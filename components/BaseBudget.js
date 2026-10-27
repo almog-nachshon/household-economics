@@ -2,7 +2,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { loadData } from "@/lib/data";
 import { startOfMonth, isActive } from "@/lib/budget";
-import { DOMAINS, LOAN_DOMAINS, loanPlan, arnona, fixedItems, monthlyIncome, impliedRate, monthsLeft } from "@/lib/base";
+import { DOMAINS, LOAN_DOMAINS, CARD_BILL, cardBillRest, loanPlan, fixedItems, monthlyIncome, impliedRate, monthsLeft } from "@/lib/base";
 import { monthLabel } from "@/lib/plan";
 import { ils } from "@/lib/goal";
 
@@ -11,11 +11,10 @@ const parsePayment = (v) => {
   const [kind, id] = String(v || "standing").split(":");
   return kind === "card" ? { kind: "credit", cardId: Number(id) || null } : { kind, cardId: null };
 };
-const paymentLabel = (e, cards) =>
-  e.kind === "credit" ? `אשראי ${cards.find((c) => c.id === e.cardId) ? `····${cards.find((c) => c.id === e.cardId).last4}` : ""}` : e.kind === "cash" ? "מזומן" : "הוראת קבע";
-function PaymentSelect({ cards }) {
+const paymentValue = (e) => (e.kind === "credit" ? `card:${e.cardId ?? ""}` : e.kind);
+function PaymentSelect({ cards, value = "standing" }) {
   return (
-    <select name="payment">
+    <select name="payment" defaultValue={value}>
       <option value="standing">הוראת קבע</option>
       {cards.map((c) => <option key={c.id} value={`card:${c.id}`}>אשראי ····{c.last4}{c.name ? ` ${c.name}` : ""}</option>)}
       {cards.length === 0 && <option value="card:">אשראי</option>}
@@ -31,6 +30,12 @@ const monthOf = (v) => {
   const [y, m] = String(v).split("-").map(Number);
   return new Date(y, m - 1, 1);
 };
+
+async function setPayment(formData) {
+  "use server";
+  await db.expense.update({ where: { id: Number(formData.get("id")) }, data: parsePayment(formData.get("payment")) });
+  revalidatePath("/expenses");
+}
 
 async function addIncome(formData) {
   "use server";
@@ -83,14 +88,6 @@ async function updateLoan(formData) {
 
 const monthValue = (d) => (d ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}` : "");
 
-async function saveHousing(formData) {
-  "use server";
-  const data = Object.fromEntries(
-    ["arnonaArea", "arnonaRate", "arnonaDiscountPct", "arnonaDiscountSqm", "rentRenewMonth"].map((k) => [k, Number(formData.get(k) || 0)]),
-  );
-  await db.settings.update({ where: { id: 1 }, data });
-  revalidatePath("/expenses");
-}
 
 async function addCard(formData) {
   "use server";
@@ -131,38 +128,45 @@ function Block({ title, total, income, children, add }) {
           <div style={{ marginTop: 8 }}>{add}</div>
         </details>
       )}
-      <Block
-        title="כרטיסי אשראי"
-        total={items.filter((i) => i.kind === "credit").reduce((t, i) => t + i.amount, 0)}
-        income={income}
-        add={
-          <form action={addCard}>
-            <label>4 ספרות אחרונות <input name="last4" required pattern="\d{4}" inputMode="numeric" maxLength={4} /></label>
-            <label>שם (לא חובה) <input name="name" placeholder="ויזה כאל, מקס..." /></label>
-            <button type="submit">הוספה</button>
-          </form>
-        }
-      >
-        <table>
-          <tbody>
-            {cards.map((c) => (
-              <tr key={c.id}>
-                <td>····{c.last4} {c.name}</td>
-                <td>{ils(items.filter((i) => i.kind === "credit" && i.cardId === c.id).reduce((t, i) => t + i.amount, 0))}</td>
-                <td><Delete table="card" id={c.id} /></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {cards.length === 0 && <p className="label">הוסף כרטיסים כדי לבחור לכל הוצאה באיזה כרטיס היא משולמת.</p>}
-      </Block>
     </div>
+  );
+}
+
+// One loan: payment, months left, interest, and a folded form to update rate / end date.
+function LoanRow({ l, month }) {
+  const p = loanPlan(l, month);
+  return (
+    <tr key={l.id}>
+      <td style={{ whiteSpace: "normal" }}>
+        {l.name} · {LOAN_DOMAINS[l.domain]}
+        <div className="label">
+          יתרה {ils(l.balance)} · {Number.isFinite(p.months) ? `${p.months} חודשים, עד ${monthLabel(p.end)}` : "התשלום לא מכסה את הריבית"}
+          {l.annualRate
+            ? ` · ${l.annualRate}% · ריבית שנותרה ${Number.isFinite(p.interestLeft) ? ils(p.interestLeft) : "—"}`
+            : " · הזן ריבית או תאריך סיום לחישוב הריבית"}
+        </div>
+        <details>
+          <summary style={{ cursor: "pointer", fontSize: 14 }}>עדכון ריבית / תאריך סיום</summary>
+          <form action={updateLoan} style={{ marginTop: 6 }}>
+            <input type="hidden" name="id" value={l.id} />
+            <label>יתרה <input type="number" name="balance" step="1" defaultValue={l.balance} required /></label>
+            <label>תשלום חודשי <input type="number" name="payment" step="1" defaultValue={l.payment ?? ""} /></label>
+            <label>ריבית שנתית % <input type="number" name="annualRate" step="0.01" defaultValue={l.annualRate || ""} /></label>
+            <label>תאריך סיום (מההסכם) <input type="month" name="endMonth" defaultValue={monthValue(l.endMonth)} /></label>
+            <button type="submit">חשב ושמור</button>
+            <span className="label">ריבית ריקה + תאריך סיום = הריבית מחושבת מהיתרה, מהתשלום ומהתאריך.</span>
+          </form>
+        </details>
+      </td>
+      <td>{ils(p.payment)}</td>
+      <td><Delete table="loan" id={l.id} /></td>
+    </tr>
   );
 }
 
 const when = (e) => [e.startMonth && `מ${monthLabel(e.startMonth)}`, e.endMonth && `עד ${monthLabel(e.endMonth)}`].filter(Boolean).join(" ");
 
-// The fixed part of the household budget as blocks: income, each expense domain (with arnona and its loans), loans.
+// The fixed part of the household budget as blocks: income, each expense domain (with its loans), loans, cards.
 export default async function BaseBudget() {
   const { settings, last } = await loadData();
   const month = startOfMonth(new Date());
@@ -174,8 +178,8 @@ export default async function BaseBudget() {
   ]);
   const income = monthlyIncome(incomes, settings, last);
   const items = fixedItems({ expenses, loans, settings, month });
+  const active = expenses.filter((e) => isActive(e, month));
   const byDomain = Object.fromEntries(DOMAINS.map((d) => [d.key, items.filter((i) => i.domain === d.key).reduce((t, i) => t + i.amount, 0)]));
-  const a = arnona(settings);
   const renewIn = (settings.rentRenewMonth - 1 - month.getMonth() + 12) % 12;
 
   return (
@@ -226,17 +230,6 @@ export default async function BaseBudget() {
                   <label>עד חודש (לא חובה, לתשלומים) <input type="month" name="endMonth" /></label>
                   <button type="submit">הוספה</button>
                 </form>
-                {d.key === "housing" && (
-                  <form action={saveHousing} style={{ marginTop: 16 }}>
-                    <h2>ארנונה וחוזה</h2>
-                    <label>שטח הדירה (מ״ר) <input type="number" name="arnonaArea" step="0.1" defaultValue={settings.arnonaArea} /></label>
-                    <label>תעריף לשנה (₪ למ״ר, מחשבון הארנונה) <input type="number" name="arnonaRate" step="0.01" defaultValue={settings.arnonaRate} /></label>
-                    <label>הנחה % <input type="number" name="arnonaDiscountPct" step="1" defaultValue={settings.arnonaDiscountPct} /></label>
-                    <label>ההנחה על המ״ר הראשונים <input type="number" name="arnonaDiscountSqm" step="1" defaultValue={settings.arnonaDiscountSqm} /></label>
-                    <label>חידוש חוזה השכירות <select name="rentRenewMonth" defaultValue={settings.rentRenewMonth}>{MONTHS.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}</select></label>
-                    <button type="submit" className="secondary">שמירה</button>
-                  </form>
-                )}
               </>
             }
           >
@@ -246,34 +239,24 @@ export default async function BaseBudget() {
                 {list.map((e) => (
                   <tr key={e.id} className={isActive(e, month) ? "" : "label"}>
                     <td style={{ whiteSpace: "normal" }}>
-                      {e.name} <span className="label">· {paymentLabel(e, cards)}</span>
+                      {e.name}
                       {when(e) && <div className="label">{when(e)}</div>}
+                      <form action={setPayment} style={{ display: "flex", gap: 4, maxWidth: "none", marginTop: 2 }}>
+                        <input type="hidden" name="id" value={e.id} />
+                        <PaymentSelect cards={cards} value={paymentValue(e)} />
+                        <button type="submit" className="secondary" style={{ padding: "2px 8px", fontSize: 13 }}>עדכון</button>
+                      </form>
                     </td>
-                    <td>{ils(e.amount)}</td>
+                    <td>
+                      {ils(e.amount)}
+                      {e.category === CARD_BILL && e.kind === "credit" && cardBillRest(e, active) !== e.amount && (
+                        <div className="label">מזה {ils(cardBillRest(e, active))} לא מפורט</div>
+                      )}
+                    </td>
                     <td><Delete table="expense" id={e.id} /></td>
                   </tr>
                 ))}
-                {d.key === "housing" && (
-                  <tr>
-                    <td style={{ whiteSpace: "normal" }}>
-                      ארנונה
-                      <div className="label">
-                        {a.monthly > 0
-                          ? `${ils(a.yearly)} לשנה, ההנחה חוסכת ${ils(a.saved)} לחודש`
-                          : `הנחה ${settings.arnonaDiscountPct}% על ${settings.arnonaDiscountSqm} מ״ר. הזן שטח ותעריף ב״הוספה״`}
-                      </div>
-                    </td>
-                    <td>{a.monthly > 0 ? ils(a.monthly) : "—"}</td>
-                    <td />
-                  </tr>
-                )}
-                {domainLoans.map((l) => (
-                  <tr key={`l${l.id}`}>
-                    <td style={{ whiteSpace: "normal" }}>{l.name}<div className="label">פירוט בבלוק ההלוואות</div></td>
-                    <td>{ils(loanPlan(l, month).payment)}</td>
-                    <td />
-                  </tr>
-                ))}
+                {domainLoans.map((l) => <LoanRow key={`l${l.id}`} l={l} month={month} />)}
               </tbody>
             </table>
           </Block>
@@ -282,7 +265,7 @@ export default async function BaseBudget() {
 
       <Block
         title="הלוואות"
-        total={loans.reduce((t, l) => t + loanPlan(l, month).payment, 0)}
+        total={loans.filter((l) => l.domain === "loans").reduce((t, l) => t + loanPlan(l, month).payment, 0)}
         income={income}
         add={
           <form action={addLoan}>
@@ -298,38 +281,34 @@ export default async function BaseBudget() {
       >
         <table>
           <tbody>
-            {loans.map((l) => {
-              const p = loanPlan(l, month);
-              return (
-                <tr key={l.id}>
-                  <td style={{ whiteSpace: "normal" }}>
-                    {l.name} · {LOAN_DOMAINS[l.domain]}
-                    <div className="label">
-                      יתרה {ils(l.balance)} · {Number.isFinite(p.months) ? `${p.months} חודשים, עד ${monthLabel(p.end)}` : "התשלום לא מכסה את הריבית"}
-                      {l.annualRate
-                        ? ` · ${l.annualRate}% · ריבית שנותרה ${Number.isFinite(p.interestLeft) ? ils(p.interestLeft) : "—"}`
-                        : " · הזן ריבית או תאריך סיום לחישוב הריבית"}
-                    </div>
-                    <details>
-                      <summary style={{ cursor: "pointer", fontSize: 14 }}>עדכון ריבית / תאריך סיום</summary>
-                      <form action={updateLoan} style={{ marginTop: 6 }}>
-                        <input type="hidden" name="id" value={l.id} />
-                        <label>יתרה <input type="number" name="balance" step="1" defaultValue={l.balance} required /></label>
-                        <label>תשלום חודשי <input type="number" name="payment" step="1" defaultValue={l.payment ?? ""} /></label>
-                        <label>ריבית שנתית % <input type="number" name="annualRate" step="0.01" defaultValue={l.annualRate || ""} /></label>
-                        <label>תאריך סיום (מההסכם) <input type="month" name="endMonth" defaultValue={monthValue(l.endMonth)} /></label>
-                        <button type="submit">חשב ושמור</button>
-                        <span className="label">ריבית ריקה + תאריך סיום = הריבית מחושבת מהיתרה, מהתשלום ומהתאריך.</span>
-                      </form>
-                    </details>
-                  </td>
-                  <td>{ils(p.payment)}</td>
-                  <td><Delete table="loan" id={l.id} /></td>
-                </tr>
-              );
-            })}
+            {loans.filter((l) => l.domain === "loans").map((l) => <LoanRow key={l.id} l={l} month={month} />)}
           </tbody>
         </table>
+      </Block>
+      <Block
+        title="כרטיסי אשראי"
+        total={items.filter((i) => i.kind === "credit").reduce((t, i) => t + i.amount, 0)}
+        income={income}
+        add={
+          <form action={addCard}>
+            <label>4 ספרות אחרונות <input name="last4" required pattern="\d{4}" inputMode="numeric" maxLength={4} /></label>
+            <label>שם (לא חובה) <input name="name" placeholder="ויזה כאל, מקס..." /></label>
+            <button type="submit">הוספה</button>
+          </form>
+        }
+      >
+        <table>
+          <tbody>
+            {cards.map((c) => (
+              <tr key={c.id}>
+                <td>····{c.last4} {c.name}</td>
+                <td>{ils(items.filter((i) => i.kind === "credit" && i.cardId === c.id).reduce((t, i) => t + i.amount, 0))}</td>
+                <td><Delete table="card" id={c.id} /></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {cards.length === 0 && <p className="label">הוסף כרטיסים כדי לבחור לכל הוצאה באיזה כרטיס היא משולמת.</p>}
       </Block>
     </div>
   );
