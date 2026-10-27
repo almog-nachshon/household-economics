@@ -2,7 +2,8 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { loadData } from "@/lib/data";
 import { CATEGORIES, monthBudget, endingSoon, startOfMonth } from "@/lib/budget";
-import { fixedItems, monthlyIncome, byPayment } from "@/lib/base";
+import { fixedItems, monthlyIncome, byPayment, DOMAINS } from "@/lib/base";
+import { SplitPie } from "@/components/Charts";
 import { monthLabel } from "@/lib/plan";
 import { ils } from "@/lib/goal";
 import BaseBudget from "@/components/BaseBudget";
@@ -62,6 +63,14 @@ export default async function Expenses({ searchParams }) {
   const items = fixedItems({ expenses, loans, settings, month });
   const b = monthBudget({ income, expenses: items, spends, savingsGoal: settings.savingsGoal, today });
   const payments = byPayment(items, cards);
+  // Pie data: by domain (plus what is left of the income), and by item (small ones grouped).
+  const domainSlices = DOMAINS.map((d) => ({ name: d.name, value: items.filter((i) => i.domain === d.key).reduce((t, i) => t + i.amount, 0) }))
+    .filter((d) => d.value > 0);
+  if (b.leftAfterFixed > 0) domainSlices.push({ name: "נשאר מההכנסה", value: b.leftAfterFixed, color: "#1e8e3e" });
+  const sorted = items.filter((i) => i.amount > 0).sort((x, y) => y.amount - x.amount);
+  const small = sorted.filter((i) => i.amount < b.standing / 50 + b.credit / 50);
+  const itemSlices = sorted.filter((i) => !small.includes(i)).map((i) => ({ name: i.name, value: i.amount }));
+  if (small.length) itemSlices.push({ name: "שאר ההוצאות", value: small.reduce((t, i) => t + i.amount, 0) });
   const ending = endingSoon(expenses, today);
   const todayValue = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
 
@@ -103,6 +112,13 @@ export default async function Expenses({ searchParams }) {
           </form>
         </div>
       </div>
+
+      {items.length > 0 && (
+        <div className="blocks">
+          <div className="card"><h2>פילוג לפי תחום</h2><SplitPie data={domainSlices} /></div>
+          <div className="card"><h2>פילוג לפי הוצאה</h2><SplitPie data={itemSlices} /></div>
+        </div>
+      )}
 
       <BaseBudget edit={searchParams?.edit} />
       <Balances />
