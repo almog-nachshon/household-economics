@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { checkPassword, checkTotp } from "@/lib/auth";
+import { checkPassword, checkTotp, totpEnabled } from "@/lib/auth";
 import { COOKIE, createSession } from "@/lib/session";
 
 async function login(formData) {
@@ -27,8 +27,8 @@ export default function Login({ searchParams }) {
       <h1>כניסה</h1>
       <form action={login}>
         <label>סיסמה <input type="password" name="password" autoComplete="current-password" required autoFocus /></label>
-        <label>קוד מאפליקציית האימות <input name="code" inputMode="numeric" pattern="\d{6}" autoComplete="one-time-code" required /></label>
-        {searchParams?.error && <p className="warn">הסיסמה או הקוד שגויים.</p>}
+        {totpEnabled() && <label>קוד מאפליקציית האימות <input name="code" inputMode="numeric" pattern="\d{6}" autoComplete="one-time-code" required /></label>}
+        {searchParams?.error && <p className="warn">{totpEnabled() ? "הסיסמה או הקוד שגויים." : "הסיסמה שגויה."}</p>}
         <button type="submit">כניסה</button>
       </form>
       <form action={logout} style={{ marginTop: 24 }}>

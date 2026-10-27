@@ -42,4 +42,38 @@ model Settings {
   monthlyInvest    Float    @default(2500) // fixed long-term ETF deposit
   checkingBuffer   Float    @default(2000) // left in the current account each month
   allocations      String   @default("[]") // JSON: [{ticker, name, pct}]
+  monthlyIncome    Float    @default(0)    // 0 = use the last snapshot's net income
+  savingsGoal      Float    @default(5000) // wanted to put aside every month
+  riskProfile      String   @default("balanced")
+}
+
+// A fixed monthly expense: a standing order from the account or a recurring card charge.
+model Expense {
+  id       Int       @id @default(autoincrement())
+  name     String
+  amount   Float
+  kind     String    // "standing" | "credit"
+  category String
+  endMonth DateTime? // last month of an installment plan; null = ongoing
+}
+
+// A one-off (variable) purchase, counted against this month's spending limit.
+model Spend {
+  id       Int      @id @default(autoincrement())
+  date     DateTime
+  amount   Float
+  category String
+  note     String   @default("")
+}
+
+// What was bought in a monthly investment review, so next month can keep or switch.
+model InvestPick {
+  id     Int      @id @default(autoincrement())
+  month  DateTime
+  symbol String
+  bucket String
+  pct    Float
+  amount Float
+
+  @@unique([month, symbol])
 }

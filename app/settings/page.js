@@ -10,6 +10,8 @@ const NUMBERS = [
   ["emergencyTarget", "יעד קרן חירום"],
   ["monthlyInvest", "הפקדה חודשית להשקעות"],
   ["checkingBuffer", "סכום שנשאר בעו״ש כל חודש"],
+  ["monthlyIncome", "הכנסה חודשית נטו (0 = לפי העדכון החודשי האחרון)"],
+  ["savingsGoal", "יעד חיסכון חודשי"],
 ];
 
 async function save(formData) {
@@ -40,7 +42,7 @@ export default async function Settings() {
         ))}
         <label>תאריך יעד <input type="date" name="targetDate" defaultValue={s.targetDate.toISOString().slice(0, 10)} required /></label>
         <label>
-          חלוקת ETF (שורה לכל קרן: סימול, שם, אחוז)
+          חלוקת ETF (שורה לכל קרן: סימול, שם, אחוז). מתעדכן אוטומטית כשמסמנים ״קניתי״ בדף ההשקעות
           <textarea name="allocations" rows={7} defaultValue={allocations} placeholder="CSPX, S&P 500, 50" />
         </label>
         <button type="submit">שמירה</button>

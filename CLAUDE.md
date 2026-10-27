@@ -10,15 +10,18 @@
 ## מבנה
 - `app/page.js` — מסך מד היעד
 - `app/update/page.js` — טופס עדכון חודשי (Snapshot לכל חודש)
+- `app/expenses` — הוצאות קבועות (הוראות קבע / אשראי, עם חודש סיום לתשלומים) וקניות משתנות; חישובי התקציב ב-`lib/budget.js`
+- `app/invest` — חלוקת ההפקדה החודשית באינטראקטיב: קבוצות ומועמדים ב-`lib/portfolio.js`, מחירים מ-Yahoo ב-`lib/market.js` (cache של 12 שעות). בדיקה חודשית ב-10–12 לחודש, ״קניתי״ שומר `InvestPick` ומעדכן את `allocations`
 - `app/deposit` (הפקדה ב-1 לחודש + כפתור "הפקדתי"), `app/year`, `app/cashflow`, `app/emergency`, `app/settings`
 - `lib/plan.js` — כללי החלוקה: buffer בעו״ש, הפקדה קבועה ל-ETF, מילוי קרן חירום, השאר לבית
-- כניסה: `middleware.js` + `lib/session.js` (cookie חתום) + `lib/auth.js` (scrypt + TOTP). משתנים ב-`.env`, יוצרים עם `npm run auth:setup`
+- כניסה: `middleware.js` + `lib/session.js` (cookie חתום) + `lib/auth.js` (scrypt; TOTP רק אם `TOTP_SECRET` מוגדר — כרגע כבוי, כניסה בסיסמה בלבד). משתנים ב-`.env`, יוצרים עם `npm run auth:setup`
 - `lib/goal.js` — חישובי היעד. הון עצמי לבית = homeSavings + kerenOld (קרן ההשתלמות החדשה נזילה רק ב-2032)
 
 ## כללים
 - אסור להכניס נתונים פיננסיים אמיתיים לריפו. רק נתוני דמה ב-`prisma/seed.mjs`. קבצי `.db` ו-`.env` נשארים מחוץ ל-git.
 - הריפו פרטי.
-- פריסה: שרת Hetzner של VoltShare, תיקייה `/opt/finance`, שירות `finance-app` בלי `ports:` על רשת `voltshare_default`. Caddy של VoltShare מפנה את `finance.2-31-65-97.sslip.io` ל-`finance-app:3000`; הבלוק נערך ב-`deploy/Caddyfile` בריפו של VoltShare.
+- פריסה: שרת Hetzner של VoltShare, תיקייה `/opt/finance`, שירות `finance-app` בלי `ports:` על רשת `voltshare_default`. Caddy של VoltShare מפנה את `finance.2.31.65.97.sslip.io` ל-`finance-app:3000`. הבלוק נמצא בשרת ב-`/opt/caddy-sites/finance.caddy` (מחוץ לריפו של VoltShare, שה-Caddyfile שלו רק עושה `import` לתיקייה), כך ש-deploy של VoltShare לא דורס אותו. אחרי עריכה: `docker exec voltshare-web-1 caddy reload --config /etc/caddy/Caddyfile`.
+- עדכון השרת: tar של הריפו (בלי node_modules, .next, .git, .env, *.db) ל-`/opt/finance`, ואז `docker compose up -d --build`.
 - לעולם לא לקרוא לשירות `api`, `web` או `db` (מתנגש עם VoltShare).
 
 ## מסכים מתוכננים
