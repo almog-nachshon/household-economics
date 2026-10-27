@@ -29,8 +29,8 @@ export default async function Year() {
         <BalanceChart
           data={rows.map((r) => ({ ...r, label: monthLabel(r.month) }))}
           lines={[
-            { key: "homeSavings", name: "חיסכון לבית", color: "#2a7d5f" },
-            { key: "emergencyFund", name: "קרן חירום", color: "#3b6fb6" },
+            { key: "homeSavings", name: "חיסכון לבית", color: "#1e8e3e" },
+            { key: "emergencyFund", name: "קרן חירום", color: "#0fa3a3" },
             { key: "investments", name: "השקעות", color: "#a0782a" },
           ]}
         />

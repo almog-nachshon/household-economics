@@ -28,7 +28,7 @@ export default async function Emergency() {
       <div className="card" style={{ marginTop: 12 }}>
         <BalanceChart
           data={snapshots.map((s) => ({ label: monthLabel(s.month), emergencyFund: s.emergencyFund }))}
-          lines={[{ key: "emergencyFund", name: "קרן חירום", color: "#3b6fb6" }]}
+          lines={[{ key: "emergencyFund", name: "קרן חירום", color: "#0fa3a3" }]}
           target={settings.emergencyTarget}
         />
       </div>

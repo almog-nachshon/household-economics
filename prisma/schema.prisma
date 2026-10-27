@@ -84,6 +84,7 @@ model AiPlan {
   id        Int      @id @default(autoincrement())
   month     DateTime @unique
   final     Boolean  @default(false)
+  metalsPct Float    @default(10)
   summary   String
   picks     String   // JSON: [{symbol, reason}]
   changes   String   // JSON: [{symbol, action: add|hold|reduce|sell, reason}]

@@ -12,8 +12,8 @@ export function CashflowChart({ data }) {
         <YAxis tickFormatter={fmt} orientation="right" />
         <Tooltip formatter={(v) => v.toLocaleString("he-IL")} />
         <Legend />
-        <Bar dataKey="income" name="הכנסות" fill="#2a7d5f" />
-        <Bar dataKey="expenses" name="הוצאות" fill="#b4562b" />
+        <Bar dataKey="income" name="הכנסות" fill="#1e8e3e" />
+        <Bar dataKey="expenses" name="הוצאות" fill="#d93025" />
       </BarChart>
     </ResponsiveContainer>
   );

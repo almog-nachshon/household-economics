@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { getSettings } from "@/lib/data";
 import { ils } from "@/lib/goal";
-import { BUCKETS, loadMarket, completePicks, sizePicks, fractional } from "@/lib/portfolio";
+import { BUCKETS, loadMarket, completePicks, sizePicks, fractional, isMetal, bucketPct, DEFAULT_METALS_PCT } from "@/lib/portfolio";
 import { advisorEnabled } from "@/lib/advisor";
 import { generatePlan, depositMonth, depositDate, holdings } from "@/lib/invest-run";
 
@@ -11,6 +11,8 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 600;
 
 const pct = (x) => (x == null ? "—" : `${(x * 100).toFixed(1)}%`);
+// A return in green when up and red when down.
+const Ret = ({ x }) => <span className={x > 0 ? "pos" : x < 0 ? "neg" : ""}>{pct(x)}</span>;
 const date = (d) => d.toLocaleDateString("he-IL");
 const bucketName = Object.fromEntries(BUCKETS.map((b) => [b.key, b.name]));
 const CHANGES = { add: "להוסיף", hold: "להחזיק, בלי כסף חדש", reduce: "לצמצם (למכור חלק)", sell: "למכור" };
@@ -51,13 +53,14 @@ async function undo(formData) {
 const numbersReason = (q) =>
   `נבחרה לפי הביצועים: ${pct(q.m12)} בשנה, ${pct(q.m6)} בחצי שנה, ${pct(q.m3)} ב-3 חודשים, בתנודתיות של ${pct(q.vol)}.`;
 
-const units = (p) => (p.units == null ? "—" : fractional(p.symbol) ? p.units.toFixed(3) : p.units);
+const units = (p) =>
+  p.units == null ? "—" : isMetal(p.symbol) ? `${p.units.toFixed(3)} אונקיות` : fractional(p.symbol) ? `${p.units.toFixed(3)} יחידות` : `${p.units} יחידות`;
 
 function Returns({ q }) {
   return (
     <table style={{ marginTop: 8 }}>
       <thead><tr><th>חודש</th><th>3 חודשים</th><th>6 חודשים</th><th>שנה</th><th>תנודתיות</th><th>ירידה מקס׳</th></tr></thead>
-      <tbody><tr><td>{pct(q.m1)}</td><td>{pct(q.m3)}</td><td>{pct(q.m6)}</td><td>{pct(q.m12)}</td><td>{pct(q.vol)}</td><td>{pct(q.maxDrawdown)}</td></tr></tbody>
+      <tbody><tr><td><Ret x={q.m1} /></td><td><Ret x={q.m3} /></td><td><Ret x={q.m6} /></td><td><Ret x={q.m12} /></td><td>{pct(q.vol)}</td><td><Ret x={q.maxDrawdown} /></td></tr></tbody>
     </table>
   );
 }
@@ -72,8 +75,11 @@ export default async function Invest({ searchParams }) {
     holdings(),
     loadMarket(),
   ]);
+  // A one-off larger (or smaller) amount for this deposit, from the amount box; otherwise the standing order.
+  const amount = Number(searchParams?.amount) > 0 ? Number(searchParams.amount) : settings.monthlyInvest;
   const chosen = plan ? JSON.parse(plan.picks) : [];
-  const { picks, leftover } = sizePicks(completePicks(chosen, market.bySymbol, settings.monthlyInvest), settings.monthlyInvest);
+  const metalsPct = plan ? plan.metalsPct : DEFAULT_METALS_PCT;
+  const { picks, leftover } = sizePicks(completePicks(chosen, market.bySymbol, amount, metalsPct), amount);
   const changes = plan
     ? JSON.parse(plan.changes)
     : held.map((h) => ({ symbol: h.symbol, action: picks.some((p) => p.symbol === h.symbol) ? "add" : "hold", reason: null }));
@@ -91,16 +97,27 @@ export default async function Invest({ searchParams }) {
       {searchParams?.error && <p className="warn">הבדיקה נכשלה: {searchParams.error}</p>}
       {market.rateError && <p className="warn">לא הצלחתי למשוך שערי מטבע ({market.rateError}).</p>}
 
+      <form method="get" style={{ display: "flex", gap: 8, alignItems: "center", maxWidth: "none", marginBottom: 12, flexWrap: "wrap" }}>
+        <span>סכום להשקעה:</span>
+        <input type="number" name="amount" min="1" step="1" defaultValue={amount} style={{ width: 140 }} />
+        <button type="submit">חשב חלוקה</button>
+        {amount !== settings.monthlyInvest && <a href="/invest">חזרה להוראת הקבע ({ils(settings.monthlyInvest)})</a>}
+      </form>
+
       <div className="card">
-        <h2>{ils(settings.monthlyInvest)} לאינטראקטיב, לאן:</h2>
+        <h2>{ils(amount)} לאינטראקטיב, לאן:</h2>
+        <p className="label" style={{ marginTop: 0 }}>
+          {BUCKETS.map((b) => `${b.name} ${Math.round(bucketPct(b, metalsPct) * 10) / 10}%`).join(" · ")}
+          {plan ? " (אחוז המתכות לפי הבדיקה של Claude)" : ""}
+        </p>
         {picks.map((p) => (
           <details key={p.symbol} style={{ borderBottom: "1px solid var(--track)", padding: "10px 0" }}>
             <summary style={{ cursor: "pointer", fontSize: 18 }}>
-              <b>{ils(p.amount)}</b> ← <b>{p.symbol}</b> {p.name} <span className="label">({bucketName[p.bucket]}, {p.pct}%)</span>
+              <b>{ils(p.amount)}</b> ← <b>{p.symbol}</b> {p.name} <span className="label">({bucketName[p.bucket]}, {Math.round(p.pct * 10) / 10}%)</span>
             </summary>
             <div style={{ overflowX: "auto" }}>
               <p className="label" style={{ margin: "8px 0 0" }}>
-                מחיר: {p.priceIls ? ils(p.priceIls) : "—"} ({p.price} {p.currency}) · לקנות: {units(p)} יחידות
+                מחיר: {p.priceIls ? ils(p.priceIls) : "—"} ({p.price} {p.currency}{isMetal(p.symbol) ? " לאונקיה" : ""}) · לקנות: {units(p)}
               </p>
               <Returns q={p} />
               <p style={{ marginBottom: 0 }}>💡 {p.reason || numbersReason(p)}</p>
@@ -163,7 +180,7 @@ export default async function Invest({ searchParams }) {
         <summary style={{ cursor: "pointer" }}>כל המועמדים והביצועים שלהם</summary>
         {BUCKETS.map((b) => (
           <div key={b.key} style={{ marginTop: 12, overflowX: "auto" }}>
-            <h2>{b.name}: {b.pct}%, {b.count === 1 ? "בחירה אחת" : `${b.count} בחירות`}</h2>
+            <h2>{b.name}: {Math.round(bucketPct(b, metalsPct) * 10) / 10}%, {b.count === 1 ? "בחירה אחת" : `${b.count} בחירות`}</h2>
             <table>
               <thead><tr><th>סימול</th><th>שם</th><th>חודש</th><th>3 חודשים</th><th>6 חודשים</th><th>שנה</th><th>תנודתיות</th></tr></thead>
               <tbody>
@@ -173,7 +190,7 @@ export default async function Invest({ searchParams }) {
                     <tr key={s} style={picks.some((p) => p.symbol === s) ? { fontWeight: 700 } : undefined}>
                       <td>{s}</td><td>{q.name}</td>
                       {q.error ? <td colSpan={5} className="warn">אין נתונים</td> : (
-                        <><td>{pct(q.m1)}</td><td>{pct(q.m3)}</td><td>{pct(q.m6)}</td><td>{pct(q.m12)}</td><td>{pct(q.vol)}</td></>
+                        <><td><Ret x={q.m1} /></td><td><Ret x={q.m3} /></td><td><Ret x={q.m6} /></td><td><Ret x={q.m12} /></td><td>{pct(q.vol)}</td></>
                       )}
                     </tr>
                   );
