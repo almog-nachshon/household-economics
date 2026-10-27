@@ -12,7 +12,7 @@
 - `app/update/page.js` — טופס עדכון חודשי (Snapshot לכל חודש)
 - `app/expenses` — הוצאות קבועות (הוראות קבע / אשראי, עם חודש סיום לתשלומים) וקניות משתנות; חישובי התקציב ב-`lib/budget.js`
 - `app/invest` — 6 החזקות להפקדה ב-10 לחודש: 4 קבוצות קבועות (מדדים 45% / סקטוריאליות 10% / ביטחוניות 25% / סיכון 20%) ומועמדים ב-`lib/portfolio.js`; מחירים מ-Yahoo ב-`lib/market.js` (cache של 12 שעות). `lib/advisor.js` שולח ל-Claude (`claude-opus-5-5`, web search) את הנתונים וההחזקות ומקבל בחירות + המלצות add/hold/reduce/sell; נשמר ב-`AiPlan` לפי חודש ההפקדה. בלי Claude, `completePicks` בוחר לפי ציון. ״קניתי״ שומר `InvestPick`. צריך `ANTHROPIC_API_KEY` ב-`.env`
-- בדיקה יומית: `POST /api/cron/invest` עם `Authorization: Bearer $CRON_SECRET` מרענן פעם ביום את התוכנית להפקדה הקרובה; הריצה ב-10 לחודש סופית ולא נדרסת. את ה-cron בשרת צריך להתקין בנפרד
+- בדיקה אוטומטית: `/etc/cron.d/finance-invest` בשרת מריץ ב-10 לחודש ב-08:00 שעון ישראל (השרת ב-UTC) את `POST /api/cron/invest` עם `Authorization: Bearer $CRON_SECRET`; ההרצה ב-10 סופית ולא נדרסת. בשאר הימים המשתמש מריץ ידנית מהכפתור בדף (לבחירתו, בגלל העלות). לוג: `/var/log/finance-invest.log`
 - `app/deposit` (הפקדה ב-1 לחודש + כפתור "הפקדתי"), `app/year`, `app/cashflow`, `app/emergency`, `app/settings`
 - `lib/plan.js` — כללי החלוקה: buffer בעו״ש, הפקדה קבועה ל-ETF, מילוי קרן חירום, השאר לבית
 - כניסה: `middleware.js` + `lib/session.js` (cookie חתום) + `lib/auth.js` (scrypt; TOTP רק אם `TOTP_SECRET` מוגדר — כרגע כבוי, כניסה בסיסמה בלבד). משתנים ב-`.env`, יוצרים עם `npm run auth:setup`
