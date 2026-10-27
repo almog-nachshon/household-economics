@@ -8,6 +8,10 @@ export default function RootLayout({ children }) {
       <body>
         <nav>
           <a href="/">יעד הבית</a>
+          <a href="/deposit">הפקדה החודש</a>
+          <a href="/year">תוכנית שנתית</a>
+          <a href="/cashflow">תזרים</a>
+          <a href="/emergency">קרן חירום</a>
           <a href="/update">עדכון חודשי</a>
         </nav>
         <main>{children}</main>

@@ -5,7 +5,22 @@ const db = new PrismaClient();
 await db.settings.upsert({
   where: { id: 1 },
   update: {},
-  create: { targetHomePrice: 3000000, equityRatio: 0.3, targetDate: new Date("2030-06-01"), emergencyTarget: 90000 },
+  create: {
+    targetHomePrice: 3000000,
+    equityRatio: 0.3,
+    targetDate: new Date("2030-06-01"),
+    emergencyTarget: 90000,
+    monthlyInvest: 2500,
+    checkingBuffer: 2000,
+    allocations: JSON.stringify([
+      { ticker: "CSPX", name: "S&P 500", pct: 50 },
+      { ticker: "CNDX", name: "Nasdaq 100", pct: 10 },
+      { ticker: "EIMI", name: "שווקים מתעוררים", pct: 10 },
+      { ticker: "TA-125", name: "ת\"א 125", pct: 10 },
+      { ticker: "IGLN", name: "זהב", pct: 15 },
+      { ticker: "SSLN", name: "כסף", pct: 5 },
+    ]),
+  },
 });
 
 for (let i = 0; i < 6; i++) {

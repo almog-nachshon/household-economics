@@ -23,10 +23,23 @@ model Snapshot {
   createdAt      DateTime @default(now())
 }
 
+// A monthly deposit marked as done on the next-month page, with the split used.
+model Deposit {
+  id          Int      @id @default(autoincrement())
+  month       DateTime @unique
+  emergency   Float
+  home        Float
+  investments Float
+  createdAt   DateTime @default(now())
+}
+
 model Settings {
   id               Int      @id @default(1)
   targetHomePrice  Float
   equityRatio      Float    // share of the price paid from own equity, e.g. 0.3
   targetDate       DateTime
   emergencyTarget  Float
+  monthlyInvest    Float    @default(2500) // fixed long-term ETF deposit
+  checkingBuffer   Float    @default(2000) // left in the current account each month
+  allocations      String   @default("[]") // JSON: [{ticker, name, pct}]
 }

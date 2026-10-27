@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { goalStatus, ils } from "@/lib/goal";
+import Stat from "@/components/Stat";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +22,7 @@ export default async function Home() {
         <div className="value">{Math.round(g.pct * 100)}%</div>
         <div className="meter"><div style={{ width: `${g.pct * 100}%` }} /></div>
       </div>
+      <a className="button" href="/deposit">מה להפקיד החודש? ←</a>
       <div className="grid" style={{ marginTop: 12 }}>
         <Stat label="קצב חיסכון חודשי" value={ils(g.pace)} />
         <Stat label="קצב נדרש" value={ils(g.requiredPace)} warn={!onTrack} />
@@ -32,11 +34,3 @@ export default async function Home() {
   );
 }
 
-function Stat({ label, value, warn }) {
-  return (
-    <div className="card">
-      <div className="label">{label}</div>
-      <div className={`value ${warn ? "warn" : ""}`}>{value}</div>
-    </div>
-  );
-}
