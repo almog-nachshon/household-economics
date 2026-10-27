@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { getSettings } from "@/lib/data";
 import { ils } from "@/lib/goal";
-import { BUCKETS, loadMarket, completePicks, sizePicks, fractional, isMetal, bucketPct, DEFAULT_METALS_PCT } from "@/lib/portfolio";
+import { BUCKETS, loadMarket, completePicks, sizePicks, fractional, isMetal, bucketPct, DEFAULT_METALS_PCT, ABOUT } from "@/lib/portfolio";
 import { advisorEnabled } from "@/lib/advisor";
 import { generatePlan, depositMonth, depositDate, holdings } from "@/lib/invest-run";
 
@@ -56,15 +56,6 @@ const numbersReason = (q) =>
 const units = (p) =>
   p.units == null ? "—" : isMetal(p.symbol) ? `${p.units.toFixed(3)} אונקיות` : fractional(p.symbol) ? `${p.units.toFixed(3)} יחידות` : `${p.units} יחידות`;
 
-function Returns({ q }) {
-  return (
-    <table style={{ marginTop: 8 }}>
-      <thead><tr><th>חודש</th><th>3 חודשים</th><th>6 חודשים</th><th>שנה</th><th>תנודתיות</th><th>ירידה מקס׳</th></tr></thead>
-      <tbody><tr><td><Ret x={q.m1} /></td><td><Ret x={q.m3} /></td><td><Ret x={q.m6} /></td><td><Ret x={q.m12} /></td><td>{pct(q.vol)}</td><td><Ret x={q.maxDrawdown} /></td></tr></tbody>
-    </table>
-  );
-}
-
 export default async function Invest({ searchParams }) {
   const settings = await getSettings();
   const month = depositMonth();
@@ -110,20 +101,29 @@ export default async function Invest({ searchParams }) {
           {BUCKETS.map((b) => `${b.name} ${Math.round(bucketPct(b, metalsPct) * 10) / 10}%`).join(" · ")}
           {plan ? " (אחוז המתכות לפי הבדיקה של Claude)" : ""}
         </p>
-        {picks.map((p) => (
-          <details key={p.symbol} style={{ borderBottom: "1px solid var(--track)", padding: "10px 0" }}>
-            <summary style={{ cursor: "pointer", fontSize: 18 }}>
-              <b>{ils(p.amount)}</b> ← <b>{p.symbol}</b> {p.name} <span className="label">({bucketName[p.bucket]}, {Math.round(p.pct * 10) / 10}%)</span>
-            </summary>
-            <div style={{ overflowX: "auto" }}>
-              <p className="label" style={{ margin: "8px 0 0" }}>
-                מחיר: {p.priceIls ? ils(p.priceIls) : "—"} ({p.price} {p.currency}{isMetal(p.symbol) ? " לאונקיה" : ""}) · לקנות: {units(p)}
-              </p>
-              <Returns q={p} />
-              <p style={{ marginBottom: 0 }}>💡 {p.reason || numbersReason(p)}</p>
-            </div>
-          </details>
-        ))}
+        <div style={{ overflowX: "auto" }}>
+          <table>
+            <thead>
+              <tr><th>סכום</th><th>סימול</th><th>שם</th><th>קבוצה</th><th>%</th><th>מחיר</th><th>לקנות</th><th>חודש</th><th>3 ח׳</th><th>6 ח׳</th><th>שנה</th><th>תנודתיות</th><th>למה</th></tr>
+            </thead>
+            <tbody>
+              {picks.map((p) => (
+                <tr key={p.symbol}>
+                  <td><b>{ils(p.amount)}</b></td>
+                  <td><b>{p.symbol}</b></td>
+                  <td>{p.name}</td>
+                  <td>{bucketName[p.bucket]}</td>
+                  <td>{Math.round(p.pct * 10) / 10}%</td>
+                  <td>{p.priceIls ? ils(p.priceIls) : "—"}</td>
+                  <td>{units(p)}</td>
+                  <td><Ret x={p.m1} /></td><td><Ret x={p.m3} /></td><td><Ret x={p.m6} /></td><td><Ret x={p.m12} /></td>
+                  <td>{pct(p.vol)}</td>
+                  <td style={{ whiteSpace: "normal", minWidth: 260 }}>{p.reason || numbersReason(p)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
         {leftover > 1 && <p className="label">נשאר כמזומן בחשבון: {ils(leftover)} (קרן בלונדון נקנית ביחידות שלמות).</p>}
         <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
           {done.length ? (
@@ -176,22 +176,27 @@ export default async function Invest({ searchParams }) {
         </div>
       )}
 
-      <details className="card" style={{ marginTop: 12 }}>
-        <summary style={{ cursor: "pointer" }}>כל המועמדים והביצועים שלהם</summary>
+      <div className="card" style={{ marginTop: 12 }}>
+        <h2>כל המניות והקרנות: תשואות ומידע</h2>
         {BUCKETS.map((b) => (
           <div key={b.key} style={{ marginTop: 12, overflowX: "auto" }}>
             <h2>{b.name}: {Math.round(bucketPct(b, metalsPct) * 10) / 10}%, {b.count === 1 ? "בחירה אחת" : `${b.count} בחירות`}</h2>
             <table>
-              <thead><tr><th>סימול</th><th>שם</th><th>חודש</th><th>3 חודשים</th><th>6 חודשים</th><th>שנה</th><th>תנודתיות</th></tr></thead>
+              <thead><tr><th>סימול</th><th>שם</th><th>מחיר</th><th>חודש</th><th>3 ח׳</th><th>6 ח׳</th><th>שנה</th><th>תנודתיות</th><th>ירידה מקס׳</th><th>מידע</th></tr></thead>
               <tbody>
                 {b.candidates.map(([s]) => {
                   const q = market.bySymbol[s];
                   return (
                     <tr key={s} style={picks.some((p) => p.symbol === s) ? { fontWeight: 700 } : undefined}>
                       <td>{s}</td><td>{q.name}</td>
-                      {q.error ? <td colSpan={5} className="warn">אין נתונים</td> : (
-                        <><td><Ret x={q.m1} /></td><td><Ret x={q.m3} /></td><td><Ret x={q.m6} /></td><td><Ret x={q.m12} /></td><td>{pct(q.vol)}</td></>
+                      {q.error ? <td colSpan={7} className="warn">אין נתונים</td> : (
+                        <>
+                          <td>{q.priceIls ? ils(q.priceIls) : `${q.price} ${q.currency}`}</td>
+                          <td><Ret x={q.m1} /></td><td><Ret x={q.m3} /></td><td><Ret x={q.m6} /></td><td><Ret x={q.m12} /></td>
+                          <td>{pct(q.vol)}</td><td><Ret x={q.maxDrawdown} /></td>
+                        </>
                       )}
+                      <td style={{ whiteSpace: "normal", minWidth: 260 }}>{ABOUT[s]}</td>
                     </tr>
                   );
                 })}
@@ -199,7 +204,7 @@ export default async function Invest({ searchParams }) {
             </table>
           </div>
         ))}
-      </details>
+      </div>
 
       <p className="label" style={{ marginTop: 12 }}>
         מחירים מ-Yahoo Finance, מתעדכנים כל 12 שעות. זו המלצה של מודל לפי נתוני עבר וחדשות, לא ייעוץ השקעות.
