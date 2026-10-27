@@ -1,15 +1,13 @@
-import { db } from "@/lib/db";
+import { loadData } from "@/lib/data";
+import Empty from "@/components/Empty";
 import { goalStatus, ils } from "@/lib/goal";
 import Stat from "@/components/Stat";
 
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const [snapshots, settings] = await Promise.all([
-    db.snapshot.findMany({ orderBy: { month: "asc" } }),
-    db.settings.findUnique({ where: { id: 1 } }),
-  ]);
-  if (!snapshots.length || !settings) return <p>אין עדיין נתונים. הוסף עדכון חודשי.</p>;
+  const { snapshots, settings } = await loadData();
+  if (!snapshots.length) return <Empty />;
 
   const g = goalStatus(snapshots, settings);
   const onTrack = g.pace >= g.requiredPace;

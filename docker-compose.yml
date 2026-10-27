@@ -1,9 +1,17 @@
+# Deployed at /opt/finance on the VoltShare server. No ports: VoltShare's Caddy
+# reaches this service over the voltshare_default network.
 services:
-  home2030:
+  finance-app:
     build: .
     restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: file:/data/home2030.db
     volumes:
       - ./data:/data
-    # Bound to localhost only; expose through the existing reverse proxy with HTTPS + auth.
-    ports:
-      - "127.0.0.1:3030:3000"
+    networks:
+      - voltshare_default
+
+networks:
+  voltshare_default:
+    external: true

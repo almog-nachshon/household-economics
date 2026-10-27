@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "prisma generate && next build",
     "start": "prisma migrate deploy && next start",
-    "seed": "node prisma/seed.mjs"
+    "seed": "node prisma/seed.mjs",
+    "auth:setup": "node scripts/auth-setup.mjs"
   },
   "dependencies": {
     "@prisma/client": "5.22.0",
