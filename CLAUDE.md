@@ -10,7 +10,9 @@
 ## מבנה
 - `app/page.js` — מסך מד היעד
 - `app/update/page.js` — טופס עדכון חודשי (Snapshot לכל חודש)
-- `app/expenses` — הוצאות קבועות (הוראות קבע / אשראי, עם חודש סיום לתשלומים) וקניות משתנות; חישובי התקציב ב-`lib/budget.js`
+- `app/expenses` — ״הוצאות / הכנסות״: תקציב החודש (`lib/budget.js`) + הטבלה הקבועה `components/BaseBudget.js`: הכנסות (`Income`, חודשיות או שנתיות), הוצאות קבועות לפי תחום דירה/רכב/שוטף (`Expense` עם חודש התחלה וסיום), ארנונה עם הנחה (שדות ב-`Settings`) והלוואות (`Loan`: תשלום+יתרה → חודשים; עם ריבית → ריבית שנותרה). החישובים ב-`lib/base.js`
+- `app/funds` — קרנות השתלמות ופנסיה (`Fund`), תחזית צבירה לנזילות / ליעד הבית / לגיל 67 ב-`lib/funds.js`
+- `app/update` — ממולא מהטבלה הקבועה, מהקרנות ומהעדכון הקודם
 - `app/invest` — 6 החזקות להפקדה ב-10 לחודש: 4 קבוצות קבועות (מדדים 45% / סקטוריאליות 10% / ביטחוניות 25% / סיכון 20%) ומועמדים ב-`lib/portfolio.js`; מחירים מ-Yahoo ב-`lib/market.js` (cache של 12 שעות). `lib/advisor.js` שולח ל-Claude (`claude-opus-5-5`, web search) את הנתונים וההחזקות ומקבל בחירות + המלצות add/hold/reduce/sell; נשמר ב-`AiPlan` לפי חודש ההפקדה. בלי Claude, `completePicks` בוחר לפי ציון. ״קניתי״ שומר `InvestPick`. צריך `ANTHROPIC_API_KEY` ב-`.env`
 - בדיקה אוטומטית: `/etc/cron.d/finance-invest` בשרת מריץ ב-10 לחודש ב-08:00 שעון ישראל (השרת ב-UTC) את `POST /api/cron/invest` עם `Authorization: Bearer $CRON_SECRET`; ההרצה ב-10 סופית ולא נדרסת. בשאר הימים המשתמש מריץ ידנית מהכפתור בדף (לבחירתו, בגלל העלות). לוג: `/var/log/finance-invest.log`
 - `app/deposit` (הפקדה ב-1 לחודש + כפתור "הפקדתי"), `app/year`, `app/cashflow`, `app/emergency`, `app/settings`

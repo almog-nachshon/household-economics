@@ -8,9 +8,10 @@ export default function RootLayout({ children }) {
       <body>
         <nav>
           <a href="/">יעד הבית</a>
-          <a href="/expenses">הוצאות</a>
+          <a href="/expenses">הוצאות / הכנסות</a>
           <a href="/deposit">הפקדה החודש</a>
           <a href="/invest">השקעות</a>
+          <a href="/funds">קרנות ופנסיה</a>
           <a href="/year">תוכנית שנתית</a>
           <a href="/cashflow">תזרים</a>
           <a href="/emergency">קרן חירום</a>

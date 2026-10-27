@@ -45,6 +45,32 @@ model Settings {
   monthlyIncome    Float    @default(0)    // 0 = use the last snapshot's net income
   savingsGoal      Float    @default(5000) // wanted to put aside every month
   riskProfile      String   @default("balanced")
+  arnonaArea        Float   @default(0)  // apartment area, m²
+  arnonaRate        Float   @default(0)  // ILS per m² per year (from the municipal bill)
+  arnonaDiscountPct Float   @default(0)  // discount %, e.g. 60
+  arnonaDiscountSqm Float   @default(0)  // the discount applies to the first N m², e.g. 97
+  rentRenewMonth    Int     @default(12) // month the lease renews (1-12)
+  birthYear         Int     @default(0)  // for pension projections to age 67
+}
+
+// A monthly income line in the base budget (salary, Ministry of Defense allowance, ...).
+model Income {
+  id     Int    @id @default(autoincrement())
+  name   String
+  amount Float
+  month  Int?   // null = every month; 1-12 = once a year in that month (e.g. a January bonus)
+}
+
+// A loan. Known payment + balance gives the months left; adding the rate also gives the interest left.
+// Without a payment, it is computed from balance, rate and end month (Shpitzer).
+model Loan {
+  id         Int       @id @default(autoincrement())
+  name       String
+  domain     String    @default("loans") // "loans" | "car" | "housing"
+  balance    Float     // remaining principal today
+  payment    Float?    // monthly payment, if known
+  annualRate Float     @default(0) // nominal yearly interest, %
+  endMonth   DateTime? // last payment month, if known
 }
 
 // A fixed monthly expense: a standing order from the account or a recurring card charge.
@@ -53,8 +79,9 @@ model Expense {
   name     String
   amount   Float
   kind     String    // "standing" | "credit"
-  category String
-  endMonth DateTime? // last month of an installment plan; null = ongoing
+  category   String
+  startMonth DateTime? // first month it applies (e.g. a rent increase); null = already
+  endMonth   DateTime? // last month of an installment plan; null = ongoing
 }
 
 // A one-off (variable) purchase, counted against this month's spending limit.
@@ -92,4 +119,21 @@ model AiPlan {
   research  String
   model     String
   createdAt DateTime @default(now())
+}
+
+// A pension or keren hishtalmut account with its monthly deposits (from the payslip) for projections.
+model Fund {
+  id               Int       @id @default(autoincrement())
+  name             String
+  kind             String    // "keren" | "pension"
+  balance          Float
+  balanceDate      DateTime
+  employeeMonthly  Float     @default(0)
+  employerMonthly  Float     @default(0)
+  severanceMonthly Float     @default(0)
+  feeBalancePct    Float     @default(0) // yearly management fee on the balance, %
+  feeDepositPct    Float     @default(0) // management fee on each deposit, %
+  returnPct        Float     @default(5) // assumed yearly return before fees, %
+  liquidDate       DateTime? // keren hishtalmut: when it can be withdrawn tax-free
+  forHome          Boolean   @default(false) // counted toward the home down payment once liquid
 }

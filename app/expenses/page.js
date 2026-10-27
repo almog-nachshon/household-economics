@@ -1,30 +1,14 @@
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { loadData } from "@/lib/data";
-import { CATEGORIES, monthBudget, endingSoon, isActive, startOfMonth } from "@/lib/budget";
+import { CATEGORIES, monthBudget, endingSoon, startOfMonth } from "@/lib/budget";
+import { fixedItems, monthlyIncome } from "@/lib/base";
 import { monthLabel } from "@/lib/plan";
 import { ils } from "@/lib/goal";
 import Stat from "@/components/Stat";
+import BaseBudget from "@/components/BaseBudget";
 
 export const dynamic = "force-dynamic";
-
-const KINDS = { standing: "הוראת קבע", credit: "חיוב קבוע באשראי" };
-
-async function addExpense(formData) {
-  "use server";
-  const end = formData.get("endMonth");
-  const [y, m] = end ? end.split("-").map(Number) : [];
-  await db.expense.create({
-    data: {
-      name: String(formData.get("name")),
-      amount: Number(formData.get("amount")),
-      kind: String(formData.get("kind")),
-      category: String(formData.get("category")),
-      endMonth: end ? new Date(y, m - 1, 1) : null,
-    },
-  });
-  revalidatePath("/expenses");
-}
 
 async function addSpend(formData) {
   "use server";
@@ -66,23 +50,26 @@ export default async function Expenses() {
   const { settings, last } = await loadData();
   const today = new Date();
   const month = startOfMonth(today);
-  const [expenses, spends] = await Promise.all([
-    db.expense.findMany({ orderBy: { amount: "desc" } }),
+  const [expenses, loans, incomes, spends] = await Promise.all([
+    db.expense.findMany(),
+    db.loan.findMany(),
+    db.income.findMany(),
     db.spend.findMany({ where: { date: { gte: month } }, orderBy: { date: "desc" } }),
   ]);
-  const income = settings.monthlyIncome || last?.netIncome || 0;
-  const b = monthBudget({ income, expenses, spends, savingsGoal: settings.savingsGoal, today });
+  const income = monthlyIncome(incomes, settings, last);
+  // Fixed items are already this month's (start/end applied), so the budget sees them all as active.
+  const b = monthBudget({ income, expenses: fixedItems({ expenses, loans, settings, month }), spends, savingsGoal: settings.savingsGoal, today });
   const ending = endingSoon(expenses, today);
   const todayValue = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
 
   return (
     <>
-      <h1>הוצאות ותקציב: {monthLabel(month)}</h1>
+      <h1>הוצאות / הכנסות: {monthLabel(month)}</h1>
       <p className="label">
-        הכנסה: {ils(income)} {settings.monthlyIncome ? "(מההגדרות)" : last ? "(מהעדכון החודשי האחרון)" : ""}.
-        יעד חיסכון חודשי: {ils(settings.savingsGoal)}. את שניהם משנים ב<a href="/settings">הגדרות</a>.
+        הכנסה: {ils(income)} {incomes.length ? "(מהטבלה למטה)" : settings.monthlyIncome ? "(מההגדרות)" : last ? "(מהעדכון החודשי האחרון)" : ""}.
+        יעד חיסכון חודשי: {ils(settings.savingsGoal)} (משנים ב<a href="/settings">הגדרות</a>).
       </p>
-      {!income && <p className="warn">אין הכנסה. הכנס הכנסה חודשית בהגדרות או בעדכון החודשי.</p>}
+      {!income && <p className="warn">אין הכנסה. הוסף הכנסות בטבלה למטה.</p>}
 
       <div className="grid">
         <Stat label="הוראות קבע" value={ils(b.standing)} />
@@ -147,42 +134,7 @@ export default async function Expenses() {
         </div>
       )}
 
-      <div className="card" style={{ marginTop: 12 }}>
-        <h2>הוספת הוצאה קבועה</h2>
-        <form action={addExpense}>
-          <label>שם <input name="name" required placeholder="שכירות, חשמל, נטפליקס..." /></label>
-          <label>סכום חודשי <input type="number" name="amount" min="0" step="0.01" required /></label>
-          <label>
-            איך משולם
-            <select name="kind">{Object.entries(KINDS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select>
-          </label>
-          <label>קטגוריה <CategorySelect /></label>
-          <label>חודש תשלום אחרון (לתשלומים, אחרת ריק) <input type="month" name="endMonth" /></label>
-          <button type="submit">הוספה</button>
-        </form>
-      </div>
-
-      {Object.entries(KINDS).map(([kind, title]) => {
-        const list = expenses.filter((e) => e.kind === kind);
-        if (!list.length) return null;
-        return (
-          <div key={kind} className="card" style={{ marginTop: 12, overflowX: "auto" }}>
-            <h2>{title}</h2>
-            <table>
-              <thead><tr><th>שם</th><th>קטגוריה</th><th>סכום</th><th>עד</th><th /></tr></thead>
-              <tbody>
-                {list.map((e) => (
-                  <tr key={e.id} className={isActive(e, month) ? "" : "label"}>
-                    <td>{e.name}</td><td>{e.category}</td><td>{ils(e.amount)}</td>
-                    <td>{e.endMonth ? monthLabel(e.endMonth) + (isActive(e, month) ? "" : " (הסתיים)") : "קבוע"}</td>
-                    <td><Delete table="expense" id={e.id} /></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        );
-      })}
+      <BaseBudget />
 
       {b.byCategory.length > 0 && (
         <div className="card" style={{ marginTop: 12, overflowX: "auto" }}>
