@@ -46,7 +46,7 @@ const CategorySelect = () => (
   <select name="category" required>{CATEGORIES.map((c) => <option key={c}>{c}</option>)}</select>
 );
 
-export default async function Expenses() {
+export default async function Expenses({ searchParams }) {
   const { settings, last } = await loadData();
   const today = new Date();
   const month = startOfMonth(today);
@@ -104,7 +104,7 @@ export default async function Expenses() {
         </div>
       </div>
 
-      <BaseBudget />
+      <BaseBudget edit={searchParams?.edit} />
       <Balances />
 
       <div className="card" style={{ marginTop: 12 }}>
