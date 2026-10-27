@@ -2,7 +2,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { loadData } from "@/lib/data";
 import { startOfMonth, isActive } from "@/lib/budget";
-import { DOMAINS, LOAN_DOMAINS, loanPlan, arnona, fixedItems, monthlyIncome } from "@/lib/base";
+import { DOMAINS, LOAN_DOMAINS, loanPlan, arnona, fixedItems, monthlyIncome, impliedRate, monthsLeft } from "@/lib/base";
 import { monthLabel } from "@/lib/plan";
 import { ils } from "@/lib/goal";
 
@@ -52,6 +52,20 @@ async function addLoan(formData) {
   });
   revalidatePath("/expenses");
 }
+
+// Updates a loan. With an end month but no rate, the rate is solved from balance, payment and months left.
+async function updateLoan(formData) {
+  "use server";
+  const balance = Number(formData.get("balance"));
+  const payment = Number(formData.get("payment")) || null;
+  const endMonth = monthOf(formData.get("endMonth"));
+  let annualRate = Number(formData.get("annualRate") || 0);
+  if (!annualRate && endMonth && payment) annualRate = impliedRate(balance, payment, monthsLeft(endMonth, startOfMonth(new Date())));
+  await db.loan.update({ where: { id: Number(formData.get("id")) }, data: { balance, payment, annualRate, endMonth } });
+  revalidatePath("/expenses");
+}
+
+const monthValue = (d) => (d ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}` : "");
 
 async function saveHousing(formData) {
   "use server";
@@ -246,8 +260,20 @@ export default async function BaseBudget() {
                       יתרה {ils(l.balance)} · {Number.isFinite(p.months) ? `${p.months} חודשים, עד ${monthLabel(p.end)}` : "התשלום לא מכסה את הריבית"}
                       {l.annualRate
                         ? ` · ${l.annualRate}% · ריבית שנותרה ${Number.isFinite(p.interestLeft) ? ils(p.interestLeft) : "—"}`
-                        : " · הזן ריבית לחישוב הריבית שנותרה"}
+                        : " · הזן ריבית או תאריך סיום לחישוב הריבית"}
                     </div>
+                    <details>
+                      <summary style={{ cursor: "pointer", fontSize: 14 }}>עדכון ריבית / תאריך סיום</summary>
+                      <form action={updateLoan} style={{ marginTop: 6 }}>
+                        <input type="hidden" name="id" value={l.id} />
+                        <label>יתרה <input type="number" name="balance" step="1" defaultValue={l.balance} required /></label>
+                        <label>תשלום חודשי <input type="number" name="payment" step="1" defaultValue={l.payment ?? ""} /></label>
+                        <label>ריבית שנתית % <input type="number" name="annualRate" step="0.01" defaultValue={l.annualRate || ""} /></label>
+                        <label>תאריך סיום (מההסכם) <input type="month" name="endMonth" defaultValue={monthValue(l.endMonth)} /></label>
+                        <button type="submit">חשב ושמור</button>
+                        <span className="label">ריבית ריקה + תאריך סיום = הריבית מחושבת מהיתרה, מהתשלום ומהתאריך.</span>
+                      </form>
+                    </details>
                   </td>
                   <td>{ils(p.payment)}</td>
                   <td><Delete table="loan" id={l.id} /></td>
