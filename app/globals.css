@@ -25,3 +25,8 @@ h1 { color: var(--accent); }
 .neg { color: var(--neg); font-weight: 600; }
 details > summary { list-style-position: inside; }
 details[open] > summary { color: var(--accent); }
+.hero { border-top-width: 5px; }
+.hero-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 16px; }
+.value.big { font-size: 34px; }
+.blocks { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; margin-top: 12px; }
+.blocks .card { margin: 0; }

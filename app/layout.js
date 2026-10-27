@@ -15,7 +15,6 @@ export default function RootLayout({ children }) {
           <a href="/year">תוכנית שנתית</a>
           <a href="/cashflow">תזרים</a>
           <a href="/emergency">קרן חירום</a>
-          <a href="/update">עדכון חודשי</a>
           <a href="/settings">הגדרות</a>
           <a href="/login">יציאה</a>
         </nav>

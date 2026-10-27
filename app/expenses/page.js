@@ -5,8 +5,8 @@ import { CATEGORIES, monthBudget, endingSoon, startOfMonth } from "@/lib/budget"
 import { fixedItems, monthlyIncome } from "@/lib/base";
 import { monthLabel } from "@/lib/plan";
 import { ils } from "@/lib/goal";
-import Stat from "@/components/Stat";
 import BaseBudget from "@/components/BaseBudget";
+import Balances from "@/components/Balances";
 
 export const dynamic = "force-dynamic";
 
@@ -71,40 +71,30 @@ export default async function Expenses() {
       </p>
       {!income && <p className="warn">אין הכנסה. הוסף הכנסות בטבלה למטה.</p>}
 
-      <div className="grid">
-        <Stat label="הוראות קבע" value={ils(b.standing)} />
-        <Stat label="חיובים קבועים באשראי" value={ils(b.credit)} />
-        <Stat label="נשאר אחרי הוצאות קבועות" value={ils(b.leftAfterFixed)} warn={b.leftAfterFixed <= 0} />
-        <Stat
-          label="מותר להוציא החודש (משתנות)"
-          value={ils(b.variableBudget)}
-          warn={!b.goalReachable}
-          hint={b.goalReachable ? "אחרי יעד החיסכון" : `היעד גבוה מדי: אפשר לחסוך עד ${ils(b.maxSaving)}`}
-        />
+      <div className="card hero">
+        <div className="hero-row">
+          <div><div className="label">הכנסות</div><div className="value pos">{ils(income)}</div></div>
+          <div><div className="label">כל ההוצאות הקבועות</div><div className="value neg">{ils(b.standing + b.credit)}</div></div>
+          <div><div className="label">יעד חיסכון</div><div className="value">{ils(b.savingsGoal)}</div></div>
+          <div>
+            <div className="label">נשאר להוצאות שוטפות החודש</div>
+            <div className={`value big ${b.remaining < 0 ? "neg" : "pos"}`}>{ils(b.remaining)}</div>
+          </div>
+        </div>
+        <div className="meter" style={{ marginTop: 12 }}>
+          <div style={{ width: `${Math.min(100, b.variableBudget ? (b.spent / b.variableBudget) * 100 : 100)}%`, background: b.remaining < 0 ? "var(--neg)" : undefined }} />
+        </div>
+        <div className="label" style={{ marginTop: 6 }}>
+          {b.goalReachable
+            ? `הוצאת ${ils(b.spent)} מתוך ${ils(b.variableBudget)} להוצאות שוטפות · ${ils(b.perDay)} ליום · ${ils(b.perWeek)} לשבוע · ${b.daysLeft} ימים לסוף החודש`
+            : `ההוצאות הקבועות משאירות ${ils(b.leftAfterFixed)}, פחות מיעד החיסכון. אפשר לחסוך עד ${ils(b.maxSaving)} בלי הוצאות שוטפות בכלל.`}
+          {" "}· חיסכון צפוי בסוף החודש: <b className={b.projectedSaving < b.savingsGoal ? "neg" : "pos"}>{ils(b.projectedSaving)}</b>
+          {" "}· תקרת אשראי: {ils(b.cardCeiling)}
+        </div>
       </div>
 
-      <div className="card" style={{ marginTop: 12 }}>
-        <div className="label">תקרת אשראי לחודש (חיובים קבועים + הוצאות משתנות)</div>
-        <div className="value">{ils(b.cardCeiling)}</div>
-        <div className="meter" style={{ marginTop: 8 }}>
-          <div style={{ width: `${Math.min(100, b.variableBudget ? (b.spent / b.variableBudget) * 100 : 100)}%`, background: b.remaining < 0 ? "var(--warn)" : undefined }} />
-        </div>
-        <div className="label" style={{ marginTop: 4 }}>
-          הוצאת {ils(b.spent)} מתוך {ils(b.variableBudget)} של ההוצאות המשתנות
-        </div>
-      </div>
-
-      <div className="grid" style={{ marginTop: 12 }}>
-        <Stat label="נשאר להוציא החודש" value={ils(b.remaining)} warn={b.remaining < 0} hint={b.remaining < 0 ? "חרגת מהתקציב" : undefined} />
-        <Stat label="מותר ליום" value={ils(b.perDay)} hint={`${b.daysLeft} ימים עד סוף החודש, כולל היום`} />
-        <Stat label="מותר לשבוע" value={ils(b.perWeek)} />
-        <Stat
-          label="חיסכון צפוי בסוף החודש"
-          value={ils(b.projectedSaving)}
-          warn={b.projectedSaving < b.savingsGoal}
-          hint={`בקצב ההוצאות הנוכחי (${ils(b.projectedSpend)} עד סוף החודש)`}
-        />
-      </div>
+      <BaseBudget />
+      <Balances />
 
       <div className="card" style={{ marginTop: 12 }}>
         <h2>הוספת הוצאה משתנה (קנייה)</h2>
@@ -134,7 +124,6 @@ export default async function Expenses() {
         </div>
       )}
 
-      <BaseBudget />
 
       {b.byCategory.length > 0 && (
         <div className="card" style={{ marginTop: 12, overflowX: "auto" }}>

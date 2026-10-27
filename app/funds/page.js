@@ -1,7 +1,8 @@
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { getSettings } from "@/lib/data";
-import { monthlyDeposit, project, yearlyFee, PENSION_FACTOR } from "@/lib/funds";
+import { monthlyDeposit, project, yearlyFee, timeline, PENSION_FACTOR } from "@/lib/funds";
+import { monthLabel } from "@/lib/plan";
 import { ils } from "@/lib/goal";
 import Stat from "@/components/Stat";
 
@@ -150,6 +151,53 @@ export default async function Funds() {
           ))}
         </div>
       ))}
+
+      {kerens.length > 0 && (
+        <div className="card" style={{ marginTop: 12 }}>
+          <h2>מה לעשות עם כל קרן</h2>
+          <ul>
+            {[...kerens].sort((x, y) => (x.liquidDate ?? 0) - (y.liquidDate ?? 0)).map((f, i) => {
+              const atLiquid = f.liquidDate ? project(f, f.liquidDate).value : null;
+              const beforeTarget = f.liquidDate && f.liquidDate <= target;
+              return (
+                <li key={f.id} style={{ marginBottom: 8 }}>
+                  <b>{f.name}</b>{" "}
+                  {f.liquidDate ? `נזילה ב-${date(f.liquidDate)}, צפי ${ils(atLiquid)}.` : "אין תאריך נזילות."}{" "}
+                  {i === 0 && beforeTarget
+                    ? `הנזילה הראשונה. לא חייבים למשוך בנזילות: הכסף ממשיך לצבור תשואה פטורה ממס, ואפשר למשוך בכל רגע. ההצעה: להשאיר אותה עד קניית הדירה (${date(target)}) כחלק מההון העצמי, ושנה לפני הקנייה להעביר למסלול סולידי (כללי / אג״ח) כדי שירידה בשוק לא תפגע במקדמה.`
+                    : beforeTarget
+                      ? "נזילה לפני יעד הבית: אפשר לכלול אותה בהון העצמי (סמן ״לבית״)."
+                      : `נזילה אחרי יעד הבית (${date(target)}), אז היא לא כסף לדירה. אפשר להשאיר אותה במסלול מנייתי לטווח ארוך, או לקחת נגדה הלוואה בריבית נמוכה אם יחסר להון העצמי.`}
+                  {!monthlyDeposit(f) && " לא פעילה (אין הפקדות), אבל ממשיכה לצבור."}
+                  {f.feeBalancePct > 0.5 && ` דמי הניהול ${f.feeBalancePct}% מהצבירה: אפשר לבקש מהסוכן הורדה (מקובל להשיג 0.5% ומטה), זה ${ils(f.balance * (f.feeBalancePct - 0.5) / 100)} בשנה היום.`}
+                </li>
+              );
+            })}
+          </ul>
+          <p className="label">מעבר כסף בין קרנות השתלמות (ניוד) שומר על הוותק. משיכה לפני הנזילות חייבת במס.</p>
+        </div>
+      )}
+
+      {kerens.length > 0 && (
+        <details className="card" style={{ marginTop: 12 }} open>
+          <summary style={{ cursor: "pointer" }}><b>צפי לכל חודש עד הנזילות</b></summary>
+          <div style={{ overflowX: "auto", maxHeight: 420, overflowY: "auto", marginTop: 8 }}>
+            <table>
+              <thead><tr><th>חודש</th>{kerens.map((f) => <th key={f.id}>{f.name}</th>)}<th>נזיל באותו חודש</th></tr></thead>
+              <tbody>
+                {timeline(kerens).map((row) => (
+                  <tr key={row.month.toISOString()}>
+                    <td>{monthLabel(row.month)}</td>
+                    {row.values.map((v) => <td key={v.id} className={v.liquid ? "pos" : ""}>{ils(v.value)}{v.liquid ? " ✓" : ""}</td>)}
+                    <td><b className={row.liquidTotal ? "pos" : ""}>{ils(row.liquidTotal)}</b></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="label">✓ = נזילה. לפי התשואה המשוערת של כל קרן אחרי דמי ניהול, וההפקדות החודשיות בקרן הפעילה.</p>
+        </details>
+      )}
 
       <div className="card" style={{ marginTop: 12 }}>
         <h2>הוספת קרן</h2>
