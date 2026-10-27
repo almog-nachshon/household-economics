@@ -2,7 +2,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { loadData } from "@/lib/data";
 import { CATEGORIES, monthBudget, endingSoon, startOfMonth } from "@/lib/budget";
-import { fixedItems, monthlyIncome } from "@/lib/base";
+import { fixedItems, monthlyIncome, byPayment } from "@/lib/base";
 import { monthLabel } from "@/lib/plan";
 import { ils } from "@/lib/goal";
 import BaseBudget from "@/components/BaseBudget";
@@ -50,15 +50,18 @@ export default async function Expenses() {
   const { settings, last } = await loadData();
   const today = new Date();
   const month = startOfMonth(today);
-  const [expenses, loans, incomes, spends] = await Promise.all([
+  const [expenses, loans, incomes, spends, cards] = await Promise.all([
     db.expense.findMany(),
     db.loan.findMany(),
     db.income.findMany(),
     db.spend.findMany({ where: { date: { gte: month } }, orderBy: { date: "desc" } }),
+    db.card.findMany({ orderBy: { id: "asc" } }),
   ]);
   const income = monthlyIncome(incomes, settings, last);
   // Fixed items are already this month's (start/end applied), so the budget sees them all as active.
-  const b = monthBudget({ income, expenses: fixedItems({ expenses, loans, settings, month }), spends, savingsGoal: settings.savingsGoal, today });
+  const items = fixedItems({ expenses, loans, settings, month });
+  const b = monthBudget({ income, expenses: items, spends, savingsGoal: settings.savingsGoal, today });
+  const payments = byPayment(items, cards);
   const ending = endingSoon(expenses, today);
   const todayValue = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
 
@@ -90,6 +93,14 @@ export default async function Expenses() {
             : `ההוצאות הקבועות משאירות ${ils(b.leftAfterFixed)}, פחות מיעד החיסכון. אפשר לחסוך עד ${ils(b.maxSaving)} בלי הוצאות שוטפות בכלל.`}
           {" "}· חיסכון צפוי בסוף החודש: <b className={b.projectedSaving < b.savingsGoal ? "neg" : "pos"}>{ils(b.projectedSaving)}</b>
           {" "}· תקרת אשראי: {ils(b.cardCeiling)}
+        </div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginTop: 12 }}>
+          {payments.map((p) => (
+            <span key={p.key} className="chip">{p.name}: <b>{ils(p.total)}</b></span>
+          ))}
+          <form method="get" style={{ display: "inline", maxWidth: "none" }}>
+            <button type="submit" className="secondary">חשב</button>
+          </form>
         </div>
       </div>
 

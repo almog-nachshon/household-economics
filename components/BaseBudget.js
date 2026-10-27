@@ -6,7 +6,23 @@ import { DOMAINS, LOAN_DOMAINS, loanPlan, arnona, fixedItems, monthlyIncome, imp
 import { monthLabel } from "@/lib/plan";
 import { ils } from "@/lib/goal";
 
-const KINDS = { standing: "הוראת קבע", credit: "אשראי" };
+// The payment select's value: "standing", "cash" or "card:<id>".
+const parsePayment = (v) => {
+  const [kind, id] = String(v || "standing").split(":");
+  return kind === "card" ? { kind: "credit", cardId: Number(id) || null } : { kind, cardId: null };
+};
+const paymentLabel = (e, cards) =>
+  e.kind === "credit" ? `אשראי ${cards.find((c) => c.id === e.cardId) ? `····${cards.find((c) => c.id === e.cardId).last4}` : ""}` : e.kind === "cash" ? "מזומן" : "הוראת קבע";
+function PaymentSelect({ cards }) {
+  return (
+    <select name="payment">
+      <option value="standing">הוראת קבע</option>
+      {cards.map((c) => <option key={c.id} value={`card:${c.id}`}>אשראי ····{c.last4}{c.name ? ` ${c.name}` : ""}</option>)}
+      {cards.length === 0 && <option value="card:">אשראי</option>}
+      <option value="cash">מזומן</option>
+    </select>
+  );
+}
 const MONTHS = ["ינואר", "פברואר", "מרץ", "אפריל", "מאי", "יוני", "יולי", "אוגוסט", "ספטמבר", "אוקטובר", "נובמבר", "דצמבר"];
 
 // <input type="month"> value -> first of that month.
@@ -29,7 +45,7 @@ async function addExpense(formData) {
     data: {
       name: String(formData.get("name")),
       amount: Number(formData.get("amount")),
-      kind: String(formData.get("kind")),
+      ...parsePayment(formData.get("payment")),
       category: String(formData.get("category")),
       startMonth: monthOf(formData.get("startMonth")),
       endMonth: monthOf(formData.get("endMonth")),
@@ -76,7 +92,13 @@ async function saveHousing(formData) {
   revalidatePath("/expenses");
 }
 
-const TABLES = { income: db.income, expense: db.expense, loan: db.loan };
+async function addCard(formData) {
+  "use server";
+  await db.card.create({ data: { last4: String(formData.get("last4")).slice(-4), name: String(formData.get("name") || "") } });
+  revalidatePath("/expenses");
+}
+
+const TABLES = { income: db.income, expense: db.expense, loan: db.loan, card: db.card };
 async function remove(formData) {
   "use server";
   await TABLES[formData.get("table")].delete({ where: { id: Number(formData.get("id")) } });
@@ -109,6 +131,31 @@ function Block({ title, total, income, children, add }) {
           <div style={{ marginTop: 8 }}>{add}</div>
         </details>
       )}
+      <Block
+        title="כרטיסי אשראי"
+        total={items.filter((i) => i.kind === "credit").reduce((t, i) => t + i.amount, 0)}
+        income={income}
+        add={
+          <form action={addCard}>
+            <label>4 ספרות אחרונות <input name="last4" required pattern="\d{4}" inputMode="numeric" maxLength={4} /></label>
+            <label>שם (לא חובה) <input name="name" placeholder="ויזה כאל, מקס..." /></label>
+            <button type="submit">הוספה</button>
+          </form>
+        }
+      >
+        <table>
+          <tbody>
+            {cards.map((c) => (
+              <tr key={c.id}>
+                <td>····{c.last4} {c.name}</td>
+                <td>{ils(items.filter((i) => i.kind === "credit" && i.cardId === c.id).reduce((t, i) => t + i.amount, 0))}</td>
+                <td><Delete table="card" id={c.id} /></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {cards.length === 0 && <p className="label">הוסף כרטיסים כדי לבחור לכל הוצאה באיזה כרטיס היא משולמת.</p>}
+      </Block>
     </div>
   );
 }
@@ -119,10 +166,11 @@ const when = (e) => [e.startMonth && `מ${monthLabel(e.startMonth)}`, e.endMonth
 export default async function BaseBudget() {
   const { settings, last } = await loadData();
   const month = startOfMonth(new Date());
-  const [incomes, expenses, loans] = await Promise.all([
+  const [incomes, expenses, loans, cards] = await Promise.all([
     db.income.findMany({ orderBy: { amount: "desc" } }),
     db.expense.findMany({ orderBy: [{ category: "asc" }, { startMonth: "asc" }] }),
     db.loan.findMany({ orderBy: { balance: "desc" } }),
+    db.card.findMany({ orderBy: { id: "asc" } }),
   ]);
   const income = monthlyIncome(incomes, settings, last);
   const items = fixedItems({ expenses, loans, settings, month });
@@ -173,7 +221,7 @@ export default async function BaseBudget() {
                   <label>שם <input name="name" required /></label>
                   <label>סכום לחודש <input type="number" name="amount" min="0" step="0.01" required /></label>
                   <label>קטגוריה <select name="category">{d.categories.map((c) => <option key={c}>{c}</option>)}</select></label>
-                  <label>תשלום <select name="kind">{Object.entries(KINDS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
+                  <label>אופן תשלום <PaymentSelect cards={cards} /></label>
                   <label>מחודש (לא חובה, למשל העלאת שכירות) <input type="month" name="startMonth" /></label>
                   <label>עד חודש (לא חובה, לתשלומים) <input type="month" name="endMonth" /></label>
                   <button type="submit">הוספה</button>
@@ -198,7 +246,7 @@ export default async function BaseBudget() {
                 {list.map((e) => (
                   <tr key={e.id} className={isActive(e, month) ? "" : "label"}>
                     <td style={{ whiteSpace: "normal" }}>
-                      {e.name}{e.kind === "credit" ? " · אשראי" : ""}
+                      {e.name} <span className="label">· {paymentLabel(e, cards)}</span>
                       {when(e) && <div className="label">{when(e)}</div>}
                     </td>
                     <td>{ils(e.amount)}</td>

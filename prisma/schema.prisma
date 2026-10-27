@@ -78,7 +78,8 @@ model Expense {
   id       Int       @id @default(autoincrement())
   name     String
   amount   Float
-  kind     String    // "standing" | "credit"
+  kind     String    // "standing" | "credit" | "cash"
+  cardId   Int?      // which credit card, when kind = "credit"
   category   String
   startMonth DateTime? // first month it applies (e.g. a rent increase); null = already
   endMonth   DateTime? // last month of an installment plan; null = ongoing
@@ -136,4 +137,11 @@ model Fund {
   returnPct        Float     @default(5) // assumed yearly return before fees, %
   liquidDate       DateTime? // keren hishtalmut: when it can be withdrawn tax-free
   forHome          Boolean   @default(false) // counted toward the home down payment once liquid
+}
+
+// A credit card, shown by its last 4 digits, so each fixed expense can say which card pays it.
+model Card {
+  id    Int    @id @default(autoincrement())
+  last4 String
+  name  String @default("")
 }

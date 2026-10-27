@@ -30,3 +30,4 @@ details[open] > summary { color: var(--accent); }
 .value.big { font-size: 34px; }
 .blocks { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; margin-top: 12px; }
 .blocks .card { margin: 0; }
+.chip { background: var(--accent-soft); border-radius: 999px; padding: 4px 12px; font-size: 14px; }
