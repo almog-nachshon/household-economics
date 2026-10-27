@@ -114,9 +114,9 @@ export default async function Expenses({ searchParams }) {
       </div>
 
       {items.length > 0 && (
-        <div className="blocks">
-          <div className="card"><h2>פילוג לפי תחום</h2><SplitPie data={domainSlices} /></div>
-          <div className="card"><h2>פילוג לפי הוצאה</h2><SplitPie data={itemSlices} /></div>
+        <div className="blocks pies">
+          <div className="card"><h2>פילוג לפי תחום</h2><SplitPie data={domainSlices} centerLabel="הכנסה" /></div>
+          <div className="card"><h2>פילוג לפי הוצאה</h2><SplitPie data={itemSlices} centerLabel="הוצאות קבועות" /></div>
         </div>
       )}
 

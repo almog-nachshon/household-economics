@@ -71,6 +71,7 @@ model Loan {
   payment    Float?    // monthly payment, if known
   annualRate Float     @default(0) // nominal yearly interest, %
   endMonth   DateTime? // last payment month, if known
+  cardId     Int?      // charged to this credit card (e.g. a car loan through the card company); null = bank
 }
 
 // A fixed monthly expense: a standing order from the account or a recurring card charge.
