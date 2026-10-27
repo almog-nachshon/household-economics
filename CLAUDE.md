@@ -11,7 +11,8 @@
 - `app/page.js` — מסך מד היעד
 - `app/update/page.js` — טופס עדכון חודשי (Snapshot לכל חודש)
 - `app/expenses` — הוצאות קבועות (הוראות קבע / אשראי, עם חודש סיום לתשלומים) וקניות משתנות; חישובי התקציב ב-`lib/budget.js`
-- `app/invest` — חלוקת ההפקדה החודשית באינטראקטיב: קבוצות ומועמדים ב-`lib/portfolio.js`, מחירים מ-Yahoo ב-`lib/market.js` (cache של 12 שעות). בדיקה חודשית ב-10–12 לחודש, ״קניתי״ שומר `InvestPick` ומעדכן את `allocations`
+- `app/invest` — חלוקת ההפקדה החודשית באינטראקטיב. מועמדים (מדדים / מתכות / מניות) ופרופילי סיכון ב-`lib/portfolio.js`, מחירים מ-Yahoo ב-`lib/market.js` (cache של 12 שעות). `lib/advisor.js` שולח ל-Claude (`claude-opus-5-5`, web search) את הנתונים ומקבל 5–6 החזקות כ-JSON; נשמר ב-`AiPlan`. ״קניתי״ שומר `InvestPick` ומעדכן את `allocations`. צריך `ANTHROPIC_API_KEY` ב-`.env`
+- הרצה אוטומטית ב-10 לחודש: `POST /api/cron/invest` עם `Authorization: Bearer $CRON_SECRET` (רץ פעם בחודש). את ה-cron בשרת צריך להתקין בנפרד
 - `app/deposit` (הפקדה ב-1 לחודש + כפתור "הפקדתי"), `app/year`, `app/cashflow`, `app/emergency`, `app/settings`
 - `lib/plan.js` — כללי החלוקה: buffer בעו״ש, הפקדה קבועה ל-ETF, מילוי קרן חירום, השאר לבית
 - כניסה: `middleware.js` + `lib/session.js` (cookie חתום) + `lib/auth.js` (scrypt; TOTP רק אם `TOTP_SECRET` מוגדר — כרגע כבוי, כניסה בסיסמה בלבד). משתנים ב-`.env`, יוצרים עם `npm run auth:setup`

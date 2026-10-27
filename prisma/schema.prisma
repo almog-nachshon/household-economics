@@ -77,3 +77,16 @@ model InvestPick {
 
   @@unique([month, symbol])
 }
+
+// The Claude advisor's recommendation for a month (lib/advisor.js).
+model AiPlan {
+  id        Int      @id @default(autoincrement())
+  month     DateTime @unique
+  summary   String
+  picks     String   // JSON: [{symbol, pct, action, reason}]
+  stopped   String   // JSON: [{symbol, reason}]
+  risks     String   // JSON: [string]
+  research  String
+  model     String
+  createdAt DateTime @default(now())
+}
