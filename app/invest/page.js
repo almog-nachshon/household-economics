@@ -2,25 +2,18 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { getSettings } from "@/lib/data";
-import { startOfMonth } from "@/lib/budget";
-import { monthLabel } from "@/lib/plan";
 import { ils } from "@/lib/goal";
-import { BUCKETS, PROFILES, loadMarket, sizePicks, reviewStatus, isMetal, fractional } from "@/lib/portfolio";
+import { BUCKETS, loadMarket, completePicks, sizePicks, fractional } from "@/lib/portfolio";
 import { advisorEnabled } from "@/lib/advisor";
-import { generatePlan, lastHeld } from "@/lib/invest-run";
-import Stat from "@/components/Stat";
+import { generatePlan, depositMonth, depositDate, holdings } from "@/lib/invest-run";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 600;
 
 const pct = (x) => (x == null ? "—" : `${(x * 100).toFixed(1)}%`);
-const ACTIONS = { keep: "ממשיכים", new: "חדש החודש" };
-
-async function setProfile(formData) {
-  "use server";
-  await db.settings.update({ where: { id: 1 }, data: { riskProfile: String(formData.get("riskProfile")) } });
-  revalidatePath("/invest");
-}
+const date = (d) => d.toLocaleDateString("he-IL");
+const bucketName = Object.fromEntries(BUCKETS.map((b) => [b.key, b.name]));
+const CHANGES = { add: "להוסיף", hold: "להחזיק, בלי כסף חדש", reduce: "לצמצם (למכור חלק)", sell: "למכור" };
 
 async function runNow() {
   "use server";
@@ -32,7 +25,7 @@ async function runNow() {
   redirect("/invest");
 }
 
-// Records this month's buys and makes them the split shown on the deposit page.
+// Records the deposit's buys and makes them the split shown on the deposit page.
 async function confirm(formData) {
   "use server";
   const month = new Date(formData.get("month"));
@@ -54,173 +47,146 @@ async function undo(formData) {
   revalidatePath("/invest");
 }
 
-const unitsLabel = (p) =>
-  p.units == null ? "—" : isMetal(p.symbol) ? `${p.units.toFixed(3)} אונ׳` : fractional(p.symbol) ? p.units.toFixed(3) : p.units;
+// Without a Claude reason, the numbers speak for themselves.
+const numbersReason = (q) =>
+  `נבחרה לפי הביצועים: ${pct(q.m12)} בשנה, ${pct(q.m6)} בחצי שנה, ${pct(q.m3)} ב-3 חודשים, בתנודתיות של ${pct(q.vol)}.`;
+
+const units = (p) => (p.units == null ? "—" : fractional(p.symbol) ? p.units.toFixed(3) : p.units);
+
+function Returns({ q }) {
+  return (
+    <table style={{ marginTop: 8 }}>
+      <thead><tr><th>חודש</th><th>3 חודשים</th><th>6 חודשים</th><th>שנה</th><th>תנודתיות</th><th>ירידה מקס׳</th></tr></thead>
+      <tbody><tr><td>{pct(q.m1)}</td><td>{pct(q.m3)}</td><td>{pct(q.m6)}</td><td>{pct(q.m12)}</td><td>{pct(q.vol)}</td><td>{pct(q.maxDrawdown)}</td></tr></tbody>
+    </table>
+  );
+}
 
 export default async function Invest({ searchParams }) {
   const settings = await getSettings();
-  const month = startOfMonth(new Date());
+  const month = depositMonth();
+  const day = depositDate(month);
   const [plan, done, held, market] = await Promise.all([
     db.aiPlan.findUnique({ where: { month } }),
     db.investPick.findMany({ where: { month } }),
-    lastHeld(month),
+    holdings(),
     loadMarket(),
   ]);
-  const review = reviewStatus();
-  const sized = plan ? sizePicks(JSON.parse(plan.picks), settings.monthlyInvest, market.bySymbol) : null;
-  const bucketName = Object.fromEntries(BUCKETS.map((b) => [b.key, b.name]));
+  const chosen = plan ? JSON.parse(plan.picks) : [];
+  const { picks, leftover } = sizePicks(completePicks(chosen, market.bySymbol, settings.monthlyInvest), settings.monthlyInvest);
+  const changes = plan
+    ? JSON.parse(plan.changes)
+    : held.map((h) => ({ symbol: h.symbol, action: picks.some((p) => p.symbol === h.symbol) ? "add" : "hold", reason: null }));
 
   return (
     <>
-      <h1>השקעות: החלוקה של {monthLabel(month)}</h1>
+      <h1>השקעות: הפקדה ב-{date(day)}</h1>
       <p className="label">
-        הוראת קבע של {ils(settings.monthlyInvest)} לאינטראקטיב ב-10 לכל חודש (משנים בהגדרות). ב-10 לחודש Claude
-        בודק את המועמדים עם נתוני שוק אמיתיים וחדשות עדכניות ובוחר 5–6 החזקות.
+        {plan
+          ? `${plan.final ? "בדיקה סופית" : "בדיקה יומית"} של Claude מ-${plan.createdAt.toLocaleString("he-IL")}. ${plan.final ? "" : `הבדיקה הסופית ב-${date(day)}, לפני ההפקדה.`}`
+          : advisorEnabled()
+            ? "Claude עוד לא בדק את ההפקדה הזו. עד אז החלוקה לפי הביצועים בלבד."
+            : "חסר ANTHROPIC_API_KEY, אז החלוקה לפי הביצועים בלבד (בלי Claude)."}
       </p>
+      {searchParams?.error && <p className="warn">הבדיקה נכשלה: {searchParams.error}</p>}
+      {market.rateError && <p className="warn">לא הצלחתי למשוך שערי מטבע ({market.rateError}).</p>}
 
-      <form action={setProfile} style={{ display: "flex", gap: 8, alignItems: "center", maxWidth: "none", marginBottom: 12 }}>
-        <span>רמת סיכון:</span>
-        <select name="riskProfile" defaultValue={settings.riskProfile}>
-          {Object.entries(PROFILES).map(([k, p]) => (
-            <option key={k} value={k}>{p.name} (מדדים {p.split.long}% / מתכות {p.split.metals}% / מניות {p.split.stocks}%)</option>
-          ))}
-        </select>
-        <button type="submit" className="secondary">עדכון</button>
-      </form>
-
-      {searchParams?.error && <p className="warn">הניתוח נכשל: {searchParams.error}</p>}
-      {market.rateError && <p className="warn">לא הצלחתי למשוך שערי מטבע ({market.rateError}), אז אין חישוב יחידות.</p>}
-
-      {!plan && (
-        <div className="card" style={{ marginBottom: 12 }}>
-          {!advisorEnabled() ? (
-            <p className="warn">חסר ANTHROPIC_API_KEY בקובץ ‎.env, אז Claude לא יכול להריץ את הניתוח.</p>
-          ) : (
-            <form action={runNow} style={{ maxWidth: "none" }}>
-              <p>
-                {review.due ? "עוד לא נעשה ניתוח החודש." : `הניתוח האוטומטי הבא: ${review.next.toLocaleDateString("he-IL")}.`}{" "}
-                הניתוח לוקח 1–3 דקות.
+      <div className="card">
+        <h2>{ils(settings.monthlyInvest)} לאינטראקטיב, לאן:</h2>
+        {picks.map((p) => (
+          <details key={p.symbol} style={{ borderBottom: "1px solid var(--track)", padding: "10px 0" }}>
+            <summary style={{ cursor: "pointer", fontSize: 18 }}>
+              <b>{ils(p.amount)}</b> ← <b>{p.symbol}</b> {p.name} <span className="label">({bucketName[p.bucket]}, {p.pct}%)</span>
+            </summary>
+            <div style={{ overflowX: "auto" }}>
+              <p className="label" style={{ margin: "8px 0 0" }}>
+                מחיר: {p.priceIls ? ils(p.priceIls) : "—"} ({p.price} {p.currency}) · לקנות: {units(p)} יחידות
               </p>
-              <button type="submit">הרץ ניתוח של Claude עכשיו</button>
+              <Returns q={p} />
+              <p style={{ marginBottom: 0 }}>💡 {p.reason || numbersReason(p)}</p>
+            </div>
+          </details>
+        ))}
+        {leftover > 1 && <p className="label">נשאר כמזומן בחשבון: {ils(leftover)} (קרן בלונדון נקנית ביחידות שלמות).</p>}
+        <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
+          {done.length ? (
+            <form action={undo} style={{ maxWidth: "none" }}>
+              <span>✅ סומן כנקנה: {done.map((p) => p.symbol).join(", ")} </span>
+              <input type="hidden" name="month" value={month.toISOString()} />
+              <button type="submit" className="secondary">ביטול הסימון</button>
+            </form>
+          ) : (
+            <form action={confirm}>
+              <input type="hidden" name="month" value={month.toISOString()} />
+              <input type="hidden" name="picks" value={JSON.stringify(picks.map(({ symbol, name, bucket, pct, amount }) => ({ symbol, name, bucket, pct, amount })))} />
+              <button type="submit">קניתי ✓</button>
+            </form>
+          )}
+          {advisorEnabled() && (
+            <form action={runNow}>
+              <button type="submit" className="secondary">בדיקה של Claude עכשיו (1–3 דק׳)</button>
             </form>
           )}
         </div>
-      )}
+      </div>
+
+      <div className="card" style={{ marginTop: 12 }}>
+        <h2>המלצות ושינויים מהחודש הקודם</h2>
+        {changes.length === 0 ? (
+          <p className="label">עוד אין החזקות. אחרי שתסמן ״קניתי״, כאן יופיעו המלצות להוסיף, להחזיק, לצמצם או למכור.</p>
+        ) : (
+          <ul>
+            {changes.map((c) => (
+              <li key={c.symbol} className={c.action === "sell" || c.action === "reduce" ? "warn" : ""}>
+                <b>{c.symbol}</b>: {CHANGES[c.action]}{c.reason ? `. ${c.reason}` : ""}
+              </li>
+            ))}
+          </ul>
+        )}
+        <p className="label">מכירה ברווח = 25% מס רווחי הון בישראל, ולכן ההמלצה למכור רק כשיש סיבה ממשית.</p>
+      </div>
 
       {plan && (
-        <>
-          <div className="grid">
-            <Stat label="להשקיע החודש" value={ils(settings.monthlyInvest)} />
-            <Stat label="שער דולר" value={market.usdIls ? `₪${market.usdIls.toFixed(3)}` : "—"} />
-            <Stat label="נשאר כמזומן בחשבון" value={ils(sized.leftover)} hint="מקרנות בלונדון שנקנות ביחידות שלמות" />
-          </div>
-
-          <div className="card" style={{ marginTop: 12 }}>
-            <h2>הסיכום של Claude</h2>
-            <p>{plan.summary}</p>
-            <p className="label">נותח ב-{plan.createdAt.toLocaleString("he-IL")} ({plan.model})</p>
-          </div>
-
-          <div className="card" style={{ marginTop: 12, overflowX: "auto" }}>
-            <h2>מה קונים</h2>
-            <table>
-              <thead><tr><th>סימול</th><th>שם</th><th>קבוצה</th><th>%</th><th>סכום</th><th>מחיר</th><th>יחידות</th><th>מצב</th><th>למה</th></tr></thead>
-              <tbody>
-                {sized.picks.map((p) => (
-                  <tr key={p.symbol}>
-                    <td><b>{p.symbol}</b></td>
-                    <td>{p.name}</td>
-                    <td>{bucketName[p.bucket]}</td>
-                    <td>{p.pct}%</td>
-                    <td>{ils(p.amount)}</td>
-                    <td>{p.priceIls ? ils(p.priceIls) : "—"}</td>
-                    <td>{unitsLabel(p)}</td>
-                    <td>{ACTIONS[p.action]}</td>
-                    <td style={{ whiteSpace: "normal", minWidth: 220 }}>{p.reason}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {JSON.parse(plan.stopped).length > 0 && (
-              <>
-                <h2 style={{ marginTop: 12 }}>מפסיקים להוסיף (לא מוכרים)</h2>
-                <ul>{JSON.parse(plan.stopped).map((s) => <li key={s.symbol}><b>{s.symbol}</b>: {s.reason}</li>)}</ul>
-              </>
-            )}
-            <h2 style={{ marginTop: 12 }}>סיכונים החודש</h2>
-            <ul>{JSON.parse(plan.risks).map((r) => <li key={r}>{r}</li>)}</ul>
-
-            <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
-              {done.length ? (
-                <form action={undo} style={{ maxWidth: "none" }}>
-                  <span>✅ סומן כנקנה: {done.map((p) => p.symbol).join(", ")} </span>
-                  <input type="hidden" name="month" value={month.toISOString()} />
-                  <button type="submit" className="secondary">ביטול הסימון</button>
-                </form>
-              ) : (
-                <form action={confirm}>
-                  <input type="hidden" name="month" value={month.toISOString()} />
-                  <input type="hidden" name="picks" value={JSON.stringify(sized.picks.map(({ symbol, name, bucket, pct, amount }) => ({ symbol, name, bucket, pct, amount })))} />
-                  <button type="submit">קניתי ✓</button>
-                </form>
-              )}
-              {advisorEnabled() && (
-                <form action={runNow}>
-                  <button type="submit" className="secondary">הרץ ניתוח מחדש</button>
-                </form>
-              )}
-            </div>
-          </div>
-
-          <details className="card" style={{ marginTop: 12 }}>
-            <summary>המחקר המלא של Claude</summary>
+        <div className="card" style={{ marginTop: 12 }}>
+          <h2>התמונה כרגע</h2>
+          <p>{plan.summary}</p>
+          <h2>סיכונים</h2>
+          <ul>{JSON.parse(plan.risks).map((r) => <li key={r}>{r}</li>)}</ul>
+          <details>
+            <summary style={{ cursor: "pointer" }}>המחקר המלא של Claude</summary>
             <div style={{ whiteSpace: "pre-wrap", marginTop: 8 }}>{plan.research}</div>
           </details>
-        </>
+        </div>
       )}
 
-      {held.length > 0 && <p className="label">בחודש הקודם נקנו: {held.map((h) => `${h.symbol} ${h.pct}%`).join(", ")}</p>}
+      <details className="card" style={{ marginTop: 12 }}>
+        <summary style={{ cursor: "pointer" }}>כל המועמדים והביצועים שלהם</summary>
+        {BUCKETS.map((b) => (
+          <div key={b.key} style={{ marginTop: 12, overflowX: "auto" }}>
+            <h2>{b.name}: {b.pct}%, {b.count === 1 ? "בחירה אחת" : `${b.count} בחירות`}</h2>
+            <table>
+              <thead><tr><th>סימול</th><th>שם</th><th>חודש</th><th>3 חודשים</th><th>6 חודשים</th><th>שנה</th><th>תנודתיות</th></tr></thead>
+              <tbody>
+                {b.candidates.map(([s]) => {
+                  const q = market.bySymbol[s];
+                  return (
+                    <tr key={s} style={picks.some((p) => p.symbol === s) ? { fontWeight: 700 } : undefined}>
+                      <td>{s}</td><td>{q.name}</td>
+                      {q.error ? <td colSpan={5} className="warn">אין נתונים</td> : (
+                        <><td>{pct(q.m1)}</td><td>{pct(q.m3)}</td><td>{pct(q.m6)}</td><td>{pct(q.m12)}</td><td>{pct(q.vol)}</td></>
+                      )}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ))}
+      </details>
 
-      {BUCKETS.map((b) => (
-        <div key={b.key} className="card" style={{ marginTop: 12, overflowX: "auto" }}>
-          <h2>{b.name}</h2>
-          <table>
-            <thead><tr><th>סימול</th><th>שם</th><th>מחיר</th><th>חודש</th><th>3 חודשים</th><th>6 חודשים</th><th>שנה</th><th>תנודתיות</th><th>ירידה מקס׳</th></tr></thead>
-            <tbody>
-              {b.candidates.map(([s]) => {
-                const q = market.bySymbol[s];
-                const picked = sized?.picks.some((p) => p.symbol === s);
-                return (
-                  <tr key={s} style={picked ? { fontWeight: 700 } : undefined}>
-                    <td>{s}</td>
-                    <td>{q.name}</td>
-                    {q.error ? (
-                      <td colSpan={7} className="warn">אין נתונים ({q.error})</td>
-                    ) : (
-                      <>
-                        <td>{q.priceIls ? ils(q.priceIls) : `${q.price} ${q.currency}`}</td>
-                        <td>{pct(q.m1)}</td><td>{pct(q.m3)}</td><td>{pct(q.m6)}</td><td>{pct(q.m12)}</td>
-                        <td>{pct(q.vol)}</td><td>{pct(q.maxDrawdown)}</td>
-                      </>
-                    )}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      ))}
-
-      <div className="card label" style={{ marginTop: 12 }}>
-        <h2>איך זה עובד</h2>
-        <ul>
-          <li>מחירים יומיים מ-Yahoo Finance (כולל דיבידנדים) של השנה האחרונה, מתעדכנים כל 12 שעות.</li>
-          <li>ב-10 לחודש Claude מקבל את המספרים האלה ואת ההחזקות מהחודש הקודם, מחפש ברשת דוחות, חדשות ומאקרו, ובוחר 5–6 החזקות לפי רמת הסיכון.</li>
-          <li>מתכות: זהב וכסף כמתכת (ספוט XAUUSD / XAGUSD באינטראקטיב, צריך הרשאת מסחר במתכות). לנחושת אין ספוט באינטראקטיב, רק חוזה עתידי גדול, ולכן היא מוצגת למעקב בלבד.</li>
-          <li>קרנות עם ״.L״ הן קרנות אירלנדיות בלונדון: בלי חשיפה למס עיזבון אמריקאי, ומס דיבידנד 15% במקום 25%. נקנות ביחידות שלמות.</li>
-          <li>זו המלצה של מודל שפה על בסיס נתוני עבר וחדשות, לא ייעוץ השקעות. ההחלטה והאחריות שלך.</li>
-        </ul>
-      </div>
+      <p className="label" style={{ marginTop: 12 }}>
+        מחירים מ-Yahoo Finance, מתעדכנים כל 12 שעות. זו המלצה של מודל לפי נתוני עבר וחדשות, לא ייעוץ השקעות.
+      </p>
     </>
   );
 }

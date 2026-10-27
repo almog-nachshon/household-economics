@@ -78,13 +78,15 @@ model InvestPick {
   @@unique([month, symbol])
 }
 
-// The Claude advisor's recommendation for a month (lib/advisor.js).
+// The Claude advisor's plan for one deposit (month = the deposit's month), refreshed daily until the
+// final review on the deposit day (lib/advisor.js, lib/invest-run.js).
 model AiPlan {
   id        Int      @id @default(autoincrement())
   month     DateTime @unique
+  final     Boolean  @default(false)
   summary   String
-  picks     String   // JSON: [{symbol, pct, action, reason}]
-  stopped   String   // JSON: [{symbol, reason}]
+  picks     String   // JSON: [{symbol, reason}]
+  changes   String   // JSON: [{symbol, action: add|hold|reduce|sell, reason}]
   risks     String   // JSON: [string]
   research  String
   model     String
