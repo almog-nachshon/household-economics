@@ -5,6 +5,7 @@ import { getSettings } from "@/lib/data";
 import { ils } from "@/lib/goal";
 import { BUCKETS, loadMarket, completePicks, sizePicks, fractional, isMetal, bucketPct, DEFAULT_METALS_PCT, ABOUT } from "@/lib/portfolio";
 import { advisorEnabled } from "@/lib/advisor";
+import { SplitPie } from "@/components/Charts";
 import { generatePlan, depositMonth, depositDate, holdings } from "@/lib/invest-run";
 
 export const dynamic = "force-dynamic";
@@ -15,6 +16,8 @@ const pct = (x) => (x == null ? "—" : `${(x * 100).toFixed(1)}%`);
 const Ret = ({ x }) => <span className={x > 0 ? "pos" : x < 0 ? "neg" : ""}>{pct(x)}</span>;
 const date = (d) => d.toLocaleDateString("he-IL");
 const bucketName = Object.fromEntries(BUCKETS.map((b) => [b.key, b.name]));
+// One color per bucket, used by the pie and the type tags.
+const BUCKET_COLORS = { index: "#0fa3a3", sector: "#3b82c4", defense: "#7a5c3e", risk: "#e0607e", metals: "#d4a017" };
 const CHANGES = { add: "להוסיף", hold: "להחזיק, בלי כסף חדש", reduce: "לצמצם (למכור חלק)", sell: "למכור" };
 
 async function runNow() {
@@ -101,24 +104,37 @@ export default async function Invest({ searchParams }) {
           {BUCKETS.map((b) => `${b.name} ${Math.round(bucketPct(b, metalsPct) * 10) / 10}%`).join(" · ")}
           {plan ? " (אחוז המתכות לפי הבדיקה של Claude)" : ""}
         </p>
+        <div className="pies" style={{ marginBottom: 12 }}>
+          <SplitPie
+            centerLabel="להשקעה"
+            data={picks.map((p) => ({ name: `${p.symbol} · ${p.name} · ${bucketName[p.bucket]}`, value: p.amount, color: BUCKET_COLORS[p.bucket] }))}
+          />
+        </div>
         <div style={{ overflowX: "auto" }}>
-          <table>
+          <table className="compact">
             <thead>
-              <tr><th>סכום</th><th>סימול</th><th>שם</th><th>קבוצה</th><th>%</th><th>מחיר</th><th>לקנות</th><th>חודש</th><th>3 ח׳</th><th>6 ח׳</th><th>שנה</th><th>תנודתיות</th><th>למה</th></tr>
+              <tr><th>סכום</th><th>סימול</th><th>שם (לחיצה לפרטים)</th><th>סוג</th><th>%</th><th>לקנות</th><th>שנה</th></tr>
             </thead>
             <tbody>
               {picks.map((p) => (
                 <tr key={p.symbol}>
                   <td><b>{ils(p.amount)}</b></td>
                   <td><b>{p.symbol}</b></td>
-                  <td>{p.name}</td>
-                  <td>{bucketName[p.bucket]}</td>
+                  <td className="line-name">
+                    <details>
+                      <summary title={p.name}>{p.name}</summary>
+                      <div className="pick-more">
+                        <div>💡 {p.reason || numbersReason(p)}</div>
+                        <div className="label">
+                          מחיר {p.priceIls ? ils(p.priceIls) : "—"} · חודש <Ret x={p.m1} /> · 3 ח׳ <Ret x={p.m3} /> · 6 ח׳ <Ret x={p.m6} /> · תנודתיות {pct(p.vol)}
+                        </div>
+                      </div>
+                    </details>
+                  </td>
+                  <td><span className="tag" style={{ background: BUCKET_COLORS[p.bucket], color: "#fff" }}>{bucketName[p.bucket]}</span></td>
                   <td>{Math.round(p.pct * 10) / 10}%</td>
-                  <td>{p.priceIls ? ils(p.priceIls) : "—"}</td>
                   <td>{units(p)}</td>
-                  <td><Ret x={p.m1} /></td><td><Ret x={p.m3} /></td><td><Ret x={p.m6} /></td><td><Ret x={p.m12} /></td>
-                  <td>{pct(p.vol)}</td>
-                  <td style={{ whiteSpace: "normal", minWidth: 260 }}>{p.reason || numbersReason(p)}</td>
+                  <td><Ret x={p.m12} /></td>
                 </tr>
               ))}
             </tbody>
@@ -176,27 +192,39 @@ export default async function Invest({ searchParams }) {
         </div>
       )}
 
-      <div className="card" style={{ marginTop: 12 }}>
-        <h2>כל המניות והקרנות: תשואות ומידע</h2>
+      <h2 style={{ marginTop: 20 }}>כל המניות והקרנות לפי תחום</h2>
+      <div className="blocks">
         {BUCKETS.map((b) => (
-          <div key={b.key} style={{ marginTop: 12, overflowX: "auto" }}>
-            <h2>{b.name}: {Math.round(bucketPct(b, metalsPct) * 10) / 10}%, {b.count === 1 ? "בחירה אחת" : `${b.count} בחירות`}</h2>
-            <table>
-              <thead><tr><th>סימול</th><th>שם</th><th>מחיר</th><th>חודש</th><th>3 ח׳</th><th>6 ח׳</th><th>שנה</th><th>תנודתיות</th><th>ירידה מקס׳</th><th>מידע</th></tr></thead>
+          <div key={b.key} className="card" style={{ borderTopColor: BUCKET_COLORS[b.key] }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
+              <h2 style={{ margin: 0, color: BUCKET_COLORS[b.key] }}>{b.name}</h2>
+              <b>{Math.round(bucketPct(b, metalsPct) * 10) / 10}%</b>
+            </div>
+            <div className="label">{b.count === 1 ? "בחירה אחת" : `${b.count} בחירות`} · מודגש = נבחר החודש · לחיצה על שם לפרטים</div>
+            <table className="compact">
+              <thead><tr><th>סימול</th><th>שם</th><th>חודש</th><th>6 ח׳</th><th>שנה</th></tr></thead>
               <tbody>
                 {b.candidates.map(([s]) => {
                   const q = market.bySymbol[s];
                   return (
                     <tr key={s} style={picks.some((p) => p.symbol === s) ? { fontWeight: 700 } : undefined}>
-                      <td>{s}</td><td>{q.name}</td>
-                      {q.error ? <td colSpan={7} className="warn">אין נתונים</td> : (
-                        <>
-                          <td>{q.priceIls ? ils(q.priceIls) : `${q.price} ${q.currency}`}</td>
-                          <td><Ret x={q.m1} /></td><td><Ret x={q.m3} /></td><td><Ret x={q.m6} /></td><td><Ret x={q.m12} /></td>
-                          <td>{pct(q.vol)}</td><td><Ret x={q.maxDrawdown} /></td>
-                        </>
+                      <td>{s}</td>
+                      <td className="line-name">
+                        <details>
+                          <summary title={q.name}>{q.name}</summary>
+                          <div className="pick-more">
+                            <div>{ABOUT[s]}</div>
+                            {!q.error && (
+                              <div className="label">
+                                מחיר {q.priceIls ? ils(q.priceIls) : `${q.price} ${q.currency}`} · 3 ח׳ <Ret x={q.m3} /> · תנודתיות {pct(q.vol)} · ירידה מקס׳ <Ret x={q.maxDrawdown} />
+                              </div>
+                            )}
+                          </div>
+                        </details>
+                      </td>
+                      {q.error ? <td colSpan={3} className="warn">אין נתונים</td> : (
+                        <><td><Ret x={q.m1} /></td><td><Ret x={q.m6} /></td><td><Ret x={q.m12} /></td></>
                       )}
-                      <td style={{ whiteSpace: "normal", minWidth: 260 }}>{ABOUT[s]}</td>
                     </tr>
                   );
                 })}

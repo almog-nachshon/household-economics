@@ -28,7 +28,7 @@ details[open] > summary { color: var(--accent); }
 .hero { border-top-width: 5px; }
 .hero-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 16px; }
 .value.big { font-size: 34px; }
-.blocks { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; margin-top: 12px; }
+.blocks { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); gap: 12px; margin-top: 12px; }
 .blocks .card { margin: 0; }
 .chip { background: var(--accent-soft); border-radius: 999px; padding: 4px 12px; font-size: 14px; }
 .button.secondary-link { background: var(--accent-soft); color: var(--accent); padding: 8px 16px; font-weight: 600; }
@@ -43,3 +43,14 @@ details[open] > summary { color: var(--accent); }
 .pie-legend .share { color: var(--muted); text-align: left; }
 @media (max-width: 520px) { .pie { grid-template-columns: 1fr; justify-items: center; } .pie-legend { width: 100%; } }
 .blocks.pies { grid-template-columns: repeat(auto-fit, minmax(min(100%, 440px), 1fr)); }
+.blocks table td { padding: 6px 4px; font-size: 14px; vertical-align: middle; }
+.blocks td.line-name { width: 100%; max-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.blocks td:nth-child(2) { font-weight: 600; text-align: left; }
+.tag { display: inline-block; margin-inline-start: 6px; padding: 0 6px; border-radius: 6px; background: var(--track); color: var(--muted); font-size: 12px; font-weight: 500; }
+.tag-card { background: var(--accent-soft); color: var(--accent); }
+.blocks td button.secondary { padding: 0 6px; font-size: 12px; line-height: 20px; background: transparent; color: var(--muted); }
+.blocks td button.secondary:hover { color: var(--neg); }
+table.compact td { padding: 6px 6px; font-size: 14px; vertical-align: top; }
+table.compact td.line-name { max-width: 260px; }
+table.compact summary { cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pick-more { white-space: normal; font-size: 13px; margin-top: 4px; min-width: 240px; }

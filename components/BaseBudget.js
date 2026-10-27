@@ -295,7 +295,7 @@ export default async function BaseBudget({ edit }) {
           <tbody>
             {incomes.map((i) => (
               <tr key={i.id} className={i.month ? "label" : ""}>
-                <td style={{ whiteSpace: "normal" }}>{i.name}{i.month ? ` (ב${MONTHS[i.month - 1]})` : ""}</td>
+                <td className="line-name" title={i.name}>{i.name}{i.month ? <span className="tag">ב{MONTHS[i.month - 1]}</span> : null}</td>
                 <td className="pos">{ils(i.amount)}</td>
                 <td><Delete table="income" id={i.id} /></td>
               </tr>
@@ -336,9 +336,10 @@ export default async function BaseBudget({ edit }) {
               <tbody>
                 {list.map((e) => (
                   <tr key={e.id} className={isActive(e, month) ? "" : "label"}>
-                    <td style={{ whiteSpace: "normal" }}>
-                      {e.name} <span className="label">· {paymentLabel(e, cards)}</span>
-                      {when(e) && <div className="label">{when(e)}</div>}
+                    <td className="line-name" title={e.name}>
+                      {e.name}
+                      <span className={`tag ${e.kind === "credit" ? "tag-card" : ""}`}>{paymentLabel(e, cards)}</span>
+                      {when(e) && <span className="tag">{when(e)}</span>}
                     </td>
                     <td>
                       {ils(e.amount)}
