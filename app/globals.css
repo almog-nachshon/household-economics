@@ -54,3 +54,10 @@ table.compact td { padding: 6px 6px; font-size: 14px; vertical-align: top; }
 table.compact td.line-name { max-width: 260px; }
 table.compact summary { cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pick-more { white-space: normal; font-size: 13px; margin-top: 4px; min-width: 240px; }
+.tile { display: block; color: inherit; text-decoration: none; transition: box-shadow 0.15s; }
+.tile:hover { box-shadow: 0 4px 14px rgba(15, 163, 163, 0.18); }
+.tile-link { color: var(--accent); font-weight: 600; font-size: 14px; margin-top: 8px; }
+nav { align-items: center; }
+nav a { padding: 4px 10px; border-radius: 8px; }
+nav a:hover { background: rgba(255, 255, 255, 0.15); }
+nav .nav-end { margin-inline-start: auto; opacity: 0.85; }

@@ -42,6 +42,7 @@ async function save(formData) {
   for (const [k] of FIELDS) data[k] = Number(formData.get(k) || 0);
   await db.snapshot.upsert({ where: { month }, update: data, create: { month, ...data } });
   revalidatePath("/expenses");
+  revalidatePath("/");
 }
 
 export default async function Balances() {
@@ -49,7 +50,7 @@ export default async function Balances() {
   const month = startOfMonth(new Date());
   const saved = last && last.month.getTime() === month.getTime();
   return (
-    <div className="card" style={{ marginTop: 12 }}>
+    <div className="card" id="balances" style={{ marginTop: 12 }}>
       <h2>יתרות החודש</h2>
       <form action={save} style={{ maxWidth: "none" }}>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "end" }}>
