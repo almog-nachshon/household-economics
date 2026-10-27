@@ -1,0 +1,9 @@
+services:
+  home2030:
+    build: .
+    restart: unless-stopped
+    volumes:
+      - ./data:/data
+    # Bound to localhost only; expose through the existing reverse proxy with HTTPS + auth.
+    ports:
+      - "127.0.0.1:3030:3000"

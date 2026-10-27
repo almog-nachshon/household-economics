@@ -1,0 +1,32 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Monthly snapshot of balances and cash flow, entered via the update form.
+model Snapshot {
+  id             Int      @id @default(autoincrement())
+  month          DateTime @unique
+  netIncome      Float
+  expenses       Float
+  emergencyFund  Float
+  homeSavings    Float
+  kerenOld       Float
+  kerenNew       Float
+  investments    Float
+  loanBalance    Float
+  carLoanBalance Float
+  createdAt      DateTime @default(now())
+}
+
+model Settings {
+  id               Int      @id @default(1)
+  targetHomePrice  Float
+  equityRatio      Float    // share of the price paid from own equity, e.g. 0.3
+  targetDate       DateTime
+  emergencyTarget  Float
+}
