@@ -26,7 +26,7 @@ const CHANGES = { add: "להוסיף", hold: "להחזיק, בלי כסף חדש
 async function runNow() {
   "use server";
   try {
-    await generatePlan();
+    await generatePlan(new Date(), "lite");
   } catch (e) {
     redirect(`/invest?error=${encodeURIComponent(e.message)}`);
   }
@@ -90,7 +90,7 @@ export default async function Invest({ searchParams }) {
         <h1>השקעות: הפקדה ב-{date(day)}</h1>
         {advisorEnabled() && (
           <form action={runNow} style={{ maxWidth: "none" }}>
-            <AiButton label="בדיקה של Claude עכשיו" updated={plan?.createdAt.toLocaleString("he-IL", { timeZone: "Asia/Jerusalem" })} />
+            <AiButton label="בדיקה מהירה של Claude" updated={plan?.createdAt.toLocaleString("he-IL", { timeZone: "Asia/Jerusalem" })} />
           </form>
         )}
       </div>

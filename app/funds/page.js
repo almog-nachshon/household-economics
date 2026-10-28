@@ -65,7 +65,7 @@ async function removeFund(formData) {
 async function reviewNow() {
   "use server";
   try {
-    await generateFundReview();
+    await generateFundReview(new Date(), "lite");
   } catch (e) {
     redirect(`/funds?error=${encodeURIComponent(e.message)}#review`);
   }
