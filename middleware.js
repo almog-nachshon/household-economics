@@ -6,4 +6,4 @@ export async function middleware(req) {
   return NextResponse.redirect(new URL("/login", req.url));
 }
 
-export const config = { matcher: ["/((?!login|api/cron|_next|favicon.ico).*)"] };
+export const config = { matcher: ["/((?!login|api/cron|_next|favicon.ico|icon).*)"] };
