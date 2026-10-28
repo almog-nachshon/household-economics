@@ -191,7 +191,7 @@ export default async function Funds({ searchParams }) {
                       <summary><span className="label">סוכן</span> <b>{f.agent}</b></summary>
                       <ul className="coverage">
                         <li>סוכן מיופה כח: {f.agent}</li>
-                        {f.agentInfo.split("\n").filter(Boolean).map((l) => <li key={l}>{l}</li>)}
+                        {f.agentInfo.split("\n").filter(Boolean).map((l) => <li key={l}>{l.startsWith("http") ? <a href={l} target="_blank" rel="noreferrer">פרטי התקשרות של הסוכנות ↗</a> : l}</li>)}
                         {f.employer && <li>מעסיק: {f.employer}</li>}
                         {f.policy && <li>מספר קופה / פוליסה: {f.policy}</li>}
                         {f.joinDate && <li>הצטרפות: {date(f.joinDate)}{f.seniorityDate ? ` · ותק: ${date(f.seniorityDate)}` : ""}</li>}
