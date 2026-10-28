@@ -7,6 +7,8 @@ import { monthLabel } from "@/lib/plan";
 import { ils } from "@/lib/goal";
 import Stat from "@/components/Stat";
 import { advisorEnabled } from "@/lib/advisor";
+import AiButton from "@/components/AiButton";
+import Logo, { ClaudeMark } from "@/components/Logo";
 import { generateFundReview } from "@/lib/fund-advisor";
 
 export const dynamic = "force-dynamic";
@@ -121,7 +123,14 @@ export default async function Funds({ searchParams }) {
 
   return (
     <>
-      <h1>קרנות השתלמות ופנסיה</h1>
+      <div className="page-head">
+        <h1>קרנות השתלמות ופנסיה</h1>
+        {advisorEnabled() && (
+          <form action={reviewNow} style={{ maxWidth: "none" }}>
+            <AiButton label="בדיקת מסלולים עם Claude" updated={review?.createdAt.toLocaleString("he-IL")} />
+          </form>
+        )}
+      </div>
       <div className="grid">
         <Stat label="קרנות השתלמות היום" value={ils(total(kerens))} />
         <Stat label="פנסיה היום" value={ils(total(pensions))} />
@@ -140,11 +149,14 @@ export default async function Funds({ searchParams }) {
               return (
                 <div key={f.id} className="card fund-card">
                   <div className="fund-head">
-                    <div>
+                    <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                      <Logo id={/פניקס/.test(f.name) ? "phoenix" : /מור/.test(f.name) ? "mor" : f.name} label={f.name} size={32} />
+                      <div>
                       <h2 style={{ margin: 0 }}>{f.name}</h2>
                       <div className="label">{f.policy && `פוליסה ${f.policy}`}</div>
+                      </div>
                     </div>
-                    <span className={`tag ${dep ? "tag-card" : ""}`}>{dep ? "פעילה" : "לא פעילה"}</span>
+                    <span className={`status ${dep ? "on" : ""}`}>{dep ? "פעילה" : "ללא הפקדות"}</span>
                   </div>
                   <div className="fund-balance">{ils(f.balance)}</div>
                   <div className="label" style={{ textAlign: "center" }}>נכון ל-{date(f.balanceDate)}</div>
@@ -196,12 +208,7 @@ export default async function Funds({ searchParams }) {
 
       <div className="card" id="review" style={{ marginTop: 16 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-          <h2 style={{ margin: 0 }}>בדיקת מסלולים עם Claude</h2>
-          {advisorEnabled() && (
-            <form action={reviewNow} style={{ maxWidth: "none" }}>
-              <button type="submit">בדוק עכשיו (1–3 דק׳)</button>
-            </form>
-          )}
+          <h2 style={{ margin: 0, display: "flex", gap: 8, alignItems: "center" }}><ClaudeMark size={20} /> בדיקת מסלולים עם Claude</h2>
         </div>
         <p className="label">
           משווה את מסלולי המניות שלך בפנסיה ובהשתלמות למובילים בשוק (תשואה נטו 1/3/5 שנים, דמי ניהול, סיכון). רץ אוטומטית

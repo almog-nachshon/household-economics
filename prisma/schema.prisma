@@ -103,6 +103,8 @@ model InvestPick {
   bucket String
   pct    Float
   amount Float
+  units  Float  @default(0) // units bought (fractional for US shares, ounces for metals)
+  price  Float  @default(0) // ILS per unit at purchase
 
   @@unique([month, symbol])
 }

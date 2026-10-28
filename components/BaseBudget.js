@@ -6,6 +6,7 @@ import { startOfMonth, isActive } from "@/lib/budget";
 import { DOMAINS, LOAN_DOMAINS, CARD_BILL, cardBillRest, loanPlan, fixedItems, monthlyIncome, impliedRate, monthsLeft } from "@/lib/base";
 import { monthLabel } from "@/lib/plan";
 import { ils } from "@/lib/goal";
+import Logo from "@/components/Logo";
 
 // The payment select's value: "standing", "cash" or "card:<id>".
 const parsePayment = (v) => {
@@ -395,7 +396,7 @@ export default async function BaseBudget({ edit }) {
           <tbody>
             {cards.map((c) => (
               <tr key={c.id}>
-                <td>····{c.last4} {c.name}</td>
+                <td><span className="sym"><Logo id={/לאומי/.test(c.name) ? "leumi" : /max/i.test(c.name) ? "max" : c.name} label={c.name} size={18} />····{c.last4} {c.name}</span></td>
                 <td>{ils(items.filter((i) => i.kind === "credit" && i.cardId === c.id).reduce((t, i) => t + i.amount, 0))}</td>
                 <td><Delete table="card" id={c.id} /></td>
               </tr>

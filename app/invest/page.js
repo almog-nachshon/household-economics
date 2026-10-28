@@ -5,6 +5,9 @@ import { getSettings } from "@/lib/data";
 import { ils } from "@/lib/goal";
 import { BUCKETS, loadMarket, completePicks, sizePicks, fractional, isMetal, bucketPct, DEFAULT_METALS_PCT, ABOUT } from "@/lib/portfolio";
 import { advisorEnabled } from "@/lib/advisor";
+import AiButton from "@/components/AiButton";
+import Logo from "@/components/Logo";
+import { portfolio } from "@/lib/holdings";
 import { SplitPie } from "@/components/Charts";
 import { generatePlan, depositMonth, depositDate, holdings } from "@/lib/invest-run";
 
@@ -37,7 +40,9 @@ async function confirm(formData) {
   const picks = JSON.parse(formData.get("picks"));
   await db.$transaction([
     db.investPick.deleteMany({ where: { month } }),
-    ...picks.map((p) => db.investPick.create({ data: { month, symbol: p.symbol, bucket: p.bucket, pct: p.pct, amount: p.amount } })),
+    ...picks.map((p) => db.investPick.create({
+      data: { month, symbol: p.symbol, bucket: p.bucket, pct: p.pct, amount: p.amount, units: p.units || 0, price: p.priceIls || 0 },
+    })),
     db.settings.update({
       where: { id: 1 },
       data: { allocations: JSON.stringify(picks.map((p) => ({ ticker: p.symbol, name: p.name, pct: p.pct }))) },
@@ -63,11 +68,12 @@ export default async function Invest({ searchParams }) {
   const settings = await getSettings();
   const month = depositMonth();
   const day = depositDate(month);
-  const [plan, done, held, market] = await Promise.all([
+  const [plan, done, held, market, folio] = await Promise.all([
     db.aiPlan.findUnique({ where: { month } }),
     db.investPick.findMany({ where: { month } }),
     holdings(),
     loadMarket(),
+    portfolio(),
   ]);
   // A one-off larger (or smaller) amount for this deposit, from the amount box; otherwise the standing order.
   const amount = Number(searchParams?.amount) > 0 ? Number(searchParams.amount) : settings.monthlyInvest;
@@ -80,7 +86,14 @@ export default async function Invest({ searchParams }) {
 
   return (
     <>
-      <h1>השקעות: הפקדה ב-{date(day)}</h1>
+      <div className="page-head">
+        <h1>השקעות: הפקדה ב-{date(day)}</h1>
+        {advisorEnabled() && (
+          <form action={runNow} style={{ maxWidth: "none" }}>
+            <AiButton label="בדיקה של Claude עכשיו" updated={plan?.createdAt.toLocaleString("he-IL")} />
+          </form>
+        )}
+      </div>
       <p className="label">
         {plan
           ? `${plan.final ? "בדיקה סופית" : "בדיקה יומית"} של Claude מ-${plan.createdAt.toLocaleString("he-IL")}. ${plan.final ? "" : `הבדיקה הסופית ב-${date(day)}, לפני ההפקדה.`}`
@@ -119,7 +132,7 @@ export default async function Invest({ searchParams }) {
               {picks.map((p) => (
                 <tr key={p.symbol}>
                   <td><b>{ils(p.amount)}</b></td>
-                  <td><b>{p.symbol}</b></td>
+                  <td><span className="sym"><Logo id={p.symbol} label={p.name} /><b>{p.symbol}</b></span></td>
                   <td className="line-name">
                     <details>
                       <summary title={p.name}>{p.name}</summary>
@@ -151,16 +164,48 @@ export default async function Invest({ searchParams }) {
           ) : (
             <form action={confirm}>
               <input type="hidden" name="month" value={month.toISOString()} />
-              <input type="hidden" name="picks" value={JSON.stringify(picks.map(({ symbol, name, bucket, pct, amount }) => ({ symbol, name, bucket, pct, amount })))} />
+              <input type="hidden" name="picks" value={JSON.stringify(picks.map(({ symbol, name, bucket, pct, amount, units, priceIls }) => ({ symbol, name, bucket, pct, amount, units, priceIls })))} />
               <button type="submit">קניתי ✓</button>
             </form>
           )}
-          {advisorEnabled() && (
-            <form action={runNow}>
-              <button type="submit" className="secondary">בדיקה של Claude עכשיו (1–3 דק׳)</button>
-            </form>
-          )}
         </div>
+      </div>
+
+      <div className="card" style={{ marginTop: 12 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
+          <h2 style={{ margin: 0 }}>התיק שלי</h2>
+          <span className="label">לפי כל ההפקדות שסימנת ״קניתי״, במחירי היום</span>
+        </div>
+        {folio.rows.length === 0 ? (
+          <p className="label">עוד אין קניות. אחרי ״קניתי״ התיק, הרווח והתשואה יחושבו כאן ובדף הראשי.</p>
+        ) : (
+          <>
+            <div className="hero-row" style={{ marginTop: 8 }}>
+              <div><div className="label">הושקע</div><div className="value">{ils(folio.cost)}</div></div>
+              <div><div className="label">שווי היום</div><div className="value">{ils(folio.value)}</div></div>
+              <div><div className="label">רווח / הפסד</div><div className={`value ${folio.profit >= 0 ? "pos" : "neg"}`}>{ils(folio.profit)}</div></div>
+              <div><div className="label">תשואה</div><div className={`value ${folio.pct >= 0 ? "pos" : "neg"}`}>{pct(folio.pct)}</div></div>
+            </div>
+            <div style={{ overflowX: "auto", marginTop: 8 }}>
+              <table className="compact">
+                <thead><tr><th>סימול</th><th>שם</th><th>יחידות</th><th>הושקע</th><th>שווי</th><th>רווח</th><th>%</th></tr></thead>
+                <tbody>
+                  {folio.rows.map((h) => (
+                    <tr key={h.symbol}>
+                      <td><span className="sym"><Logo id={h.symbol} label={h.name} size={18} /><b>{h.symbol}</b></span></td>
+                      <td className="line-name" title={h.name}>{h.name}</td>
+                      <td>{h.units ? h.units.toFixed(3) : "—"}</td>
+                      <td>{ils(h.cost)}</td>
+                      <td>{ils(h.value)}</td>
+                      <td className={h.profit >= 0 ? "pos" : "neg"}>{ils(h.profit)}</td>
+                      <td><Ret x={h.pct} /></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
       </div>
 
       <div className="card" style={{ marginTop: 12 }}>
@@ -208,7 +253,7 @@ export default async function Invest({ searchParams }) {
                   const q = market.bySymbol[s];
                   return (
                     <tr key={s} style={picks.some((p) => p.symbol === s) ? { fontWeight: 700 } : undefined}>
-                      <td>{s}</td>
+                      <td><span className="sym"><Logo id={s} label={q.name} size={18} />{s}</span></td>
                       <td className="line-name">
                         <details>
                           <summary title={q.name}>{q.name}</summary>

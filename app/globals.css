@@ -70,3 +70,18 @@ nav .nav-end { margin-inline-start: auto; opacity: 0.85; }
 .review-fund { border-top: 1px solid var(--track); padding: 10px 0; display: grid; gap: 4px; }
 .tag-stay { background: #e3f4e8; color: var(--pos); }
 .tag-switch { background: #fde8e6; color: var(--neg); }
+.page-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.page-head h1 { margin: 16px 0; }
+.ai-button { display: inline-flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.ai-button button { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; }
+.ai-button button:disabled { opacity: 0.85; cursor: progress; }
+.spinner { width: 16px; height: 16px; border: 2px solid rgba(255, 255, 255, 0.4); border-top-color: #fff; border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.sym { display: inline-flex; align-items: center; gap: 6px; }
+.status { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--muted); background: var(--track); border-radius: 999px; padding: 2px 10px; white-space: nowrap; }
+.status::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+.status.on { color: var(--pos); background: #e3f4e8; }
+.status.on::before { background: var(--pos); box-shadow: 0 0 0 3px rgba(30, 142, 62, 0.18); }
+.claude-btn { background: #fff; color: var(--text); border: 1px solid #D97757; }
+.claude-btn:hover { background: #fdf3ef; }
+.claude-spin { animation: spin 1.2s linear infinite; }

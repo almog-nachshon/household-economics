@@ -2,7 +2,8 @@ import { db } from "@/lib/db";
 import { loadData } from "@/lib/data";
 import { startOfMonth, monthBudget } from "@/lib/budget";
 import { fixedItems, monthlyIncome } from "@/lib/base";
-import { homeGoal, ils } from "@/lib/goal";
+import { homeGoal, monthsBetween, ils } from "@/lib/goal";
+import { portfolio, projectPortfolio } from "@/lib/holdings";
 import { depositMonth, depositDate } from "@/lib/invest-run";
 
 export const dynamic = "force-dynamic";
@@ -26,13 +27,14 @@ export default async function Home() {
   const today = new Date();
   const month = startOfMonth(today);
   const dMonth = depositMonth(today);
-  const [incomes, expenses, loans, spends, funds, plan] = await Promise.all([
+  const [incomes, expenses, loans, spends, funds, plan, folio] = await Promise.all([
     db.income.findMany(),
     db.expense.findMany(),
     db.loan.findMany(),
     db.spend.findMany({ where: { date: { gte: month } } }),
     db.fund.findMany(),
     db.aiPlan.findUnique({ where: { month: dMonth } }),
+    portfolio(),
   ]);
   const income = monthlyIncome(incomes, settings, last);
   const items = fixedItems({ expenses, loans, settings, month });
@@ -40,7 +42,9 @@ export default async function Home() {
   const fixed = b.standing + b.credit;
   const monthlySaving = Math.max(0, b.leftAfterFixed - settings.monthlyInvest);
   const kerens = funds.filter((f) => f.kind === "keren");
-  const g = homeGoal({ settings, homeSavings: last?.homeSavings ?? 0, kerens, monthlySaving, today });
+  // The portfolio counts toward the home: today's value, and at the target with the monthly deposit (5% a year assumed).
+  const portfolioAtTarget = projectPortfolio(folio.value, settings.monthlyInvest, Math.max(0, monthsBetween(today, settings.targetDate)));
+  const g = homeGoal({ settings, homeSavings: last?.homeSavings ?? 0, kerens, monthlySaving, portfolioNow: folio.value, portfolioAtTarget, today });
   const onTrack = monthlySaving >= g.requiredPace;
   const emergency = last?.emergencyFund ?? 0;
 
@@ -57,7 +61,7 @@ export default async function Home() {
         </div>
         <div className="meter" style={{ marginTop: 12 }}><div style={{ width: `${g.pct * 100}%` }} /></div>
         <div className="label" style={{ marginTop: 6 }}>
-          {Math.round(g.pct * 100)}% מהיעד · חיסכון לבית {ils(last?.homeSavings ?? 0)} + קרן השתלמות נזילה {ils(g.kerenNow)} ·{" "}
+          {Math.round(g.pct * 100)}% מהיעד · חיסכון לבית {ils(last?.homeSavings ?? 0)} + תיק השקעות {ils(folio.value)} + קרן השתלמות נזילה {ils(g.kerenNow)} ·{" "}
           {g.monthsLeft} חודשים ליעד · צריך לחסוך <b className={onTrack ? "pos" : "neg"}>{ils(g.requiredPace)}</b> בחודש, נשאר לחיסכון{" "}
           <b className={onTrack ? "pos" : "neg"}>{ils(monthlySaving)}</b> (אחרי הוצאות קבועות והשקעה)
         </div>
@@ -69,6 +73,11 @@ export default async function Home() {
         </Tile>
         <Tile href="/invest" title={`השקעה ב-${date(depositDate(dMonth))}`} value={ils(settings.monthlyInvest)}>
           {plan ? `${plan.final ? "בדיקה סופית" : "בדיקה"} של Claude מ-${date(plan.createdAt)} · מתכות ${plan.metalsPct}%` : "Claude עוד לא בדק את ההפקדה הזו"}
+        </Tile>
+        <Tile href="/invest" title="תיק השקעות" value={ils(folio.value)} valueClass={folio.profit >= 0 ? "pos" : "neg"}>
+          {folio.rows.length
+            ? `הושקע ${ils(folio.cost)} · רווח ${ils(folio.profit)} (${(folio.pct * 100).toFixed(1)}%) · צפי ביעד ${ils(portfolioAtTarget)}`
+            : `עוד אין קניות · עם ${ils(settings.monthlyInvest)} בחודש: צפי ביעד ${ils(portfolioAtTarget)}`}
         </Tile>
         <Tile href="/funds" title="קרנות השתלמות" value={ils(kerens.reduce((t, f) => t + f.balance, 0))}>
           לבית ב-{date(settings.targetDate)}: {ils(g.kerenAtTarget)}
