@@ -101,3 +101,22 @@ nav .brand { font-weight: 800; color: #fff; margin-inline-end: 8px; }
 .site-footer { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px 16px; max-width: 960px; margin: 32px auto 0; padding: 16px; border-top: 1px solid var(--track); font-size: 14px; }
 .site-footer a { color: inherit; text-decoration: none; }
 .site-footer a:hover { color: var(--accent); }
+/* Invest page: deposit hero and pick cards */
+.invest-hero { border-top-width: 5px; background: linear-gradient(180deg, var(--accent-soft), var(--card) 160px); }
+.invest-hero-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 16px; align-items: center; }
+.bucket-bars { display: grid; gap: 6px; min-width: min(100%, 300px); }
+.bucket-bar { display: grid; grid-template-columns: 110px 1fr 44px; gap: 8px; align-items: center; font-size: 13px; }
+.meter.thin { height: 8px; }
+.pick-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); gap: 12px; margin-top: 8px; }
+.pick-card { background: var(--card); border: 1px solid var(--track); border-inline-start: 4px solid var(--accent); border-radius: 12px; padding: 12px; display: grid; gap: 8px; align-content: start; box-shadow: 0 2px 8px rgba(15, 163, 163, 0.07); transition: transform .15s, box-shadow .15s; }
+.pick-card:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(15, 163, 163, 0.14); }
+.pick-top { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; }
+.pick-name { max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+.pick-amount { text-align: end; font-size: 18px; }
+.pick-amount .label { font-size: 12px; }
+.pick-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.pick-reason { margin: 0; font-size: 14px; line-height: 1.5; }
+.pick-line { font-size: 13px; line-height: 1.5; background: var(--accent-soft); border-radius: 8px; padding: 6px 8px; }
+.pick-line span { display: block; color: var(--accent); font-weight: 700; font-size: 12px; }
+.pick-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; border-top: 1px solid var(--track); padding-top: 8px; font-size: 13px; }
+.pick-stats span { display: block; color: var(--muted); font-size: 11px; }

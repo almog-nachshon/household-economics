@@ -111,47 +111,55 @@ export default async function Invest({ searchParams }) {
         {amount !== settings.monthlyInvest && <a href="/invest">חזרה להוראת הקבע ({ils(settings.monthlyInvest)})</a>}
       </form>
 
-      <div className="card">
-        <h2>{ils(amount)} לאינטראקטיב, לאן:</h2>
-        <p className="label" style={{ marginTop: 0 }}>
-          {BUCKETS.map((b) => `${b.name} ${Math.round(bucketPct(b, metalsPct) * 10) / 10}%`).join(" · ")}
-          {plan ? " (אחוז המתכות לפי הבדיקה של Claude)" : ""}
-        </p>
-        <div className="pies" style={{ marginBottom: 12 }}>
+      <div className="card invest-hero">
+        <div className="invest-hero-head">
+          <div>
+            <div className="label">הפקדה ב-{date(day)}</div>
+            <div className="value big">{ils(amount)}</div>
+            <div className="label">{picks.length} החזקות · {plan ? `לפי מחקר של Claude` : "לפי ציון ביצועים"}</div>
+          </div>
+          <div className="bucket-bars">
+            {BUCKETS.map((b) => {
+              const share = bucketPct(b, metalsPct);
+              return (
+                <div key={b.key} className="bucket-bar">
+                  <span>{b.name}</span>
+                  <div className="meter thin"><div style={{ width: `${share}%`, background: BUCKET_COLORS[b.key] }} /></div>
+                  <b>{Math.round(share * 10) / 10}%</b>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+        <div className="pies" style={{ margin: "8px 0 4px" }}>
           <SplitPie
             centerLabel="להשקעה"
             data={picks.map((p) => ({ name: `${p.symbol} · ${p.name} · ${bucketName[p.bucket]}`, value: p.amount, color: BUCKET_COLORS[p.bucket] }))}
           />
         </div>
-        <div style={{ overflowX: "auto" }}>
-          <table className="compact">
-            <thead>
-              <tr><th>סכום</th><th>סימול</th><th>שם (לחיצה לפרטים)</th><th>סוג</th><th>%</th><th>לקנות</th><th>שנה</th></tr>
-            </thead>
-            <tbody>
-              {picks.map((p) => (
-                <tr key={p.symbol}>
-                  <td><b>{ils(p.amount)}</b></td>
-                  <td><span className="sym"><Logo id={p.symbol} label={p.name} /><b>{p.symbol}</b></span></td>
-                  <td className="line-name">
-                    <details>
-                      <summary title={p.name}>{p.name}</summary>
-                      <div className="pick-more">
-                        <div>💡 {p.reason || numbersReason(p)}</div>
-                        <div className="label">
-                          מחיר {p.priceIls ? ils(p.priceIls) : "—"} · חודש <Ret x={p.m1} /> · 3 ח׳ <Ret x={p.m3} /> · 6 ח׳ <Ret x={p.m6} /> · תנודתיות {pct(p.vol)}
-                        </div>
-                      </div>
-                    </details>
-                  </td>
-                  <td><span className="tag" style={{ background: BUCKET_COLORS[p.bucket], color: "#fff" }}>{bucketName[p.bucket]}</span></td>
-                  <td>{Math.round(p.pct * 10) / 10}%</td>
-                  <td>{units(p)}</td>
-                  <td><Ret x={p.m12} /></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="pick-grid">
+          {picks.map((p) => (
+            <div key={p.symbol} className="pick-card" style={{ borderInlineStartColor: BUCKET_COLORS[p.bucket] }}>
+              <div className="pick-top">
+                <span className="sym"><Logo id={p.symbol} label={p.name} size={28} /><span><b>{p.symbol}</b><div className="label pick-name" title={p.name}>{p.name}</div></span></span>
+                <div className="pick-amount"><b>{ils(p.amount)}</b><div className="label">{units(p)}</div></div>
+              </div>
+              <div className="pick-tags">
+                <span className="tag" style={{ background: BUCKET_COLORS[p.bucket], color: "#fff", marginInlineStart: 0 }}>{bucketName[p.bucket]}</span>
+                <span className="tag">{Math.round(p.pct * 10) / 10}%</span>
+                {p.conviction ? <span className="tag tag-card" title="רמת ביטחון של Claude">{"★".repeat(Math.round(p.conviction))}{"☆".repeat(5 - Math.round(p.conviction))}</span> : null}
+              </div>
+              <p className="pick-reason">💡 {p.reason || numbersReason(p)}</p>
+              {p.analysts && <div className="pick-line"><span>אנליסטים</span>{p.analysts}</div>}
+              {p.outlook && <div className="pick-line"><span>צפי</span>{p.outlook}</div>}
+              <div className="pick-stats">
+                <div><span>מחיר</span>{p.priceIls ? ils(p.priceIls) : "—"}</div>
+                <div><span>3 ח׳</span><Ret x={p.m3} /></div>
+                <div><span>שנה</span><Ret x={p.m12} /></div>
+                <div><span>תנודתיות</span>{pct(p.vol)}</div>
+              </div>
+            </div>
+          ))}
         </div>
         {leftover > 1 && <p className="label">נשאר כמזומן בחשבון: {ils(leftover)} (קרן בלונדון נקנית ביחידות שלמות).</p>}
         <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
