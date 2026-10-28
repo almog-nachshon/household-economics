@@ -138,6 +138,22 @@ model Fund {
   returnPct        Float     @default(5) // assumed yearly return before fees, %
   liquidDate       DateTime? // keren hishtalmut: when it can be withdrawn tax-free
   forHome          Boolean   @default(false) // counted toward the home down payment once liquid
+  track            String    @default("") // investment track, e.g. "מניות"
+  policy           String    @default("") // policy / fund number
+  joinDate         DateTime?
+  providerRetire   Float     @default(0) // the fund's own projection at retirement (savings)
+  providerPension  Float     @default(0) // the fund's own projected monthly pension
+  coverage         String    @default("") // insurance cover, one "name: amount" per line
+}
+
+// Claude's review of the pension and keren hishtalmut tracks against the market's best (lib/fund-advisor.js).
+model FundReview {
+  id        Int      @id @default(autoincrement())
+  month     DateTime @unique
+  summary   String
+  funds     String   // JSON: [{fund, current, verdict, best, alternatives, reason}]
+  research  String
+  createdAt DateTime @default(now())
 }
 
 // A credit card, shown by its last 4 digits, so each fixed expense can say which card pays it.
