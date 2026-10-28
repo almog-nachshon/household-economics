@@ -90,13 +90,13 @@ export default async function Invest({ searchParams }) {
         <h1>השקעות: הפקדה ב-{date(day)}</h1>
         {advisorEnabled() && (
           <form action={runNow} style={{ maxWidth: "none" }}>
-            <AiButton label="בדיקה של Claude עכשיו" updated={plan?.createdAt.toLocaleString("he-IL")} />
+            <AiButton label="בדיקה של Claude עכשיו" updated={plan?.createdAt.toLocaleString("he-IL", { timeZone: "Asia/Jerusalem" })} />
           </form>
         )}
       </div>
       <p className="label">
         {plan
-          ? `${plan.final ? "בדיקה סופית" : "בדיקה יומית"} של Claude מ-${plan.createdAt.toLocaleString("he-IL")}. ${plan.final ? "" : `הבדיקה הסופית ב-${date(day)}, לפני ההפקדה.`}`
+          ? `${plan.final ? "בדיקה סופית" : "בדיקה יומית"} של Claude מ-${plan.createdAt.toLocaleString("he-IL", { timeZone: "Asia/Jerusalem" })}. ${plan.final ? "" : `הבדיקה הסופית ב-${date(day)}, לפני ההפקדה.`}`
           : advisorEnabled()
             ? "Claude עוד לא בדק את ההפקדה הזו. עד אז החלוקה לפי הביצועים בלבד."
             : "חסר ANTHROPIC_API_KEY, אז החלוקה לפי הביצועים בלבד (בלי Claude)."}

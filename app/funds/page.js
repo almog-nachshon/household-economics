@@ -131,7 +131,7 @@ export default async function Funds({ searchParams }) {
         <h1>קרנות השתלמות ופנסיה</h1>
         {advisorEnabled() && (
           <form action={reviewNow} style={{ maxWidth: "none" }}>
-            <AiButton label="בדיקת מסלולים עם Claude" updated={review?.createdAt.toLocaleString("he-IL")} />
+            <AiButton label="בדיקת מסלולים עם Claude" updated={review?.createdAt.toLocaleString("he-IL", { timeZone: "Asia/Jerusalem" })} />
           </form>
         )}
       </div>
@@ -234,7 +234,7 @@ export default async function Funds({ searchParams }) {
         {review ? (
           <>
             <p>{review.summary}</p>
-            <p className="label">נבדק ב-{review.createdAt.toLocaleString("he-IL")}</p>
+            <p className="label">נבדק ב-{review.createdAt.toLocaleString("he-IL", { timeZone: "Asia/Jerusalem" })}</p>
             {JSON.parse(review.funds).map((r) => (
               <div key={r.fund} className="review-fund">
                 <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
