@@ -85,3 +85,5 @@ nav .nav-end { margin-inline-start: auto; opacity: 0.85; }
 .claude-btn { background: #fff; color: var(--text); border: 1px solid #D97757; }
 .claude-btn:hover { background: #fdf3ef; }
 .claude-spin { animation: spin 1.2s linear infinite; }
+.add-fund > summary { list-style: none; cursor: pointer; display: inline-block; margin-top: 0; }
+.add-fund > summary::-webkit-details-marker { display: none; }

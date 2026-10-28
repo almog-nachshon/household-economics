@@ -68,11 +68,6 @@ async function reviewNow() {
   redirect("/funds#review");
 }
 
-async function saveBirthYear(formData) {
-  "use server";
-  await db.settings.update({ where: { id: 1 }, data: { birthYear: Number(formData.get("birthYear") || 0) } });
-  revalidatePath("/funds");
-}
 
 const inline = { display: "grid", gap: 4, maxWidth: "none" };
 const Row = ({ children }) => <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "end" }}>{children}</div>;
@@ -113,7 +108,8 @@ export default async function Funds({ searchParams }) {
     db.fundReview.findFirst({ orderBy: { month: "desc" } }),
   ]);
   const target = settings.targetDate;
-  const retire = settings.birthYear ? new Date(settings.birthYear + 67, 0, 1) : null;
+  const b = settings.birthDate;
+  const retire = b ? new Date(b.getFullYear() + 67, b.getMonth(), b.getDate()) : null;
   const kerens = funds.filter((f) => f.kind === "keren");
   const pensions = funds.filter((f) => f.kind === "pension");
   const total = (list) => list.reduce((t, f) => t + f.balance, 0);
@@ -177,7 +173,7 @@ export default async function Funds({ searchParams }) {
                       </>
                     ) : (
                       <>
-                        <div><span className="label">צפי חיסכון לפרישה{f.providerRetire ? " (הקופה)" : ""}</span><b className="pos">{atRetire ? ils(atRetire) : "הזן שנת לידה"}</b></div>
+                        <div><span className="label">צפי חיסכון לפרישה{f.providerRetire ? " (הקופה)" : ""}</span><b className="pos">{atRetire ? ils(atRetire) : "הזן תאריך לידה בהגדרות"}</b></div>
                         <div><span className="label">קצבה צפויה{f.providerPension ? " (הקופה)" : ""}</span><b className="pos">{pensionMonthly ? `${ils(pensionMonthly)} לחודש` : "—"}</b></div>
                       </>
                     )}
@@ -298,20 +294,16 @@ export default async function Funds({ searchParams }) {
         </details>
       )}
 
-      <div className="card" style={{ marginTop: 12 }}>
-        <h2>הוספת קרן</h2>
-        <form action={addFund} style={{ maxWidth: "none" }}>
-          <FundFields f={{ returnPct: 5 }} />
-          <button type="submit" style={{ marginTop: 8 }}>הוספה</button>
-        </form>
-      </div>
+      <details className="add-fund" style={{ marginTop: 12 }}>
+        <summary className="button">+ הוספת קרן</summary>
+        <div className="card" style={{ marginTop: 8 }}>
+          <form action={addFund} style={{ maxWidth: "none" }}>
+            <FundFields f={{ returnPct: 5 }} />
+            <button type="submit" style={{ marginTop: 8 }}>הוספה</button>
+          </form>
+        </div>
+      </details>
 
-      <form action={saveBirthYear} className="card" style={{ marginTop: 12, maxWidth: "none" }}>
-        <Row>
-          <label style={inline}>שנת לידה (לתחזית פנסיה בגיל 67) <input type="number" name="birthYear" defaultValue={settings.birthYear || ""} style={{ width: 100 }} /></label>
-          <button type="submit" className="secondary">שמירה</button>
-        </Row>
-      </form>
 
       <div className="card label" style={{ marginTop: 12 }}>
         <h2>איך זה מחושב</h2>

@@ -50,7 +50,8 @@ model Settings {
   arnonaDiscountPct Float   @default(0)  // discount %, e.g. 60
   arnonaDiscountSqm Float   @default(0)  // the discount applies to the first N m², e.g. 97
   rentRenewMonth    Int     @default(12) // month the lease renews (1-12)
-  birthYear         Int     @default(0)  // for pension projections to age 67
+  birthYear         Int     @default(0)  // legacy; birthDate is used
+  birthDate         DateTime? // for pension projections to age 67
 }
 
 // A monthly income line in the base budget (salary, Ministry of Defense allowance, ...).

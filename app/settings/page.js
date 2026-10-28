@@ -18,6 +18,7 @@ async function save(formData) {
   "use server";
   const data = Object.fromEntries(NUMBERS.map(([k]) => [k, Number(formData.get(k))]));
   data.targetDate = new Date(formData.get("targetDate"));
+  data.birthDate = formData.get("birthDate") ? new Date(formData.get("birthDate")) : null;
   // One "TICKER, name, pct" per line.
   data.allocations = JSON.stringify(
     String(formData.get("allocations"))
@@ -41,6 +42,7 @@ export default async function Settings() {
           <label key={k}>{label} <input type="number" name={k} step={step || "1"} defaultValue={s[k]} required /></label>
         ))}
         <label>תאריך יעד <input type="date" name="targetDate" defaultValue={s.targetDate.toISOString().slice(0, 10)} required /></label>
+        <label>תאריך לידה (לתחזית פנסיה בגיל 67) <input type="date" name="birthDate" defaultValue={s.birthDate ? s.birthDate.toISOString().slice(0, 10) : ""} /></label>
         <label>
           חלוקת ETF (שורה לכל קרן: סימול, שם, אחוז). מתעדכן אוטומטית כשמסמנים ״קניתי״ בדף ההשקעות
           <textarea name="allocations" rows={7} defaultValue={allocations} placeholder="CSPX, S&P 500, 50" />
