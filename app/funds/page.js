@@ -246,7 +246,7 @@ export default async function Funds({ searchParams }) {
                 {r.alternatives.length > 0 && (
                   <div style={{ overflowX: "auto" }}>
                     <table className="compact">
-                      <thead><tr><th>קופה / מסלול</th><th>3 שנים</th><th>5 שנים</th><th>ד״נ צבירה</th><th>ד״נ הפקדה</th><th>12 ח׳</th></tr></thead>
+                      <thead><tr><th>קופה / מסלול</th><th>3 שנים (שנתי)</th><th>5 שנים (שנתי)</th><th>ד״נ צבירה</th><th>ד״נ הפקדה</th><th>מתחילת השנה</th></tr></thead>
                       <tbody>
                         {r.alternatives.map((a) => (
                           <tr key={a.name}><td className="line-name" title={a.name}>{a.name}</td><td><b>{a.return3y}</b></td><td><b>{a.return5y}</b></td><td>{a.feeBalance ?? a.fee}</td><td>{a.feeDeposit ?? "—"}</td><td className="label">{a.return1y}</td></tr>
