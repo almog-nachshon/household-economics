@@ -246,8 +246,9 @@ export default async function Invest({ searchParams }) {
               <b>{Math.round(bucketPct(b, metalsPct) * 10) / 10}%</b>
             </div>
             <div className="label">{b.count === 1 ? "בחירה אחת" : `${b.count} בחירות`} · מודגש = נבחר החודש · לחיצה על שם לפרטים</div>
-            <table className="compact">
-              <thead><tr><th>סימול</th><th>שם</th><th>חודש</th><th>6 ח׳</th><th>שנה</th></tr></thead>
+            <div className="table-scroll">
+            <table className="compact wide">
+              <thead><tr><th>סימול</th><th>שם</th><th>חודש</th><th>3 ח׳</th><th>6 ח׳</th><th>שנה</th><th>תנודתיות</th><th>ירידה מקס׳</th></tr></thead>
               <tbody>
                 {b.candidates.map(([s]) => {
                   const q = market.bySymbol[s];
@@ -267,20 +268,21 @@ export default async function Invest({ searchParams }) {
                           </div>
                         </details>
                       </td>
-                      {q.error ? <td colSpan={3} className="warn">אין נתונים</td> : (
-                        <><td><Ret x={q.m1} /></td><td><Ret x={q.m6} /></td><td><Ret x={q.m12} /></td></>
+                      {q.error ? <td colSpan={6} className="warn">אין נתונים</td> : (
+                        <><td><Ret x={q.m1} /></td><td><Ret x={q.m3} /></td><td><Ret x={q.m6} /></td><td><Ret x={q.m12} /></td><td className="label">{pct(q.vol)}</td><td><Ret x={q.maxDrawdown} /></td></>
                       )}
                     </tr>
                   );
                 })}
               </tbody>
             </table>
+            </div>
           </div>
         ))}
       </div>
 
       <p className="label" style={{ marginTop: 12 }}>
-        מחירים מ-Yahoo Finance, מתעדכנים כל 12 שעות. זו המלצה של מודל לפי נתוני עבר וחדשות, לא ייעוץ השקעות.
+        הטבלה מ-Yahoo Finance (מתעדכנת כל 12 שעות); Claude מצליב מחירים וחדשות מול Reuters, Bloomberg, CNBC, Morningstar, Investing.com ודוחות החברות. זו המלצה של מודל לפי נתוני עבר וחדשות, לא ייעוץ השקעות.
       </p>
     </>
   );

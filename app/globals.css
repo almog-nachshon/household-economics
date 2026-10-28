@@ -87,3 +87,10 @@ nav .nav-end { margin-inline-start: auto; opacity: 0.85; }
 .claude-spin { animation: spin 1.2s linear infinite; }
 .add-fund > summary { list-style: none; cursor: pointer; display: inline-block; margin-top: 0; }
 .add-fund > summary::-webkit-details-marker { display: none; }
+.blocks > .card { min-width: 0; }
+.table-scroll { overflow-x: auto; margin-top: 6px; scrollbar-width: thin; scrollbar-color: var(--accent) var(--track); }
+.table-scroll::-webkit-scrollbar { height: 6px; }
+.table-scroll::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 3px; }
+table.compact.wide { width: max-content; min-width: 100%; }
+table.compact.wide td, table.compact.wide th { white-space: nowrap; }
+table.compact.wide td.line-name { width: auto; max-width: 200px; }
