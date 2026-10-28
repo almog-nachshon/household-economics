@@ -17,6 +17,7 @@ export default function Logo({ id, label, size = 22 }) {
   const [failed, setFailed] = useState(false);
   const style = { width: size, height: size, borderRadius: 6, flex: "none", verticalAlign: "middle" };
   if (EMOJI[id]) return <span style={{ ...style, display: "inline-grid", placeItems: "center", fontSize: size * 0.8 }}>{EMOJI[id]}</span>;
+  if (id === "mor") return <MorMark size={size} />;
   const domain = DOMAINS[id];
   if (!domain || failed) {
     return (
@@ -35,6 +36,18 @@ export function ClaudeMark({ size = 18, spinning = false }) {
       {Array.from({ length: 12 }, (_, i) => (
         <rect key={i} x="11" y="1.5" width="2" height="8" rx="1" fill="#D97757" transform={`rotate(${i * 30} 12 12)`} opacity={spinning ? 0.35 + (i / 12) * 0.65 : 1} />
       ))}
+    </svg>
+  );
+}
+
+// More (Mor) investment house: navy M legs with the teal check, after their app icon.
+function MorMark({ size }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 48 48" aria-label="מור" style={{ flex: "none", verticalAlign: "middle" }}>
+      <rect width="48" height="48" rx="8" fill="#fff" />
+      <path d="M8 14 L15 14 L15 40 L8 40 Z" fill="#1d3a63" />
+      <path d="M33 22 L40 15 L40 40 L33 40 Z" fill="#1d3a63" />
+      <path d="M9 13 L17 13 L24 27 L37 6 C39 4 43 6 42 9 L27 35 C26 37 22 37 21 35 Z" fill="#6cc4c8" />
     </svg>
   );
 }
