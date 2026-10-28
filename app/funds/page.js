@@ -207,8 +207,8 @@ export default async function Funds({ searchParams }) {
           <h2 style={{ margin: 0, display: "flex", gap: 8, alignItems: "center" }}><ClaudeMark size={20} /> בדיקת מסלולים עם Claude</h2>
         </div>
         <p className="label">
-          משווה את מסלולי המניות שלך בפנסיה ובהשתלמות למובילים בשוק (תשואה נטו 1/3/5 שנים, דמי ניהול, סיכון). רץ אוטומטית
-          ב-10 לכל חודש.
+          לכל קופה (פנסיה מקיפה, משלימה, קרנות השתלמות): 3 הקופות הכי טובות שיכולות להחליף אותה, לפי תשואה נטו ל-3 ול-5 שנים
+          ודמי ניהול מצבירה ומהפקדה. רץ אוטומטית פעם ב-3 חודשים (ב-10 לחודש), ובכל רגע מהכפתור למעלה.
         </p>
         {searchParams?.error && <p className="warn">הבדיקה נכשלה: {searchParams.error}</p>}
         {review ? (
@@ -226,10 +226,10 @@ export default async function Funds({ searchParams }) {
                 {r.alternatives.length > 0 && (
                   <div style={{ overflowX: "auto" }}>
                     <table className="compact">
-                      <thead><tr><th>מסלול</th><th>12 ח׳</th><th>3 שנים</th><th>5 שנים</th><th>דמי ניהול</th></tr></thead>
+                      <thead><tr><th>קופה / מסלול</th><th>3 שנים</th><th>5 שנים</th><th>ד״נ צבירה</th><th>ד״נ הפקדה</th><th>12 ח׳</th></tr></thead>
                       <tbody>
                         {r.alternatives.map((a) => (
-                          <tr key={a.name}><td className="line-name" title={a.name}>{a.name}</td><td>{a.return1y}</td><td>{a.return3y}</td><td>{a.return5y}</td><td>{a.fee}</td></tr>
+                          <tr key={a.name}><td className="line-name" title={a.name}>{a.name}</td><td><b>{a.return3y}</b></td><td><b>{a.return5y}</b></td><td>{a.feeBalance ?? a.fee}</td><td>{a.feeDeposit ?? "—"}</td><td className="label">{a.return1y}</td></tr>
                         ))}
                       </tbody>
                     </table>
