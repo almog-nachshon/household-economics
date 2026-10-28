@@ -144,6 +144,10 @@ model Fund {
   track            String    @default("") // investment track, e.g. "מניות"
   policy           String    @default("") // policy / fund number
   joinDate         DateTime?
+  seniorityDate    DateTime? // ותק: can be earlier than joinDate when moved from another fund
+  employer         String    @default("")
+  agent            String    @default("") // the insurance agency on the account (סוכן מיופה כח)
+  agentInfo        String    @default("") // its contact details, one per line
   providerRetire   Float     @default(0) // the fund's own projection at retirement (savings)
   providerPension  Float     @default(0) // the fund's own projected monthly pension
   coverage         String    @default("") // insurance cover, one "name: amount" per line

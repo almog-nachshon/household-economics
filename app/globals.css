@@ -94,3 +94,5 @@ nav .nav-end { margin-inline-start: auto; opacity: 0.85; }
 table.compact.wide { width: max-content; min-width: 100%; }
 table.compact.wide td, table.compact.wide th { white-space: nowrap; }
 table.compact.wide td.line-name { width: auto; max-width: 200px; }
+.agent { margin-top: 8px; background: var(--accent-soft); border-radius: 8px; padding: 6px 10px; }
+.agent summary { cursor: pointer; }

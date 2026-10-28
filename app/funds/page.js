@@ -33,6 +33,10 @@ function fundData(formData) {
     balanceDate: dayOf(formData.get("balanceDate")),
     liquidDate: dayOf(formData.get("liquidDate")),
     joinDate: dayOf(formData.get("joinDate")),
+    seniorityDate: dayOf(formData.get("seniorityDate")),
+    employer: String(formData.get("employer") || ""),
+    agent: String(formData.get("agent") || ""),
+    agentInfo: String(formData.get("agentInfo") || ""),
     forHome: formData.get("forHome") === "on",
     track: String(formData.get("track") || ""),
     policy: String(formData.get("policy") || ""),
@@ -93,6 +97,10 @@ function FundFields({ f = {} }) {
       <label style={inline}>מסלול <input name="track" defaultValue={f.track} style={{ width: 110 }} /></label>
       <label style={inline}>מספר פוליסה <input name="policy" defaultValue={f.policy} style={{ width: 120 }} /></label>
       <label style={inline}>הצטרפות <input type="date" name="joinDate" defaultValue={iso(f.joinDate)} /></label>
+      <label style={inline}>ותק <input type="date" name="seniorityDate" defaultValue={iso(f.seniorityDate)} /></label>
+      <label style={inline}>מעסיק <input name="employer" defaultValue={f.employer} style={{ width: 160 }} /></label>
+      <label style={inline}>סוכן <input name="agent" defaultValue={f.agent} style={{ width: 200 }} /></label>
+      <label style={{ ...inline, width: "100%" }}>פרטי הסוכן (שורה לכל פרט: טלפון, מייל, איש קשר) <textarea name="agentInfo" rows={2} defaultValue={f.agentInfo} /></label>
       {n("providerRetire", "צפי הקופה לפרישה", "1", 120)}
       {n("providerPension", "קצבה צפויה (הקופה)", "1", 110)}
       <label style={{ ...inline, width: "100%" }}>כיסויים (שורה לכל כיסוי: שם: סכום) <textarea name="coverage" rows={3} defaultValue={f.coverage} /></label>
@@ -158,7 +166,7 @@ export default async function Funds({ searchParams }) {
                   <div className="label" style={{ textAlign: "center" }}>נכון ל-{date(f.balanceDate)}</div>
                   <div className="fund-grid">
                     <div><span className="label">מסלול</span><b>{f.track || "—"}</b></div>
-                    <div><span className="label">הצטרפות</span><b>{f.joinDate ? date(f.joinDate) : "—"}</b></div>
+                    <div><span className="label">הצטרפות</span><b>{f.joinDate ? date(f.joinDate) : "—"}</b>{f.seniorityDate && <span className="label">ותק מ-{date(f.seniorityDate)}</span>}</div>
                     <div><span className="label">דמי ניהול מצבירה</span><b>{f.feeBalancePct}%</b></div>
                     <div><span className="label">דמי ניהול מהפקדה</span><b>{f.feeDepositPct}%</b></div>
                     <div>
@@ -178,6 +186,18 @@ export default async function Funds({ searchParams }) {
                       </>
                     )}
                   </div>
+                  {f.agent && (
+                    <details className="agent">
+                      <summary><span className="label">סוכן</span> <b>{f.agent}</b></summary>
+                      <ul className="coverage">
+                        <li>סוכן מיופה כח: {f.agent}</li>
+                        {f.agentInfo.split("\n").filter(Boolean).map((l) => <li key={l}>{l}</li>)}
+                        {f.employer && <li>מעסיק: {f.employer}</li>}
+                        {f.policy && <li>מספר קופה / פוליסה: {f.policy}</li>}
+                        {f.joinDate && <li>הצטרפות: {date(f.joinDate)}{f.seniorityDate ? ` · ותק: ${date(f.seniorityDate)}` : ""}</li>}
+                      </ul>
+                    </details>
+                  )}
                   {f.coverage && (
                     <div style={{ marginTop: 8 }}>
                       <div className="label">כיסויים ביטוחיים</div>
