@@ -149,9 +149,10 @@ export default async function Invest({ searchParams }) {
                 <span className="tag">{Math.round(p.pct * 10) / 10}%</span>
                 {p.conviction ? <span className="tag tag-card" title="רמת ביטחון של Claude">{"★".repeat(Math.round(p.conviction))}{"☆".repeat(5 - Math.round(p.conviction))}</span> : null}
               </div>
-              <p className="pick-reason">💡 {p.reason || numbersReason(p)}</p>
-              {p.analysts && <div className="pick-line"><span>אנליסטים</span>{p.analysts}</div>}
-              {p.outlook && <div className="pick-line"><span>צפי</span>{p.outlook}</div>}
+              <p className="pick-reason"><b>מה זה: </b>{p.about || ABOUT[p.symbol]}</p>
+              <div className="pick-line"><span>למה עכשיו</span>{p.reason || numbersReason(p)}</div>
+              {p.analysts && <div className="pick-line"><span>מה אומרים האנליסטים</span>{p.analysts}</div>}
+              {p.outlook && <div className="pick-line"><span>מה לשים לב</span>{p.outlook}</div>}
               <div className="pick-stats">
                 <div><span>מחיר</span>{p.priceIls ? ils(p.priceIls) : "—"}</div>
                 <div><span>3 ח׳</span><Ret x={p.m3} /></div>
