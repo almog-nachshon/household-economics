@@ -187,3 +187,15 @@ table.rank tr.chosen td { font-weight: 700; background: var(--accent-soft); }
 .market-pre, .market-after { background: #fff4d6; color: #a07200; border-color: #f0dc9c; } .market-pre .market-dot, .market-after .market-dot { background: #d4a017; }
 .market-closed { background: #fde8e6; color: var(--neg); border-color: #f5c4bf; } .market-closed .market-dot { background: var(--neg); }
 .market-sub { font-weight: 500; }
+/* Invest: allocation overview table */
+.alloc-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.alloc-table th { font-size: 12px; color: var(--muted); font-weight: 600; padding: 6px 8px; border-bottom: 1px solid var(--track); }
+.alloc-table td { padding: 8px; border-bottom: 1px solid var(--track); vertical-align: middle; }
+.alloc-table tr:last-child td { border-bottom: 0; }
+.alloc-table .tag + .tag { margin-inline-start: 4px; }
+.alloc-bar-col { width: 38%; min-width: 160px; }
+.alloc-bar { position: relative; background: var(--track); border-radius: 6px; height: 22px; overflow: hidden; }
+.alloc-bar > div { position: absolute; inset-block: 0; inset-inline-start: 0; border-radius: 6px; }
+.alloc-bar > span { position: relative; display: flex; align-items: center; height: 100%; padding-inline-start: 8px; font-size: 12px; font-weight: 700; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.25); }
+.bucket-bar { grid-template-columns: 170px 1fr 48px; }
+.bucket-bars { min-width: min(100%, 380px); }

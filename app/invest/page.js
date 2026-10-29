@@ -150,17 +150,30 @@ export default async function Invest({ searchParams }) {
           </div>
         </div>
         <h2 style={{ marginTop: 16 }}>סקירת הקצאת התיק</h2>
-        <div className="alloc">
-          {picks.map((p) => (
-            <div key={p.symbol} className="alloc-row">
-              <span className="sym"><Logo id={p.symbol} label={p.name} size={20} /><b>{p.symbol}</b></span>
-              <div className="alloc-bar"><div style={{ width: `${Math.min(100, Math.max(p.pct * 4, 14))}%`, background: BUCKET_COLORS[p.bucket] }}>{Math.round(p.pct * 10) / 10}%</div></div>
-              <b>{ils(p.amount)}</b>
-              <span className="label">@ {p.priceIls ? ils(p.priceIls) : "—"}</span>
-              <span className="alloc-ret"><span>היום <LiveChange symbol={p.symbol} fallback={p.d1} /></span><span className="label">שנה <Ret x={p.m12} /></span></span>
-              <span className="alloc-tags"><span className="tag" style={{ marginInlineStart: 0 }}>{typeOf(p)}</span><Div q={p} /></span>
-            </div>
-          ))}
+        <div className="table-scroll">
+          <table className="alloc-table">
+            <thead>
+              <tr><th>החזקה</th><th className="alloc-bar-col">חלק מההפקדה</th><th>סכום</th><th>מחיר</th><th>היום</th><th>שנה</th><th>סוג</th></tr>
+            </thead>
+            <tbody>
+              {picks.map((p) => (
+                <tr key={p.symbol}>
+                  <td><span className="sym"><Logo id={p.symbol} label={p.name} size={20} /><b>{p.symbol}</b></span></td>
+                  <td className="alloc-bar-col">
+                    <div className="alloc-bar">
+                      <div style={{ width: `${Math.min(100, p.pct * 4)}%`, background: BUCKET_COLORS[p.bucket] }} />
+                      <span>{Math.round(p.pct * 10) / 10}%</span>
+                    </div>
+                  </td>
+                  <td><b>{ils(p.amount)}</b></td>
+                  <td className="label">{p.priceIls ? ils(p.priceIls) : "—"}</td>
+                  <td><LiveChange symbol={p.symbol} fallback={p.d1} /></td>
+                  <td><Ret x={p.m12} /></td>
+                  <td><span className="tag" style={{ marginInlineStart: 0 }}>{typeOf(p)}</span><Div q={p} /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
         {leftover > 1 && <p className="label">נשאר כמזומן בחשבון: {ils(leftover)} (קרן בלונדון נקנית ביחידות שלמות).</p>}
         <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
