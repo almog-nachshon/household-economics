@@ -210,34 +210,31 @@ export default async function Invest({ searchParams }) {
       <h2 style={{ marginTop: 20 }}>{picks.length} הבחירות: ניתוח מפורט</h2>
       <div className="pick-grid">
         {picks.map((p) => (
-          <div key={p.symbol} className="xcard">
-            <div className="xcard-top">
-              <div>
-                <div className="xcard-title"><Logo id={p.symbol} label={p.name} size={24} /><span className="xcard-sym">{p.symbol}</span><Risk vol={p.vol} /></div>
+          <div key={p.symbol} className="xcard" style={{ borderTopColor: BUCKET_COLORS[p.bucket] }}>
+            <div className="xcard-head">
+              <Logo id={p.symbol} label={p.name} size={36} />
+              <div className="xcard-id">
+                <div className="xcard-sym">{p.symbol}</div>
                 <div className="xcard-name" dir="auto" title={p.name}>{p.name}</div>
-                <div className="xcard-sub">{p.sector || bucketName[p.bucket]}</div>
               </div>
               <div className="xcard-money">
-                <div className="xcard-pct"><Info text="החלק של ההחזקה מסכום ההפקדה" />{Math.round(p.pct * 10) / 10}%</div>
+                <div className="xcard-pct" style={{ color: BUCKET_COLORS[p.bucket] }}>{Math.round(p.pct * 10) / 10}%</div>
                 <div className="xcard-amount">{money(p.amount)}</div>
-                <div className="xcard-price">
-                  <LiveChange symbol={p.symbol} fallback={p.d1} />
-                  <b>{p.priceIls ? unitPrice(p.priceIls) : "—"}</b> / {isMetal(p.symbol) ? "אונקיה" : "יחידה"}
-                </div>
               </div>
             </div>
+            <div className="xcard-strip">
+              <div><span>מחיר ליחידה</span><b>{p.priceIls ? unitPrice(p.priceIls) : "—"}</b></div>
+              <div><span>היום</span><LiveChange symbol={p.symbol} fallback={p.d1} /></div>
+              <div className="xcard-strip-buy"><span>לקנות</span><b>{units(p)}</b></div>
+            </div>
             <div className="xcard-tags">
+              <Risk vol={p.vol} />
               <span className="xtag">{typeOf(p)}</span>
+              <span className="xtag xtag-sector" style={{ color: BUCKET_COLORS[p.bucket], borderColor: BUCKET_COLORS[p.bucket] }}>{p.sector || bucketName[p.bucket]}</span>
               {p.divYield > 0 && <span className="xtag xtag-div">💰 דיבידנד ~{(p.divYield * 100).toFixed(1)}%</span>}
-              {p.conviction ? <span className="xtag" title="רמת ביטחון במחקר">{"★".repeat(Math.round(p.conviction))}{"☆".repeat(5 - Math.round(p.conviction))}</span> : null}
+              {p.conviction ? <span className="xtag xtag-stars" title="רמת ביטחון במחקר">{"★".repeat(Math.round(p.conviction))}{"☆".repeat(5 - Math.round(p.conviction))}</span> : null}
             </div>
             <div className="xcard-about">{p.about || ABOUT[p.symbol]}</div>
-            <div className="xcard-buy">
-              <span>לקנות</span>
-              <b>{units(p)}</b>
-              <span className="label">ב-{money(p.amount)}</span>
-            </div>
-            <div className="xcard-bar"><div style={{ width: `${Math.min(100, p.pct * 4)}%` }} /></div>
             <IntradayChart symbol={p.symbol} />
             <div className="xcard-metrics">
               <div><span>תשואה שנתית<Info text="השינוי במחיר (כולל דיבידנדים) ב-12 החודשים האחרונים" /></span><Ret x={p.m12} /></div>
