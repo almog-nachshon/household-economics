@@ -8,7 +8,6 @@ import { advisorEnabled } from "@/lib/advisor";
 import AiButton from "@/components/AiButton";
 import Logo from "@/components/Logo";
 import { portfolio } from "@/lib/holdings";
-import { SplitPie } from "@/components/Charts";
 import { generatePlan, depositMonth, depositDate, holdings } from "@/lib/invest-run";
 
 export const dynamic = "force-dynamic";
@@ -21,6 +20,16 @@ const date = (d) => d.toLocaleDateString("he-IL");
 const bucketName = Object.fromEntries(BUCKETS.map((b) => [b.key, b.name]));
 // One color per bucket, used by the pie and the type tags.
 const BUCKET_COLORS = { index: "#0fa3a3", sector: "#3b82c4", defense: "#7a5c3e", risk: "#e0607e", metals: "#d4a017" };
+// Risk level from the yearly volatility.
+const RISK = [[0.15, "נמוך", "risk-low"], [0.25, "בינוני", "risk-mid"], [0.4, "גבוה", "risk-high"], [Infinity, "גבוה מאוד", "risk-vhigh"]];
+const Risk = ({ vol }) => {
+  if (vol == null) return null;
+  const [, name, cls] = RISK.find(([max]) => vol < max);
+  return <span className={`risk ${cls}`}>סיכון {name}</span>;
+};
+const typeOf = (p) => (isMetal(p.symbol) ? "מתכת" : /ETF|קרן|UCITS|SPDR|iShares|Vanguard|Invesco|VanEck/.test(p.name) ? "קרן סל" : "מניה");
+const Div = ({ q }) => (q.divYield > 0 ? <span className="tag tag-div">דיבידנד ~{(q.divYield * 100).toFixed(1)}%</span> : null);
+const sharpe = (x) => (x == null ? "—" : x.toFixed(2));
 const CHANGES = { add: "להוסיף", hold: "להחזיק, בלי כסף חדש", reduce: "לצמצם (למכור חלק)", sell: "למכור" };
 
 async function runNow() {
@@ -80,6 +89,10 @@ export default async function Invest({ searchParams }) {
   const chosen = plan ? JSON.parse(plan.picks) : [];
   const metalsPct = plan ? plan.metalsPct : DEFAULT_METALS_PCT;
   const { picks, leftover } = sizePicks(completePicks(chosen, market.bySymbol, amount, metalsPct), amount);
+  // Every candidate with data, best score first, the score scaled 0-100.
+  const valid = Object.values(market.bySymbol).filter((q) => !q.error && q.buyable);
+  const [lo, hi] = [Math.min(...valid.map((q) => q.score)), Math.max(...valid.map((q) => q.score))];
+  const ranked = valid.map((q) => ({ ...q, rankScore: hi > lo ? ((q.score - lo) / (hi - lo)) * 100 : 50 })).sort((x, y) => y.score - x.score);
   const changes = plan
     ? JSON.parse(plan.changes)
     : held.map((h) => ({ symbol: h.symbol, action: picks.some((p) => p.symbol === h.symbol) ? "add" : "hold", reason: null }));
@@ -131,34 +144,16 @@ export default async function Invest({ searchParams }) {
             })}
           </div>
         </div>
-        <div className="pies" style={{ margin: "8px 0 4px" }}>
-          <SplitPie
-            centerLabel="להשקעה"
-            data={picks.map((p) => ({ name: `${p.symbol} · ${p.name} · ${bucketName[p.bucket]}`, value: p.amount, color: BUCKET_COLORS[p.bucket] }))}
-          />
-        </div>
-        <div className="pick-grid">
+        <h2 style={{ marginTop: 16 }}>סקירת הקצאת התיק</h2>
+        <div className="alloc">
           {picks.map((p) => (
-            <div key={p.symbol} className="pick-card" style={{ borderInlineStartColor: BUCKET_COLORS[p.bucket] }}>
-              <div className="pick-top">
-                <span className="sym"><Logo id={p.symbol} label={p.name} size={28} /><span><b>{p.symbol}</b><div className="label pick-name" title={p.name}>{p.name}</div></span></span>
-                <div className="pick-amount"><b>{ils(p.amount)}</b><div className="label">{units(p)}</div></div>
-              </div>
-              <div className="pick-tags">
-                <span className="tag" style={{ background: BUCKET_COLORS[p.bucket], color: "#fff", marginInlineStart: 0 }}>{bucketName[p.bucket]}</span>
-                <span className="tag">{Math.round(p.pct * 10) / 10}%</span>
-                {p.conviction ? <span className="tag tag-card" title="רמת ביטחון של Claude">{"★".repeat(Math.round(p.conviction))}{"☆".repeat(5 - Math.round(p.conviction))}</span> : null}
-              </div>
-              <p className="pick-reason"><b>מה זה: </b>{p.about || ABOUT[p.symbol]}</p>
-              <div className="pick-line"><span>למה עכשיו</span>{p.reason || numbersReason(p)}</div>
-              {p.analysts && <div className="pick-line"><span>מה אומרים האנליסטים</span>{p.analysts}</div>}
-              {p.outlook && <div className="pick-line"><span>מה לשים לב</span>{p.outlook}</div>}
-              <div className="pick-stats">
-                <div><span>מחיר</span>{p.priceIls ? ils(p.priceIls) : "—"}</div>
-                <div><span>3 ח׳</span><Ret x={p.m3} /></div>
-                <div><span>שנה</span><Ret x={p.m12} /></div>
-                <div><span>תנודתיות</span>{pct(p.vol)}</div>
-              </div>
+            <div key={p.symbol} className="alloc-row">
+              <span className="sym"><Logo id={p.symbol} label={p.name} size={20} /><b>{p.symbol}</b></span>
+              <div className="alloc-bar"><div style={{ width: `${Math.min(100, Math.max(p.pct * 4, 14))}%`, background: BUCKET_COLORS[p.bucket] }}>{Math.round(p.pct * 10) / 10}%</div></div>
+              <b>{ils(p.amount)}</b>
+              <span className="label">@ {p.priceIls ? ils(p.priceIls) : "—"}</span>
+              <span className="alloc-ret"><Ret x={p.m12} /> לשנה</span>
+              <span className="alloc-tags"><span className="tag" style={{ marginInlineStart: 0 }}>{typeOf(p)}</span><Div q={p} /></span>
             </div>
           ))}
         </div>
@@ -178,6 +173,46 @@ export default async function Invest({ searchParams }) {
             </form>
           )}
         </div>
+      </div>
+
+      <h2 style={{ marginTop: 20 }}>{picks.length} הבחירות: ניתוח מפורט</h2>
+      <div className="pick-grid">
+        {picks.map((p) => (
+          <div key={p.symbol} className="pick-card" style={{ borderTopColor: BUCKET_COLORS[p.bucket] }}>
+            <div className="pick-top">
+              <div className="sym">
+                <Logo id={p.symbol} label={p.name} size={30} />
+                <span><span className="pick-symbol">{p.symbol}</span> <Risk vol={p.vol} /><div className="label pick-name" title={p.name}>{p.name}</div></span>
+              </div>
+              <div className="pick-amount">
+                <div className="pick-pct" style={{ color: BUCKET_COLORS[p.bucket] }}>{Math.round(p.pct * 10) / 10}%</div>
+                <b>{ils(p.amount)}</b>
+                <div className="label">{units(p)}</div>
+              </div>
+            </div>
+            <div className="pick-tags">
+              <span className="tag" style={{ background: BUCKET_COLORS[p.bucket], color: "#fff", marginInlineStart: 0 }}>{bucketName[p.bucket]}</span>
+              <span className="tag">{typeOf(p)}</span>
+              <Div q={p} />
+              {p.conviction ? <span className="tag tag-card" title="רמת ביטחון במחקר">{"★".repeat(Math.round(p.conviction))}{"☆".repeat(5 - Math.round(p.conviction))}</span> : null}
+            </div>
+            <div className="metric-grid">
+              <div><span>תשואה שנתית</span><Ret x={p.m12} /></div>
+              <div><span>3 חודשים</span><Ret x={p.m3} /></div>
+              <div><span>שארפ</span><b>{sharpe(p.sharpe)}</b></div>
+              <div><span>תנודתיות</span><b>{pct(p.vol)}</b></div>
+              <div><span>ירידה מקס׳</span><Ret x={p.maxDrawdown} /></div>
+              <div><span>מגמה 30 יום</span><Ret x={p.m1} /></div>
+            </div>
+            {p.analysts && <div className="pick-line"><span>מה אומרים האנליסטים</span>{p.analysts}</div>}
+            <details className="pick-details">
+              <summary>מה זה ולמה עכשיו</summary>
+              <p className="pick-reason"><b>מה זה: </b>{p.about || ABOUT[p.symbol]}</p>
+              <div className="pick-line"><span>למה עכשיו</span>{p.reason || numbersReason(p)}</div>
+              {p.outlook && <div className="pick-line"><span>מה לשים לב</span>{p.outlook}</div>}
+            </details>
+          </div>
+        ))}
       </div>
 
       <div className="card" style={{ marginTop: 12 }}>
@@ -246,48 +281,35 @@ export default async function Invest({ searchParams }) {
         </div>
       )}
 
-      <h2 style={{ marginTop: 20 }}>כל המניות והקרנות לפי תחום</h2>
-      <div className="blocks">
-        {BUCKETS.map((b) => (
-          <div key={b.key} className="card" style={{ borderTopColor: BUCKET_COLORS[b.key] }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
-              <h2 style={{ margin: 0, color: BUCKET_COLORS[b.key] }}>{b.name}</h2>
-              <b>{Math.round(bucketPct(b, metalsPct) * 10) / 10}%</b>
-            </div>
-            <div className="label">{b.count === 1 ? "בחירה אחת" : `${b.count} בחירות`} · מודגש = נבחר החודש · לחיצה על שם לפרטים</div>
-            <div className="table-scroll">
-            <table className="compact wide">
-              <thead><tr><th>סימול</th><th>שם</th><th>חודש</th><th>3 ח׳</th><th>6 ח׳</th><th>שנה</th><th>תנודתיות</th><th>ירידה מקס׳</th></tr></thead>
-              <tbody>
-                {b.candidates.map(([s]) => {
-                  const q = market.bySymbol[s];
-                  return (
-                    <tr key={s} style={picks.some((p) => p.symbol === s) ? { fontWeight: 700 } : undefined}>
-                      <td><span className="sym"><Logo id={s} label={q.name} size={18} />{s}</span></td>
-                      <td className="line-name">
-                        <details>
-                          <summary title={q.name}>{q.name}</summary>
-                          <div className="pick-more">
-                            <div>{ABOUT[s]}</div>
-                            {!q.error && (
-                              <div className="label">
-                                מחיר {q.priceIls ? ils(q.priceIls) : `${q.price} ${q.currency}`} · 3 ח׳ <Ret x={q.m3} /> · תנודתיות {pct(q.vol)} · ירידה מקס׳ <Ret x={q.maxDrawdown} />
-                              </div>
-                            )}
-                          </div>
-                        </details>
-                      </td>
-                      {q.error ? <td colSpan={6} className="warn">אין נתונים</td> : (
-                        <><td><Ret x={q.m1} /></td><td><Ret x={q.m3} /></td><td><Ret x={q.m6} /></td><td><Ret x={q.m12} /></td><td className="label">{pct(q.vol)}</td><td><Ret x={q.maxDrawdown} /></td></>
-                      )}
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-            </div>
-          </div>
-        ))}
+      <div className="card" style={{ marginTop: 20 }}>
+        <h2>דירוג כל המניות והקרנות</h2>
+        <div className="label">ציון 0-100: תשואת 3, 6 ו-12 חודשים פחות חצי מהתנודתיות · מודגש = נבחר · לחיצה על שם לפרטים</div>
+        <div className="table-scroll">
+          <table className="compact wide rank">
+            <thead><tr><th>#</th><th>סימול</th><th>שם</th><th>תחום</th><th>ציון</th><th>שנה</th><th>שארפ</th><th>סיכון</th><th>דיבידנד</th><th>מחיר</th></tr></thead>
+            <tbody>
+              {ranked.map((q, i) => (
+                <tr key={q.symbol} className={picks.some((p) => p.symbol === q.symbol) ? "chosen" : ""}>
+                  <td className="label">{i + 1}</td>
+                  <td><span className="sym"><Logo id={q.symbol} label={q.name} size={18} /><b>{q.symbol}</b></span></td>
+                  <td className="line-name">
+                    <details>
+                      <summary title={q.name}>{q.name}</summary>
+                      <div className="pick-more">{ABOUT[q.symbol]}</div>
+                    </details>
+                  </td>
+                  <td><span className="tag" style={{ background: BUCKET_COLORS[q.bucket], color: "#fff", marginInlineStart: 0 }}>{bucketName[q.bucket]}</span></td>
+                  <td><b className="score">{Math.round(q.rankScore)}</b></td>
+                  <td><Ret x={q.m12} /></td>
+                  <td>{sharpe(q.sharpe)}</td>
+                  <td><Risk vol={q.vol} /></td>
+                  <td className="label">{q.divYield > 0 ? `${(q.divYield * 100).toFixed(1)}%` : "—"}</td>
+                  <td className="label">{q.priceIls ? ils(q.priceIls) : "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <p className="label" style={{ marginTop: 12 }}>

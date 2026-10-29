@@ -120,3 +120,26 @@ nav .brand { font-weight: 800; color: #fff; margin-inline-end: 8px; }
 .pick-line span { display: block; color: var(--accent); font-weight: 700; font-size: 12px; }
 .pick-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; border-top: 1px solid var(--track); padding-top: 8px; font-size: 13px; }
 .pick-stats span { display: block; color: var(--muted); font-size: 11px; }
+/* Invest: allocation rows, risk badges, metric grid, ranking */
+.alloc { display: grid; gap: 8px; }
+.alloc-row { display: grid; grid-template-columns: 110px minmax(120px, 1fr) 90px 90px 110px auto; gap: 10px; align-items: center; font-size: 14px; }
+.alloc-bar { background: var(--track); border-radius: 6px; height: 24px; overflow: hidden; }
+.alloc-bar > div { height: 100%; color: #fff; font-size: 12px; font-weight: 700; display: flex; align-items: center; padding-inline-start: 8px; border-radius: 6px; }
+.alloc-tags { display: flex; gap: 4px; flex-wrap: wrap; }
+@media (max-width: 700px) { .alloc-row { grid-template-columns: 90px 1fr 80px; } .alloc-row > .label, .alloc-ret, .alloc-tags { display: none; } }
+.risk { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 11px; font-weight: 700; vertical-align: middle; }
+.risk-low { background: #e3f4e8; color: var(--pos); }
+.risk-mid { background: #fff4d6; color: #a07200; }
+.risk-high { background: #ffe8d9; color: #c25a00; }
+.risk-vhigh { background: #fde8e6; color: var(--neg); }
+.tag-div { background: #fff4d6; color: #a07200; }
+.pick-card { border-top: 4px solid var(--accent); border-inline-start-width: 1px; border-inline-start-color: var(--track); }
+.pick-symbol { font-size: 18px; font-weight: 800; }
+.pick-pct { font-size: 22px; font-weight: 800; line-height: 1; }
+.metric-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px 4px; text-align: center; background: #f7fbfb; border-radius: 10px; padding: 8px 4px; font-size: 14px; }
+.metric-grid span { display: block; color: var(--muted); font-size: 11px; margin-bottom: 2px; }
+.pick-details > summary { cursor: pointer; color: var(--accent); font-weight: 600; font-size: 13px; border: 1px solid var(--track); border-radius: 8px; padding: 6px 10px; text-align: center; list-style: none; }
+.pick-details[open] > summary { margin-bottom: 8px; }
+.pick-details { display: grid; gap: 8px; }
+table.rank tr.chosen td { font-weight: 700; background: var(--accent-soft); }
+.score { color: var(--accent); }
