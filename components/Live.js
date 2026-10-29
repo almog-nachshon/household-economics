@@ -91,7 +91,7 @@ export function IntradayChart({ symbol }) {
   const y = (c) => H - 4 - ((c - lo) / (hi - lo || 1)) * (H - 8);
   const line = pts.map(([t, c], i) => `${i ? "L" : "M"}${x(t).toFixed(1)},${y(c).toFixed(1)}`).join(" ");
   const up = pts[pts.length - 1][1] >= (q.prev ?? pts[0][1]);
-  const color = up ? "#3ddc84" : "#ff6b6b";
+  const color = up ? "#1e8e3e" : "#d93025";
   const hours = [];
   for (let t = Math.ceil(t0 / 3600) * 3600; t <= t1; t += 3600) hours.push(t);
   const hh = (t) => new Date(t * 1000).toLocaleTimeString("he-IL", { timeZone: "Asia/Jerusalem", hour: "2-digit", minute: "2-digit" });
@@ -100,11 +100,11 @@ export function IntradayChart({ symbol }) {
       <svg viewBox={`0 0 ${W} ${H + 14}`} preserveAspectRatio="none" role="img" aria-label="גרף יומי">
         {hours.map((t) => (
           <g key={t}>
-            <line x1={x(t)} x2={x(t)} y1="0" y2={H} stroke="#2c3a4e" strokeWidth="1" />
-            <text x={x(t)} y={H + 11} fontSize="8" fill="#7f8ea3" textAnchor="middle">{hh(t)}</text>
+            <line x1={x(t)} x2={x(t)} y1="0" y2={H} stroke="#e3ecee" strokeWidth="1" />
+            <text x={x(t)} y={H + 11} fontSize="8" fill="#66757d" textAnchor="middle">{hh(t)}</text>
           </g>
         ))}
-        {q.prev && <line x1="0" x2={W} y1={y(q.prev)} y2={y(q.prev)} stroke="#7f8ea3" strokeDasharray="3 3" strokeWidth="1" />}
+        {q.prev && <line x1="0" x2={W} y1={y(q.prev)} y2={y(q.prev)} stroke="#9aa5ad" strokeDasharray="3 3" strokeWidth="1" />}
         <path d={`${line} L${x(pts[pts.length - 1][0]).toFixed(1)},${H} L0,${H} Z`} fill={color} opacity="0.12" />
         <path d={line} fill="none" stroke={color} strokeWidth="1.8" />
       </svg>

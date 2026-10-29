@@ -157,7 +157,7 @@ export default async function Invest({ searchParams }) {
               <div className="alloc-bar"><div style={{ width: `${Math.min(100, Math.max(p.pct * 4, 14))}%`, background: BUCKET_COLORS[p.bucket] }}>{Math.round(p.pct * 10) / 10}%</div></div>
               <b>{ils(p.amount)}</b>
               <span className="label">@ {p.priceIls ? ils(p.priceIls) : "—"}</span>
-              <span className="alloc-ret"><LiveChange symbol={p.symbol} fallback={p.d1} /> היום · <Ret x={p.m12} /> לשנה</span>
+              <span className="alloc-ret"><span>היום <LiveChange symbol={p.symbol} fallback={p.d1} /></span><span className="label">שנה <Ret x={p.m12} /></span></span>
               <span className="alloc-tags"><span className="tag" style={{ marginInlineStart: 0 }}>{typeOf(p)}</span><Div q={p} /></span>
             </div>
           ))}
@@ -186,7 +186,7 @@ export default async function Invest({ searchParams }) {
           <div key={p.symbol} className="xcard">
             <div className="xcard-top">
               <div>
-                <div className="xcard-title"><span className="xcard-sym">{p.symbol}</span><Risk vol={p.vol} /></div>
+                <div className="xcard-title"><Logo id={p.symbol} label={p.name} size={24} /><span className="xcard-sym">{p.symbol}</span><Risk vol={p.vol} /></div>
                 <div className="xcard-name" title={p.name}>{p.name}</div>
                 <div className="xcard-sub">{p.sector || bucketName[p.bucket]}</div>
               </div>
@@ -200,7 +200,6 @@ export default async function Invest({ searchParams }) {
               </div>
             </div>
             <div className="xcard-tags">
-              <Logo id={p.symbol} label={p.name} size={22} />
               <span className="xtag">{typeOf(p)}</span>
               {p.divYield > 0 && <span className="xtag xtag-div">💰 דיבידנד ~{(p.divYield * 100).toFixed(1)}%</span>}
               {p.conviction ? <span className="xtag" title="רמת ביטחון במחקר">{"★".repeat(Math.round(p.conviction))}{"☆".repeat(5 - Math.round(p.conviction))}</span> : null}
@@ -212,7 +211,7 @@ export default async function Invest({ searchParams }) {
               <div><span>ממוצע חודשי<Info text="התשואה הממוצעת לחודש בשנה האחרונה" /></span><Ret x={p.mAvg} /></div>
               <div><span>שארפ<Info text="תשואה ביחס לסיכון, מעל ריבית חסרת סיכון של 4%. מעל 1 = טוב, מעל 2 = מצוין" /></span><b className="pos">{sharpe(p.sharpe)}</b></div>
               <div><span>תנודתיות<Info text="כמה המחיר קופץ במהלך שנה. מעל 40% = תנודתי מאוד" /></span><b>{pct(p.vol)}</b></div>
-              <div><span>ירידה מקסימלית<Info text="הנפילה הגדולה ביותר מהשיא בשנה האחרונה" /></span><Ret x={p.maxDrawdown} /></div>
+              <div><span>ירידה מקס׳<Info text="הנפילה הגדולה ביותר מהשיא בשנה האחרונה" /></span><Ret x={p.maxDrawdown} /></div>
               <div><span>מגמה 30 יום<Info text="השינוי במחיר בחודש האחרון" /></span><Ret x={p.m1} /></div>
             </div>
             {(p.eps || p.analysts) && (
