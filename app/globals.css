@@ -250,3 +250,4 @@ table.rank tr.chosen td { font-weight: 700; background: var(--accent-soft); }
 .xcard-buy-total { margin-inline-start: auto; font-size: 12px; color: var(--text); }
 .xcard-buy-total b { font-size: 15px; color: var(--text); }
 .xcard-buy-total span { color: var(--muted); }
+.market-clock { font-variant-numeric: tabular-nums; font-weight: 800; direction: ltr; unicode-bidi: isolate; font-size: 14px; }

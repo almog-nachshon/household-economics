@@ -59,18 +59,20 @@ const EARLY_CLOSE = ["2026-11-27", "2026-12-24", "2027-11-26"]; // 13:00 close
 
 function nyNow(d) {
   const parts = Object.fromEntries(
-    new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", weekday: "short", hourCycle: "h23" })
+    new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", weekday: "short", hourCycle: "h23" })
       .formatToParts(d).map((p) => [p.type, p.value]),
   );
-  return { date: `${parts.year}-${parts.month}-${parts.day}`, min: Number(parts.hour) * 60 + Number(parts.minute), weekday: parts.weekday };
+  return { date: `${parts.year}-${parts.month}-${parts.day}`, min: Number(parts.hour) * 60 + Number(parts.minute), sec: Number(parts.second), weekday: parts.weekday };
 }
 
 function status(d) {
-  const { date, min, weekday } = nyNow(d);
+  const { date, min, sec, weekday } = nyNow(d);
+  // Seconds left until a New York minute mark, for the countdown.
+  const until = (m) => (m - min) * 60 - sec;
   const close = EARLY_CLOSE.includes(date) ? 13 * 60 : 16 * 60;
   if (weekday === "Sat" || weekday === "Sun" || HOLIDAYS.includes(date)) return { state: "closed", label: HOLIDAYS.includes(date) ? "סגור (חג בארה״ב)" : "סגור (סוף שבוע)" };
-  if (min >= 570 && min < close) return { state: "open", label: "פתוח", left: close - min };
-  if (min >= 240 && min < 570) return { state: "pre", label: "מסחר מוקדם", left: 570 - min };
+  if (min >= 570 && min < close) return { state: "open", label: "פתוח", left: until(close) };
+  if (min >= 240 && min < 570) return { state: "pre", label: "מסחר מוקדם", left: until(570) };
   if (min >= close && min < 20 * 60) return { state: "after", label: "מסחר מאוחר" };
   return { state: "closed", label: "סגור" };
 }
@@ -85,18 +87,19 @@ export function MarketStatus() {
   const [now, setNow] = useState(null);
   useEffect(() => {
     setNow(new Date());
-    const id = setInterval(() => setNow(new Date()), 30000);
+    const id = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(id);
   }, []);
   if (!now) return null;
   const s = status(now);
-  const hm = (m) => `${Math.floor(m / 60)}:${String(m % 60).padStart(2, "0")}`;
+  const pad = (n) => String(n).padStart(2, "0");
+  const clock = (t) => `${Math.floor(t / 3600)}:${pad(Math.floor((t % 3600) / 60))}:${pad(t % 60)}`;
   return (
     <span className={`market market-${s.state}`} title={`שעות מסחר רגילות בשעון ישראל: ${ilTime(now, 570)}–${ilTime(now, 960)}`}>
       <span className="market-dot" />
       שוק ארה״ב: {s.label}
-      {s.state === "open" && <span className="market-sub"> · נסגר בעוד {hm(s.left)}</span>}
-      {s.state === "pre" && <span className="market-sub"> · נפתח בעוד {hm(s.left)}</span>}
+      {s.state === "open" && <span className="market-sub"> · נסגר בעוד <span className="market-clock">{clock(s.left)}</span></span>}
+      {s.state === "pre" && <span className="market-sub"> · נפתח בעוד <span className="market-clock">{clock(s.left)}</span></span>}
       {s.state !== "open" && s.state !== "pre" && <span className="market-sub"> · נפתח ב-{ilTime(now, 570)} שעון ישראל</span>}
     </span>
   );
