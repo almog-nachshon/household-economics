@@ -7,7 +7,7 @@ import { BUCKETS, loadMarket, completePicks, sizePicks, fractional, isMetal, buc
 import { advisorEnabled } from "@/lib/advisor";
 import AiButton from "@/components/AiButton";
 import Logo from "@/components/Logo";
-import { LiveQuotes, LiveChange, MarketStatus, IntradayChart } from "@/components/Live";
+import { LiveQuotes, LiveChange, LiveWeek, LivePrice, MarketStatus, IntradayChart } from "@/components/Live";
 import { portfolio } from "@/lib/holdings";
 import { generatePlan, depositMonth, depositDate, holdings } from "@/lib/invest-run";
 
@@ -153,7 +153,7 @@ export default async function Invest({ searchParams }) {
         <div className="table-scroll">
           <table className="alloc-table">
             <thead>
-              <tr><th>החזקה</th><th className="alloc-bar-col">חלק מההפקדה</th><th>סכום</th><th>מחיר</th><th>היום</th><th>שנה</th><th>סוג</th></tr>
+              <tr><th>החזקה</th><th className="alloc-bar-col">חלק מההפקדה</th><th>סכום</th><th>מחיר עכשיו</th><th>היום</th><th>השבוע</th><th>שנה</th><th>סוג</th></tr>
             </thead>
             <tbody>
               {picks.map((p) => (
@@ -166,8 +166,9 @@ export default async function Invest({ searchParams }) {
                     </div>
                   </td>
                   <td><b>{ils(p.amount)}</b></td>
-                  <td className="label">{p.priceIls ? ils(p.priceIls) : "—"}</td>
+                  <td><LivePrice symbol={p.symbol} ils={p.priceIls ? ils(p.priceIls) : null} /></td>
                   <td><LiveChange symbol={p.symbol} fallback={p.d1} /></td>
+                  <td><LiveWeek symbol={p.symbol} /></td>
                   <td><Ret x={p.m12} /></td>
                   <td><span className="tag" style={{ marginInlineStart: 0 }}>{typeOf(p)}</span><Div q={p} /></td>
                 </tr>

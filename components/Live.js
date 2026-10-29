@@ -15,13 +15,37 @@ export function LiveQuotes({ symbols, children }) {
   return <LiveContext.Provider value={quotes}>{children}</LiveContext.Provider>;
 }
 
+// A change as a colored pill with an arrow; live (from /api/live) when available, else the cached daily figure.
+function Pill({ x, live }) {
+  if (x == null) return <span className="label">—</span>;
+  const up = x >= 0;
+  return (
+    <span className={`chg ${up ? "chg-up" : "chg-down"}`}>
+      {up ? "▲" : "▼"} {Math.abs(x * 100).toFixed(2)}%{live ? <span className="live-dot" /> : null}
+    </span>
+  );
+}
+
 export function LiveChange({ symbol, fallback }) {
   const q = useContext(LiveContext)[symbol];
-  const x = q?.change ?? fallback;
-  if (x == null) return null;
+  return <Pill x={q?.change ?? fallback} live={q?.change != null} />;
+}
+
+export function LiveWeek({ symbol }) {
+  const q = useContext(LiveContext)[symbol];
+  return <Pill x={q?.week} live={q?.week != null} />;
+}
+
+const CUR = { USD: "$", GBP: "£", EUR: "€", ILS: "₪" };
+// The price right now in its own currency, with the time of the last trade (Israel time).
+export function LivePrice({ symbol, ils }) {
+  const q = useContext(LiveContext)[symbol];
+  if (!q?.price) return <span className="label">{ils || "—"}</span>;
+  const t = q.time ? new Date(q.time * 1000).toLocaleTimeString("he-IL", { timeZone: "Asia/Jerusalem", hour: "2-digit", minute: "2-digit" }) : "";
   return (
-    <span className={x >= 0 ? "pos" : "neg"} title="השינוי היום">
-      {x >= 0 ? "+" : ""}{(x * 100).toFixed(2)}%{q ? <span className="live-dot" /> : null}
+    <span className="live-price">
+      <b dir="ltr">{CUR[q.currency] ?? ""}{q.price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</b>
+      <span className="label">{ils}{t ? ` · ${t}` : ""}</span>
     </span>
   );
 }

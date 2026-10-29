@@ -199,3 +199,10 @@ table.rank tr.chosen td { font-weight: 700; background: var(--accent-soft); }
 .alloc-bar > span { position: relative; display: flex; align-items: center; height: 100%; padding-inline-start: 8px; font-size: 12px; font-weight: 700; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.25); }
 .bucket-bar { grid-template-columns: 170px 1fr 48px; }
 .bucket-bars { min-width: min(100%, 380px); }
+/* Live price and change pills */
+.chg { display: inline-flex; align-items: center; gap: 3px; padding: 2px 8px; border-radius: 12px; font-size: 13px; font-weight: 700; white-space: nowrap; direction: ltr; }
+.chg-up { background: #e3f4e8; color: var(--pos); }
+.chg-down { background: #fde8e6; color: var(--neg); }
+.live-price { display: grid; line-height: 1.25; white-space: nowrap; }
+.live-price b { font-size: 15px; }
+.live-price .label { font-size: 11px; }
