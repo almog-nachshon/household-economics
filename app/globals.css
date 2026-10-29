@@ -251,3 +251,11 @@ table.rank tr.chosen td { font-weight: 700; background: var(--accent-soft); }
 .xcard-buy-total b { font-size: 15px; color: var(--text); }
 .xcard-buy-total span { color: var(--muted); }
 .market-clock { font-variant-numeric: tabular-nums; font-weight: 800; direction: ltr; unicode-bidi: isolate; font-size: 14px; }
+/* Invest card: why to buy / what to watch */
+.xcard-why, .xcard-risk { border-radius: 10px; padding: 10px 12px; }
+.xcard-why { background: #e3f4e8; border: 1px solid #bfe5cb; }
+.xcard-risk { background: #fff8e1; border: 1px solid #f0dc9c; }
+.xcard-why span, .xcard-risk span { display: block; font-size: 12px; font-weight: 800; margin-bottom: 4px; }
+.xcard-why span { color: var(--pos); }
+.xcard-risk span { color: #a07200; }
+.xcard-why p, .xcard-risk p { margin: 0; font-size: 13px; line-height: 1.55; }

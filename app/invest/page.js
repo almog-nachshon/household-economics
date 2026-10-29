@@ -244,6 +244,16 @@ export default async function Invest({ searchParams }) {
               {p.conviction ? <span className="xtag xtag-stars" title="רמת ביטחון במחקר">{"★".repeat(Math.round(p.conviction))}{"☆".repeat(5 - Math.round(p.conviction))}</span> : null}
             </div>
             <div className="xcard-about">{p.about || ABOUT[p.symbol]}</div>
+            <div className="xcard-why">
+              <span>💡 למה לקנות</span>
+              <p>{p.reason || numbersReason(p)}</p>
+            </div>
+            {p.outlook && (
+              <div className="xcard-risk">
+                <span>⚠️ מה לשים לב</span>
+                <p>{p.outlook}</p>
+              </div>
+            )}
             <IntradayChart symbol={p.symbol} />
             <div className="xcard-metrics">
               <div><span>תשואה שנתית<Info text="השינוי במחיר (כולל דיבידנדים) ב-12 החודשים האחרונים" /></span><Ret x={p.m12} /></div>
@@ -260,11 +270,8 @@ export default async function Invest({ searchParams }) {
               </div>
             )}
             <details className="xcard-details">
-              <summary>פרטי החברה ←</summary>
-              <p><b>מה זה: </b>{p.about || ABOUT[p.symbol]}</p>
-              <p><b>למה עכשיו: </b>{p.reason || numbersReason(p)}</p>
-              {p.outlook && <p><b>מה לשים לב: </b>{p.outlook}</p>}
-              <p className="xcard-units">לקנות: {units(p)}</p>
+              <summary>עוד על החברה ←</summary>
+              <p>{p.about || ABOUT[p.symbol]}</p>
             </details>
           </div>
         ))}
