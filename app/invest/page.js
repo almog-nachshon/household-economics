@@ -201,7 +201,7 @@ export default async function Invest({ searchParams }) {
             <div className="xcard-top">
               <div>
                 <div className="xcard-title"><Logo id={p.symbol} label={p.name} size={24} /><span className="xcard-sym">{p.symbol}</span><Risk vol={p.vol} /></div>
-                <div className="xcard-name" title={p.name}>{p.name}</div>
+                <div className="xcard-name" dir="auto" title={p.name}>{p.name}</div>
                 <div className="xcard-sub">{p.sector || bucketName[p.bucket]}</div>
               </div>
               <div className="xcard-money">
@@ -217,6 +217,12 @@ export default async function Invest({ searchParams }) {
               <span className="xtag">{typeOf(p)}</span>
               {p.divYield > 0 && <span className="xtag xtag-div">💰 דיבידנד ~{(p.divYield * 100).toFixed(1)}%</span>}
               {p.conviction ? <span className="xtag" title="רמת ביטחון במחקר">{"★".repeat(Math.round(p.conviction))}{"☆".repeat(5 - Math.round(p.conviction))}</span> : null}
+            </div>
+            <div className="xcard-about">{p.about || ABOUT[p.symbol]}</div>
+            <div className="xcard-buy">
+              <span>לקנות</span>
+              <b>{units(p)}</b>
+              <span className="label">ב-{ils(p.amount)}</span>
             </div>
             <div className="xcard-bar"><div style={{ width: `${Math.min(100, p.pct * 4)}%` }} /></div>
             <IntradayChart symbol={p.symbol} />
