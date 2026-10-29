@@ -137,7 +137,7 @@ export default async function Invest({ searchParams }) {
           <a href={`/invest?amount=${Math.round(amount / (market.usdIls || 1))}&cur=USD`} className={usd ? "on" : ""}>$ דולר</a>
         </span>
         <button type="submit">חשב חלוקה</button>
-        {market.usdIls && <span className="label">דולר = {market.usdIls.toFixed(3)} ₪</span>}
+        {market.usdIls && <span className="label">דולר = {market.usdIls.toFixed(3)} ₪ (שער עכשיו, מתעדכן כל דקה)</span>}
         {Math.round(amount) !== settings.monthlyInvest && <a href="/invest">חזרה להוראת הקבע ({ils(settings.monthlyInvest)})</a>}
       </form>
 
