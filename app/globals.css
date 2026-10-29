@@ -232,3 +232,5 @@ table.rank tr.chosen td { font-weight: 700; background: var(--accent-soft); }
 .xcard-tags .risk { font-size: 12px; padding: 2px 10px; }
 .xtag-sector { font-weight: 600; background: var(--card); }
 .xtag-stars { color: #d4a017; letter-spacing: 1px; }
+.xcard-ils { font-size: 11px; color: var(--muted); }
+.ils-small { font-size: 11px; }

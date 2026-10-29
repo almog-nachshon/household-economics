@@ -89,12 +89,12 @@ export default async function Invest({ searchParams }) {
   ]);
   // A one-off larger (or smaller) amount for this deposit, from the amount box; otherwise the standing order.
   // The amount box works in shekels or dollars (the ₪ / $ toggle); the split is always computed in shekels.
-  const usd = searchParams?.cur === "USD" && market.usdIls > 0;
+  const usd = searchParams?.cur !== "ILS" && market.usdIls > 0; // dollars by default: IBKR trades in USD
   const rate = usd ? market.usdIls : 1;
   const typed = Number(searchParams?.amount) > 0 ? Number(searchParams.amount) : null;
   const amount = typed ? typed * rate : settings.monthlyInvest;
   const shown = Math.round(amount / rate);
-  const money = (x) => (usd ? `$${Math.round(x / rate).toLocaleString("en-US")}` : ils(x));
+  const money = (x) => (usd ? `${x < 0 ? "-" : ""}$${Math.round(Math.abs(x) / rate).toLocaleString("en-US")}` : ils(x));
   const unitPrice = (x) => (usd ? `$${(x / rate).toLocaleString("en-US", { maximumFractionDigits: 2 })}` : ils(x));
   const chosen = plan ? JSON.parse(plan.picks) : [];
   const metalsPct = plan ? plan.metalsPct : DEFAULT_METALS_PCT;
@@ -133,8 +133,8 @@ export default async function Invest({ searchParams }) {
         <input type="number" name="amount" min="1" step="1" defaultValue={shown} style={{ width: 140 }} />
         <input type="hidden" name="cur" value={usd ? "USD" : "ILS"} />
         <span className="cur-toggle">
-          <a href={`/invest?amount=${Math.round(amount)}&cur=ILS`} className={usd ? "" : "on"}>₪ שקל</a>
           <a href={`/invest?amount=${Math.round(amount / (market.usdIls || 1))}&cur=USD`} className={usd ? "on" : ""}>$ דולר</a>
+          <a href={`/invest?amount=${Math.round(amount)}&cur=ILS`} className={usd ? "" : "on"}>₪ שקל</a>
         </span>
         <button type="submit">חשב חלוקה</button>
         {market.usdIls && <span className="label">דולר = {market.usdIls.toFixed(3)} ₪ (שער עכשיו, מתעדכן כל דקה)</span>}
@@ -147,6 +147,7 @@ export default async function Invest({ searchParams }) {
           <div>
             <div className="label">הפקדה ב-{date(day)}</div>
             <div className="value big">{money(amount)}</div>
+            {usd && <div className="label">≈ {ils(amount)} לפי דולר = {market.usdIls.toFixed(3)} ₪</div>}
             <div className="label">{picks.length} החזקות · {plan ? `לפי מחקר של Claude` : "לפי ציון ביצועים"}</div>
           </div>
           <div className="bucket-bars">
@@ -179,7 +180,7 @@ export default async function Invest({ searchParams }) {
                     </div>
                   </td>
                   <td><b>{money(p.amount)}</b></td>
-                  <td><LivePrice symbol={p.symbol} ils={p.priceIls && !usd ? ils(p.priceIls) : null} /></td>
+                  <td><LivePrice symbol={p.symbol} ils={p.priceIls ? ils(p.priceIls) : null} /></td>
                   <td><LiveChange symbol={p.symbol} fallback={p.d1} /></td>
                   <td><LiveWeek symbol={p.symbol} /></td>
                   <td><Ret x={p.m12} /></td>
@@ -223,7 +224,7 @@ export default async function Invest({ searchParams }) {
               </div>
             </div>
             <div className="xcard-strip">
-              <div><span>מחיר ליחידה</span><b>{p.priceIls ? unitPrice(p.priceIls) : "—"}</b></div>
+              <div><span>מחיר ליחידה</span><b>{p.priceIls ? unitPrice(p.priceIls) : "—"}</b>{usd && p.priceIls ? <span className="xcard-ils">{ils(p.priceIls)}</span> : null}</div>
               <div><span>היום</span><LiveChange symbol={p.symbol} fallback={p.d1} /></div>
               <div className="xcard-strip-buy"><span>לקנות</span><b>{units(p)}</b></div>
             </div>
@@ -272,9 +273,9 @@ export default async function Invest({ searchParams }) {
         ) : (
           <>
             <div className="hero-row" style={{ marginTop: 8 }}>
-              <div><div className="label">הושקע</div><div className="value">{ils(folio.cost)}</div></div>
-              <div><div className="label">שווי היום</div><div className="value">{ils(folio.value)}</div></div>
-              <div><div className="label">רווח / הפסד</div><div className={`value ${folio.profit >= 0 ? "pos" : "neg"}`}>{ils(folio.profit)}</div></div>
+              <div><div className="label">הושקע</div><div className="value">{money(folio.cost)}</div></div>
+              <div><div className="label">שווי היום</div><div className="value">{money(folio.value)}</div></div>
+              <div><div className="label">רווח / הפסד</div><div className={`value ${folio.profit >= 0 ? "pos" : "neg"}`}>{money(folio.profit)}</div></div>
               <div><div className="label">תשואה</div><div className={`value ${folio.pct >= 0 ? "pos" : "neg"}`}>{pct(folio.pct)}</div></div>
             </div>
             <div style={{ overflowX: "auto", marginTop: 8 }}>
@@ -286,9 +287,9 @@ export default async function Invest({ searchParams }) {
                       <td><span className="sym"><Logo id={h.symbol} label={h.name} size={18} /><b>{h.symbol}</b></span></td>
                       <td className="line-name" title={h.name}>{h.name}</td>
                       <td>{h.units ? h.units.toFixed(3) : "—"}</td>
-                      <td>{ils(h.cost)}</td>
-                      <td>{ils(h.value)}</td>
-                      <td className={h.profit >= 0 ? "pos" : "neg"}>{ils(h.profit)}</td>
+                      <td>{money(h.cost)}</td>
+                      <td>{money(h.value)}</td>
+                      <td className={h.profit >= 0 ? "pos" : "neg"}>{money(h.profit)}</td>
                       <td><Ret x={h.pct} /></td>
                     </tr>
                   ))}
@@ -351,7 +352,7 @@ export default async function Invest({ searchParams }) {
                   <td>{sharpe(q.sharpe)}</td>
                   <td><Risk vol={q.vol} /></td>
                   <td className="label">{q.divYield > 0 ? `${(q.divYield * 100).toFixed(1)}%` : "—"}</td>
-                  <td className="label">{q.priceIls ? unitPrice(q.priceIls) : "—"}</td>
+                  <td className="label">{q.priceIls ? unitPrice(q.priceIls) : "—"}{usd && q.priceIls ? <span className="ils-small"> · {ils(q.priceIls)}</span> : null}</td>
                 </tr>
               ))}
             </tbody>
