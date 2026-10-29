@@ -224,7 +224,7 @@ export default async function Invest({ searchParams }) {
               </div>
             </div>
             <div className="xcard-strip">
-              <div><span>מחיר ליחידה</span><b>{p.priceIls ? unitPrice(p.priceIls) : "—"}</b>{usd && p.priceIls ? <span className="xcard-ils">{ils(p.priceIls)}</span> : null}</div>
+              <div><span>מחיר ליחידה</span><b className="usd-price">{p.priceIls ? unitPrice(p.priceIls) : "—"}</b>{usd && p.priceIls ? <span className="xcard-ils">{ils(p.priceIls)}</span> : null}</div>
               <div><span>היום</span><LiveChange symbol={p.symbol} fallback={p.d1} /></div>
               <div className="xcard-strip-buy"><span>לקנות</span><b>{units(p)}</b></div>
             </div>
@@ -352,7 +352,7 @@ export default async function Invest({ searchParams }) {
                   <td>{sharpe(q.sharpe)}</td>
                   <td><Risk vol={q.vol} /></td>
                   <td className="label">{q.divYield > 0 ? `${(q.divYield * 100).toFixed(1)}%` : "—"}</td>
-                  <td className="label">{q.priceIls ? unitPrice(q.priceIls) : "—"}{usd && q.priceIls ? <span className="ils-small"> · {ils(q.priceIls)}</span> : null}</td>
+                  <td>{q.priceIls ? <b className="usd-price">{unitPrice(q.priceIls)}</b> : "—"}{usd && q.priceIls ? <span className="label ils-small"> · {ils(q.priceIls)}</span> : null}</td>
                 </tr>
               ))}
             </tbody>
