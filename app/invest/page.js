@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { getSettings } from "@/lib/data";
 import { ils } from "@/lib/goal";
-import { BUCKETS, loadMarket, completePicks, sizePicks, fractional, isMetal, bucketPct, DEFAULT_METALS_PCT, ABOUT } from "@/lib/portfolio";
+import { BUCKETS, loadMarket, completePicks, sizePicks, isMetal, bucketPct, DEFAULT_METALS_PCT, ABOUT } from "@/lib/portfolio";
 import { advisorEnabled } from "@/lib/advisor";
 import AiButton from "@/components/AiButton";
 import Logo from "@/components/Logo";
@@ -74,7 +74,7 @@ const numbersReason = (q) =>
   `נבחרה לפי הביצועים: ${pct(q.m12)} בשנה, ${pct(q.m6)} בחצי שנה, ${pct(q.m3)} ב-3 חודשים, בתנודתיות של ${pct(q.vol)}.`;
 
 const units = (p) =>
-  p.units == null ? "—" : isMetal(p.symbol) ? `${p.units.toFixed(3)} אונקיות` : fractional(p.symbol) ? `${p.units.toFixed(3)} יחידות` : `${p.units} יחידות`;
+  p.units == null ? "—" : `${p.units} ${isMetal(p.symbol) ? (p.units === 1 ? "אונקיה" : "אונקיות") : p.units === 1 ? "יחידה" : "יחידות"}`;
 
 export default async function Invest({ searchParams }) {
   const settings = await getSettings();
@@ -176,7 +176,7 @@ export default async function Invest({ searchParams }) {
             </tbody>
           </table>
         </div>
-        {leftover > 1 && <p className="label">נשאר כמזומן בחשבון: {ils(leftover)} (קרן בלונדון נקנית ביחידות שלמות).</p>}
+        {leftover > 1 && <p className="label">נשאר כמזומן בחשבון: {ils(leftover)} (קונים רק יחידות שלמות, אז האחוזים בפועל קרובים ליעד אבל לא זהים). יישאר להפקדה הבאה.</p>}
         <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
           {done.length ? (
             <form action={undo} style={{ maxWidth: "none" }}>
