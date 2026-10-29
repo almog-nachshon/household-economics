@@ -1,0 +1,113 @@
+"use client";
+import { createContext, useContext, useEffect, useState } from "react";
+
+// Today's change per symbol, refreshed every minute from /api/live.
+const LiveContext = createContext({});
+
+export function LiveQuotes({ symbols, children }) {
+  const [quotes, setQuotes] = useState({});
+  useEffect(() => {
+    const load = () => fetch(`/api/live?symbols=${symbols.join(",")}`).then((r) => r.json()).then(setQuotes).catch(() => {});
+    load();
+    const id = setInterval(load, 60000);
+    return () => clearInterval(id);
+  }, [symbols.join(",")]);
+  return <LiveContext.Provider value={quotes}>{children}</LiveContext.Provider>;
+}
+
+export function LiveChange({ symbol, fallback }) {
+  const q = useContext(LiveContext)[symbol];
+  const x = q?.change ?? fallback;
+  if (x == null) return null;
+  return (
+    <span className={x >= 0 ? "pos" : "neg"} title="השינוי היום">
+      {x >= 0 ? "+" : ""}{(x * 100).toFixed(2)}%{q ? <span className="live-dot" /> : null}
+    </span>
+  );
+}
+
+// NYSE / Nasdaq regular hours 9:30-16:00 New York time, with pre-market and after-hours, and exchange holidays.
+const HOLIDAYS = [
+  "2026-01-01", "2026-01-19", "2026-02-16", "2026-04-03", "2026-05-25", "2026-06-19", "2026-07-03", "2026-09-07", "2026-11-26", "2026-12-25",
+  "2027-01-01", "2027-01-18", "2027-02-15", "2027-03-26", "2027-05-31", "2027-06-18", "2027-07-05", "2027-09-06", "2027-11-25", "2027-12-24",
+];
+const EARLY_CLOSE = ["2026-11-27", "2026-12-24", "2027-11-26"]; // 13:00 close
+
+function nyNow(d) {
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", weekday: "short", hourCycle: "h23" })
+      .formatToParts(d).map((p) => [p.type, p.value]),
+  );
+  return { date: `${parts.year}-${parts.month}-${parts.day}`, min: Number(parts.hour) * 60 + Number(parts.minute), weekday: parts.weekday };
+}
+
+function status(d) {
+  const { date, min, weekday } = nyNow(d);
+  const close = EARLY_CLOSE.includes(date) ? 13 * 60 : 16 * 60;
+  if (weekday === "Sat" || weekday === "Sun" || HOLIDAYS.includes(date)) return { state: "closed", label: HOLIDAYS.includes(date) ? "סגור (חג בארה״ב)" : "סגור (סוף שבוע)" };
+  if (min >= 570 && min < close) return { state: "open", label: "פתוח", left: close - min };
+  if (min >= 240 && min < 570) return { state: "pre", label: "מסחר מוקדם", left: 570 - min };
+  if (min >= close && min < 20 * 60) return { state: "after", label: "מסחר מאוחר" };
+  return { state: "closed", label: "סגור" };
+}
+
+// Israel time of 9:30 / 16:00 in New York today (the gap changes with daylight saving in each country).
+const ilTime = (d, nyMinutes) => {
+  const { min } = nyNow(d);
+  return new Date(d.getTime() + (nyMinutes - min) * 60000).toLocaleTimeString("he-IL", { timeZone: "Asia/Jerusalem", hour: "2-digit", minute: "2-digit" });
+};
+
+export function MarketStatus() {
+  const [now, setNow] = useState(null);
+  useEffect(() => {
+    setNow(new Date());
+    const id = setInterval(() => setNow(new Date()), 30000);
+    return () => clearInterval(id);
+  }, []);
+  if (!now) return null;
+  const s = status(now);
+  const hm = (m) => `${Math.floor(m / 60)}:${String(m % 60).padStart(2, "0")}`;
+  return (
+    <span className={`market market-${s.state}`} title={`שעות מסחר רגילות בשעון ישראל: ${ilTime(now, 570)}–${ilTime(now, 960)}`}>
+      <span className="market-dot" />
+      שוק ארה״ב: {s.label}
+      {s.state === "open" && <span className="market-sub"> · נסגר בעוד {hm(s.left)}</span>}
+      {s.state === "pre" && <span className="market-sub"> · נפתח בעוד {hm(s.left)}</span>}
+      {s.state !== "open" && s.state !== "pre" && <span className="market-sub"> · נפתח ב-{ilTime(now, 570)} שעון ישראל</span>}
+    </span>
+  );
+}
+
+// Today's price line (5-minute points) against yesterday's close, with hour marks in Israel time.
+export function IntradayChart({ symbol }) {
+  const q = useContext(LiveContext)[symbol];
+  const pts = q?.points;
+  if (!pts || pts.length < 2) return <div className="intraday intraday-empty">גרף יומי נטען…</div>;
+  const W = 300, H = 70;
+  const values = pts.map(([, c]) => c).concat(q.prev ?? []);
+  const lo = Math.min(...values), hi = Math.max(...values);
+  const t0 = pts[0][0], t1 = Math.max(pts[pts.length - 1][0], t0 + 6.5 * 3600);
+  const x = (t) => ((t - t0) / (t1 - t0)) * W;
+  const y = (c) => H - 4 - ((c - lo) / (hi - lo || 1)) * (H - 8);
+  const line = pts.map(([t, c], i) => `${i ? "L" : "M"}${x(t).toFixed(1)},${y(c).toFixed(1)}`).join(" ");
+  const up = pts[pts.length - 1][1] >= (q.prev ?? pts[0][1]);
+  const color = up ? "#3ddc84" : "#ff6b6b";
+  const hours = [];
+  for (let t = Math.ceil(t0 / 3600) * 3600; t <= t1; t += 3600) hours.push(t);
+  const hh = (t) => new Date(t * 1000).toLocaleTimeString("he-IL", { timeZone: "Asia/Jerusalem", hour: "2-digit", minute: "2-digit" });
+  return (
+    <div className="intraday" dir="ltr">
+      <svg viewBox={`0 0 ${W} ${H + 14}`} preserveAspectRatio="none" role="img" aria-label="גרף יומי">
+        {hours.map((t) => (
+          <g key={t}>
+            <line x1={x(t)} x2={x(t)} y1="0" y2={H} stroke="#2c3a4e" strokeWidth="1" />
+            <text x={x(t)} y={H + 11} fontSize="8" fill="#7f8ea3" textAnchor="middle">{hh(t)}</text>
+          </g>
+        ))}
+        {q.prev && <line x1="0" x2={W} y1={y(q.prev)} y2={y(q.prev)} stroke="#7f8ea3" strokeDasharray="3 3" strokeWidth="1" />}
+        <path d={`${line} L${x(pts[pts.length - 1][0]).toFixed(1)},${H} L0,${H} Z`} fill={color} opacity="0.12" />
+        <path d={line} fill="none" stroke={color} strokeWidth="1.8" />
+      </svg>
+    </div>
+  );
+}

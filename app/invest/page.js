@@ -7,6 +7,7 @@ import { BUCKETS, loadMarket, completePicks, sizePicks, fractional, isMetal, buc
 import { advisorEnabled } from "@/lib/advisor";
 import AiButton from "@/components/AiButton";
 import Logo from "@/components/Logo";
+import { LiveQuotes, LiveChange, MarketStatus, IntradayChart } from "@/components/Live";
 import { portfolio } from "@/lib/holdings";
 import { generatePlan, depositMonth, depositDate, holdings } from "@/lib/invest-run";
 
@@ -29,6 +30,8 @@ const Risk = ({ vol }) => {
 };
 const typeOf = (p) => (isMetal(p.symbol) ? "מתכת" : /ETF|קרן|UCITS|SPDR|iShares|Vanguard|Invesco|VanEck/.test(p.name) ? "קרן סל" : "מניה");
 const Div = ({ q }) => (q.divYield > 0 ? <span className="tag tag-div">דיבידנד ~{(q.divYield * 100).toFixed(1)}%</span> : null);
+// A small ⓘ with an explanation on hover / tap.
+const Info = ({ text }) => <span className="info" title={text} tabIndex={0}>i</span>;
 const sharpe = (x) => (x == null ? "—" : x.toFixed(2));
 const CHANGES = { add: "להוסיף", hold: "להחזיק, בלי כסף חדש", reduce: "לצמצם (למכור חלק)", sell: "למכור" };
 
@@ -101,6 +104,7 @@ export default async function Invest({ searchParams }) {
     <>
       <div className="page-head">
         <h1>השקעות: הפקדה ב-{date(day)}</h1>
+        <MarketStatus />
         {advisorEnabled() && (
           <form action={runNow} style={{ maxWidth: "none" }}>
             <AiButton label="בדיקה מהירה של Claude" updated={plan?.createdAt.toLocaleString("he-IL", { timeZone: "Asia/Jerusalem" })} />
@@ -124,6 +128,7 @@ export default async function Invest({ searchParams }) {
         {amount !== settings.monthlyInvest && <a href="/invest">חזרה להוראת הקבע ({ils(settings.monthlyInvest)})</a>}
       </form>
 
+      <LiveQuotes symbols={picks.map((p) => p.symbol)}>
       <div className="card invest-hero">
         <div className="invest-hero-head">
           <div>
@@ -152,7 +157,7 @@ export default async function Invest({ searchParams }) {
               <div className="alloc-bar"><div style={{ width: `${Math.min(100, Math.max(p.pct * 4, 14))}%`, background: BUCKET_COLORS[p.bucket] }}>{Math.round(p.pct * 10) / 10}%</div></div>
               <b>{ils(p.amount)}</b>
               <span className="label">@ {p.priceIls ? ils(p.priceIls) : "—"}</span>
-              <span className="alloc-ret"><Ret x={p.m12} /> לשנה</span>
+              <span className="alloc-ret"><LiveChange symbol={p.symbol} fallback={p.d1} /> היום · <Ret x={p.m12} /> לשנה</span>
               <span className="alloc-tags"><span className="tag" style={{ marginInlineStart: 0 }}>{typeOf(p)}</span><Div q={p} /></span>
             </div>
           ))}
@@ -178,42 +183,55 @@ export default async function Invest({ searchParams }) {
       <h2 style={{ marginTop: 20 }}>{picks.length} הבחירות: ניתוח מפורט</h2>
       <div className="pick-grid">
         {picks.map((p) => (
-          <div key={p.symbol} className="pick-card" style={{ borderTopColor: BUCKET_COLORS[p.bucket] }}>
-            <div className="pick-top">
-              <div className="sym">
-                <Logo id={p.symbol} label={p.name} size={30} />
-                <span><span className="pick-symbol">{p.symbol}</span> <Risk vol={p.vol} /><div className="label pick-name" title={p.name}>{p.name}</div></span>
+          <div key={p.symbol} className="xcard">
+            <div className="xcard-top">
+              <div>
+                <div className="xcard-title"><span className="xcard-sym">{p.symbol}</span><Risk vol={p.vol} /></div>
+                <div className="xcard-name" title={p.name}>{p.name}</div>
+                <div className="xcard-sub">{p.sector || bucketName[p.bucket]}</div>
               </div>
-              <div className="pick-amount">
-                <div className="pick-pct" style={{ color: BUCKET_COLORS[p.bucket] }}>{Math.round(p.pct * 10) / 10}%</div>
-                <b>{ils(p.amount)}</b>
-                <div className="label">{units(p)}</div>
+              <div className="xcard-money">
+                <div className="xcard-pct"><Info text="החלק של ההחזקה מסכום ההפקדה" />{Math.round(p.pct * 10) / 10}%</div>
+                <div className="xcard-amount">{ils(p.amount)}</div>
+                <div className="xcard-price">
+                  <LiveChange symbol={p.symbol} fallback={p.d1} />
+                  <b>{p.priceIls ? ils(p.priceIls) : "—"}</b> / {isMetal(p.symbol) ? "אונקיה" : "יחידה"}
+                </div>
               </div>
             </div>
-            <div className="pick-tags">
-              <span className="tag" style={{ background: BUCKET_COLORS[p.bucket], color: "#fff", marginInlineStart: 0 }}>{bucketName[p.bucket]}</span>
-              <span className="tag">{typeOf(p)}</span>
-              <Div q={p} />
-              {p.conviction ? <span className="tag tag-card" title="רמת ביטחון במחקר">{"★".repeat(Math.round(p.conviction))}{"☆".repeat(5 - Math.round(p.conviction))}</span> : null}
+            <div className="xcard-tags">
+              <Logo id={p.symbol} label={p.name} size={22} />
+              <span className="xtag">{typeOf(p)}</span>
+              {p.divYield > 0 && <span className="xtag xtag-div">💰 דיבידנד ~{(p.divYield * 100).toFixed(1)}%</span>}
+              {p.conviction ? <span className="xtag" title="רמת ביטחון במחקר">{"★".repeat(Math.round(p.conviction))}{"☆".repeat(5 - Math.round(p.conviction))}</span> : null}
             </div>
-            <div className="metric-grid">
-              <div><span>תשואה שנתית</span><Ret x={p.m12} /></div>
-              <div><span>3 חודשים</span><Ret x={p.m3} /></div>
-              <div><span>שארפ</span><b>{sharpe(p.sharpe)}</b></div>
-              <div><span>תנודתיות</span><b>{pct(p.vol)}</b></div>
-              <div><span>ירידה מקס׳</span><Ret x={p.maxDrawdown} /></div>
-              <div><span>מגמה 30 יום</span><Ret x={p.m1} /></div>
+            <div className="xcard-bar"><div style={{ width: `${Math.min(100, p.pct * 4)}%` }} /></div>
+            <IntradayChart symbol={p.symbol} />
+            <div className="xcard-metrics">
+              <div><span>תשואה שנתית<Info text="השינוי במחיר (כולל דיבידנדים) ב-12 החודשים האחרונים" /></span><Ret x={p.m12} /></div>
+              <div><span>ממוצע חודשי<Info text="התשואה הממוצעת לחודש בשנה האחרונה" /></span><Ret x={p.mAvg} /></div>
+              <div><span>שארפ<Info text="תשואה ביחס לסיכון, מעל ריבית חסרת סיכון של 4%. מעל 1 = טוב, מעל 2 = מצוין" /></span><b className="pos">{sharpe(p.sharpe)}</b></div>
+              <div><span>תנודתיות<Info text="כמה המחיר קופץ במהלך שנה. מעל 40% = תנודתי מאוד" /></span><b>{pct(p.vol)}</b></div>
+              <div><span>ירידה מקסימלית<Info text="הנפילה הגדולה ביותר מהשיא בשנה האחרונה" /></span><Ret x={p.maxDrawdown} /></div>
+              <div><span>מגמה 30 יום<Info text="השינוי במחיר בחודש האחרון" /></span><Ret x={p.m1} /></div>
             </div>
-            {p.analysts && <div className="pick-line"><span>מה אומרים האנליסטים</span>{p.analysts}</div>}
-            <details className="pick-details">
-              <summary>מה זה ולמה עכשיו</summary>
-              <p className="pick-reason"><b>מה זה: </b>{p.about || ABOUT[p.symbol]}</p>
-              <div className="pick-line"><span>למה עכשיו</span>{p.reason || numbersReason(p)}</div>
-              {p.outlook && <div className="pick-line"><span>מה לשים לב</span>{p.outlook}</div>}
+            {(p.eps || p.analysts) && (
+              <div className="xcard-box">
+                {p.eps && <div className="xcard-eps"><span>EPS צפוי<Info text="רווח צפוי למניה ומכפיל הרווח, לפי תחזיות האנליסטים" /></span><b>{p.eps}</b></div>}
+                {p.analysts && <div className="xcard-analysts">{p.analysts}</div>}
+              </div>
+            )}
+            <details className="xcard-details">
+              <summary>פרטי החברה ←</summary>
+              <p><b>מה זה: </b>{p.about || ABOUT[p.symbol]}</p>
+              <p><b>למה עכשיו: </b>{p.reason || numbersReason(p)}</p>
+              {p.outlook && <p><b>מה לשים לב: </b>{p.outlook}</p>}
+              <p className="xcard-units">לקנות: {units(p)}</p>
             </details>
           </div>
         ))}
       </div>
+      </LiveQuotes>
 
       <div className="card" style={{ marginTop: 12 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
