@@ -211,3 +211,6 @@ table.rank tr.chosen td { font-weight: 700; background: var(--accent-soft); }
 .xcard-buy { display: flex; align-items: baseline; gap: 8px; justify-content: space-between; background: var(--accent-soft); border: 1px solid #bfe7e7; border-radius: 10px; padding: 8px 12px; }
 .xcard-buy > span:first-child { font-size: 12px; font-weight: 700; color: var(--accent); }
 .xcard-buy b { font-size: 16px; color: var(--accent); }
+.cur-toggle { display: inline-flex; border: 1px solid var(--accent); border-radius: 8px; overflow: hidden; }
+.cur-toggle a { padding: 8px 12px; font-weight: 700; text-decoration: none; color: var(--accent); background: var(--card); }
+.cur-toggle a.on { background: var(--accent); color: #fff; }

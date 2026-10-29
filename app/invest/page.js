@@ -88,7 +88,14 @@ export default async function Invest({ searchParams }) {
     portfolio(),
   ]);
   // A one-off larger (or smaller) amount for this deposit, from the amount box; otherwise the standing order.
-  const amount = Number(searchParams?.amount) > 0 ? Number(searchParams.amount) : settings.monthlyInvest;
+  // The amount box works in shekels or dollars (the ₪ / $ toggle); the split is always computed in shekels.
+  const usd = searchParams?.cur === "USD" && market.usdIls > 0;
+  const rate = usd ? market.usdIls : 1;
+  const typed = Number(searchParams?.amount) > 0 ? Number(searchParams.amount) : null;
+  const amount = typed ? typed * rate : settings.monthlyInvest;
+  const shown = Math.round(amount / rate);
+  const money = (x) => (usd ? `$${Math.round(x / rate).toLocaleString("en-US")}` : ils(x));
+  const unitPrice = (x) => (usd ? `$${(x / rate).toLocaleString("en-US", { maximumFractionDigits: 2 })}` : ils(x));
   const chosen = plan ? JSON.parse(plan.picks) : [];
   const metalsPct = plan ? plan.metalsPct : DEFAULT_METALS_PCT;
   const { picks, leftover } = sizePicks(completePicks(chosen, market.bySymbol, amount, metalsPct), amount);
@@ -123,9 +130,15 @@ export default async function Invest({ searchParams }) {
 
       <form method="get" style={{ display: "flex", gap: 8, alignItems: "center", maxWidth: "none", marginBottom: 12, flexWrap: "wrap" }}>
         <span>סכום להשקעה:</span>
-        <input type="number" name="amount" min="1" step="1" defaultValue={amount} style={{ width: 140 }} />
+        <input type="number" name="amount" min="1" step="1" defaultValue={shown} style={{ width: 140 }} />
+        <input type="hidden" name="cur" value={usd ? "USD" : "ILS"} />
+        <span className="cur-toggle">
+          <a href={`/invest?amount=${Math.round(amount)}&cur=ILS`} className={usd ? "" : "on"}>₪ שקל</a>
+          <a href={`/invest?amount=${Math.round(amount / (market.usdIls || 1))}&cur=USD`} className={usd ? "on" : ""}>$ דולר</a>
+        </span>
         <button type="submit">חשב חלוקה</button>
-        {amount !== settings.monthlyInvest && <a href="/invest">חזרה להוראת הקבע ({ils(settings.monthlyInvest)})</a>}
+        {market.usdIls && <span className="label">דולר = {market.usdIls.toFixed(3)} ₪</span>}
+        {Math.round(amount) !== settings.monthlyInvest && <a href="/invest">חזרה להוראת הקבע ({ils(settings.monthlyInvest)})</a>}
       </form>
 
       <LiveQuotes symbols={picks.map((p) => p.symbol)}>
@@ -133,7 +146,7 @@ export default async function Invest({ searchParams }) {
         <div className="invest-hero-head">
           <div>
             <div className="label">הפקדה ב-{date(day)}</div>
-            <div className="value big">{ils(amount)}</div>
+            <div className="value big">{money(amount)}</div>
             <div className="label">{picks.length} החזקות · {plan ? `לפי מחקר של Claude` : "לפי ציון ביצועים"}</div>
           </div>
           <div className="bucket-bars">
@@ -165,8 +178,8 @@ export default async function Invest({ searchParams }) {
                       <span>{Math.round(p.pct * 10) / 10}%</span>
                     </div>
                   </td>
-                  <td><b>{ils(p.amount)}</b></td>
-                  <td><LivePrice symbol={p.symbol} ils={p.priceIls ? ils(p.priceIls) : null} /></td>
+                  <td><b>{money(p.amount)}</b></td>
+                  <td><LivePrice symbol={p.symbol} ils={p.priceIls && !usd ? ils(p.priceIls) : null} /></td>
                   <td><LiveChange symbol={p.symbol} fallback={p.d1} /></td>
                   <td><LiveWeek symbol={p.symbol} /></td>
                   <td><Ret x={p.m12} /></td>
@@ -176,7 +189,7 @@ export default async function Invest({ searchParams }) {
             </tbody>
           </table>
         </div>
-        {leftover > 1 && <p className="label">נשאר כמזומן בחשבון: {ils(leftover)} (קונים רק יחידות שלמות, אז האחוזים בפועל קרובים ליעד אבל לא זהים). יישאר להפקדה הבאה.</p>}
+        {leftover > 1 && <p className="label">נשאר כמזומן בחשבון: {money(leftover)} (קונים רק יחידות שלמות, אז האחוזים בפועל קרובים ליעד אבל לא זהים). יישאר להפקדה הבאה.</p>}
         <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
           {done.length ? (
             <form action={undo} style={{ maxWidth: "none" }}>
@@ -206,10 +219,10 @@ export default async function Invest({ searchParams }) {
               </div>
               <div className="xcard-money">
                 <div className="xcard-pct"><Info text="החלק של ההחזקה מסכום ההפקדה" />{Math.round(p.pct * 10) / 10}%</div>
-                <div className="xcard-amount">{ils(p.amount)}</div>
+                <div className="xcard-amount">{money(p.amount)}</div>
                 <div className="xcard-price">
                   <LiveChange symbol={p.symbol} fallback={p.d1} />
-                  <b>{p.priceIls ? ils(p.priceIls) : "—"}</b> / {isMetal(p.symbol) ? "אונקיה" : "יחידה"}
+                  <b>{p.priceIls ? unitPrice(p.priceIls) : "—"}</b> / {isMetal(p.symbol) ? "אונקיה" : "יחידה"}
                 </div>
               </div>
             </div>
@@ -222,7 +235,7 @@ export default async function Invest({ searchParams }) {
             <div className="xcard-buy">
               <span>לקנות</span>
               <b>{units(p)}</b>
-              <span className="label">ב-{ils(p.amount)}</span>
+              <span className="label">ב-{money(p.amount)}</span>
             </div>
             <div className="xcard-bar"><div style={{ width: `${Math.min(100, p.pct * 4)}%` }} /></div>
             <IntradayChart symbol={p.symbol} />
@@ -341,7 +354,7 @@ export default async function Invest({ searchParams }) {
                   <td>{sharpe(q.sharpe)}</td>
                   <td><Risk vol={q.vol} /></td>
                   <td className="label">{q.divYield > 0 ? `${(q.divYield * 100).toFixed(1)}%` : "—"}</td>
-                  <td className="label">{q.priceIls ? ils(q.priceIls) : "—"}</td>
+                  <td className="label">{q.priceIls ? unitPrice(q.priceIls) : "—"}</td>
                 </tr>
               ))}
             </tbody>
