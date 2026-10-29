@@ -226,7 +226,7 @@ export default async function Invest({ searchParams }) {
             <div className="xcard-strip">
               <div><span>מחיר ליחידה</span><b className="usd-price">{p.priceIls ? unitPrice(p.priceIls) : "—"}</b>{usd && p.priceIls ? <span className="xcard-ils">{ils(p.priceIls)}</span> : null}</div>
               <div><span>היום</span><LiveChange symbol={p.symbol} fallback={p.d1} /></div>
-              <div className="xcard-strip-buy"><span>לקנות</span><b>{units(p)}</b></div>
+              <div className="xcard-strip-buy"><span>לקנות</span><b>{units(p)}</b><span className="xcard-cost">סה״כ <b>{money(p.cost)}</b>{usd ? ` · ${ils(p.cost)}` : ""}</span></div>
             </div>
             <div className="xcard-tags">
               <Risk vol={p.vol} />
