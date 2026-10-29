@@ -223,10 +223,18 @@ export default async function Invest({ searchParams }) {
                 <div className="xcard-amount">{money(p.amount)}</div>
               </div>
             </div>
-            <div className="xcard-strip">
-              <div><span>מחיר ליחידה</span><b className="usd-price">{p.priceIls ? unitPrice(p.priceIls) : "—"}</b>{usd && p.priceIls ? <span className="xcard-ils">{ils(p.priceIls)}</span> : null}</div>
-              <div><span>היום</span><LiveChange symbol={p.symbol} fallback={p.d1} /></div>
-              <div className="xcard-strip-buy"><span>לקנות</span><b>{units(p)}</b><span className="xcard-cost">סה״כ <b>{money(p.cost)}</b>{usd ? ` · ${ils(p.cost)}` : ""}</span></div>
+            <div className="xcard-price-row">
+              <div>
+                <span className="xcard-k">מחיר ליחידה</span>
+                <b className="usd-price">{p.priceIls ? unitPrice(p.priceIls) : "—"}</b>
+                {usd && p.priceIls ? <span className="xcard-ils">{ils(p.priceIls)}</span> : null}
+              </div>
+              <div className="xcard-today"><span className="xcard-k">היום</span><LiveChange symbol={p.symbol} fallback={p.d1} /></div>
+            </div>
+            <div className="xcard-buyrow">
+              <span className="xcard-k">לקנות</span>
+              <b>{units(p)}</b>
+              <span className="xcard-buy-total">סה״כ <b>{money(p.cost)}</b>{usd ? <span> · {ils(p.cost)}</span> : null}</span>
             </div>
             <div className="xcard-tags">
               <Risk vol={p.vol} />
