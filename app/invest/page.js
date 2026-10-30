@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { getSettings } from "@/lib/data";
 import { ils } from "@/lib/goal";
-import { BUCKETS, loadMarket, completePicks, sizePicks, isMetal, bucketPct, DEFAULT_METALS_PCT, ABOUT } from "@/lib/portfolio";
+import { BUCKETS, loadMarket, completePicks, gapShares, sizePicks, isMetal, bucketPct, DEFAULT_METALS_PCT, ABOUT } from "@/lib/portfolio";
 import { advisorEnabled } from "@/lib/advisor";
 import AiButton from "@/components/AiButton";
 import Logo from "@/components/Logo";
@@ -122,7 +122,9 @@ export default async function Invest({ searchParams }) {
   const unitPrice = (x) => (usd ? `$${(x / rate).toLocaleString("en-US", { maximumFractionDigits: 2 })}` : ils(x));
   const chosen = plan ? JSON.parse(plan.picks) : [];
   const metalsPct = plan ? plan.metalsPct : DEFAULT_METALS_PCT;
-  const { picks, skipped, leftover } = sizePicks(completePicks(chosen, market.bySymbol, amount, metalsPct), amount);
+  // With IBKR holdings, the deposit fills the buckets that are furthest below target.
+  const shares = folio.broker ? gapShares(folio.rows.filter((h) => h.bucket), amount, metalsPct) : null;
+  const { picks, skipped, leftover } = sizePicks(completePicks(chosen, market.bySymbol, amount, metalsPct, shares), amount);
   // Every candidate with data, best score first, the score scaled 0-100.
   const valid = Object.values(market.bySymbol).filter((q) => !q.error && q.buyable);
   const [lo, hi] = [Math.min(...valid.map((q) => q.score)), Math.max(...valid.map((q) => q.score))];
@@ -188,10 +190,11 @@ export default async function Invest({ searchParams }) {
             <div className="value big">{money(amount)}</div>
             {usd && <div className="label">≈ {ils(amount)} לפי דולר = {market.usdIls.toFixed(3)} ₪</div>}
             <div className="label">{picks.length} החזקות · {plan ? `לפי מחקר של Claude` : "לפי ציון ביצועים"}</div>
+            {shares && <div className="label">החלוקה משלימה את מה שכבר בתיק: יותר כסף לחלקים שרחוקים מהיעד</div>}
           </div>
           <div className="bucket-bars">
             {BUCKETS.map((b) => {
-              const share = bucketPct(b, metalsPct);
+              const share = shares ? shares[b.key] : bucketPct(b, metalsPct);
               return (
                 <div key={b.key} className="bucket-bar">
                   <span>{b.name}</span>
