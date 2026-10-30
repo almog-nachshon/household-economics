@@ -6,6 +6,7 @@ import { ils } from "@/lib/goal";
 import { BUCKETS, REVIEW_DAY, loadMarket, completePicks, gapShares, sizePicks, isMetal, bucketPct, DEFAULT_METALS_PCT, ABOUT } from "@/lib/portfolio";
 import { advisorEnabled } from "@/lib/advisor";
 import AiButton from "@/components/AiButton";
+import SyncButton from "@/components/SyncButton";
 import Logo from "@/components/Logo";
 import Sources from "@/components/Sources";
 import { LiveQuotes, LiveChange, LiveWeek, LivePrice, MarketStatus, IntradayChart } from "@/components/Live";
@@ -143,7 +144,7 @@ export default async function Invest({ searchParams }) {
         <MarketStatus />
         {ibkrEnabled() && (
           <form action={syncNow} style={{ maxWidth: "none" }}>
-            <button type="submit" className="secondary">רענון מאינטראקטיב</button>
+            <SyncButton />
           </form>
         )}
         {advisorEnabled() && (
