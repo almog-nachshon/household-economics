@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { getSettings } from "@/lib/data";
 import { ils } from "@/lib/goal";
-import { BUCKETS, loadMarket, completePicks, gapShares, sizePicks, isMetal, bucketPct, DEFAULT_METALS_PCT, ABOUT } from "@/lib/portfolio";
+import { BUCKETS, REVIEW_DAY, loadMarket, completePicks, gapShares, sizePicks, isMetal, bucketPct, DEFAULT_METALS_PCT, ABOUT } from "@/lib/portfolio";
 import { advisorEnabled } from "@/lib/advisor";
 import AiButton from "@/components/AiButton";
 import Logo from "@/components/Logo";
@@ -11,7 +11,7 @@ import Sources from "@/components/Sources";
 import { LiveQuotes, LiveChange, LiveWeek, LivePrice, MarketStatus, IntradayChart } from "@/components/Live";
 import { portfolio } from "@/lib/holdings";
 import { generatePlan, depositMonth, depositDate, holdings } from "@/lib/invest-run";
-import { ibkrEnabled, syncIbkr, ibkrQuoteUrl, ibkrDetailsUrl } from "@/lib/ibkr";
+import { ibkrEnabled, syncIbkr, ibkrQuoteUrl, ibkrDetailsUrl, boughtSince } from "@/lib/ibkr";
 import { STOP, TARGET } from "@/lib/alerts";
 import Alerts from "@/components/Alerts";
 import { signalsFor, SIGNAL, finvizUrl, onFinviz } from "@/lib/signals";
@@ -122,9 +122,11 @@ export default async function Invest({ searchParams }) {
   const unitPrice = (x) => (usd ? `$${(x / rate).toLocaleString("en-US", { maximumFractionDigits: 2 })}` : ils(x));
   const chosen = plan ? JSON.parse(plan.picks) : [];
   const metalsPct = plan ? plan.metalsPct : DEFAULT_METALS_PCT;
-  // With IBKR holdings, the deposit fills the buckets that are furthest below target.
+  // With IBKR holdings, the deposit fills the buckets that are furthest below target. What was already bought at IBKR
+  // for this deposit (since the day after the last deposit day) is done: shown as bought, not offered again.
   const shares = folio.broker ? gapShares(folio.rows.filter((h) => h.bucket), amount, metalsPct) : null;
-  const { picks, skipped, leftover } = sizePicks(completePicks(chosen, market.bySymbol, amount, metalsPct, shares), amount);
+  const bought = folio.broker ? await boughtSince(new Date(Date.UTC(month.getFullYear(), month.getMonth() - 1, REVIEW_DAY + 1))) : [];
+  const { picks, skipped, leftover } = sizePicks(completePicks(chosen, market.bySymbol, amount, metalsPct, shares, new Set(bought.map((b) => b.symbol))), amount);
   // Every candidate with data, best score first, the score scaled 0-100.
   const valid = Object.values(market.bySymbol).filter((q) => !q.error && q.buyable);
   const [lo, hi] = [Math.min(...valid.map((q) => q.score)), Math.max(...valid.map((q) => q.score))];
@@ -206,7 +208,24 @@ export default async function Invest({ searchParams }) {
             })}
           </div>
         </div>
-        <h2 style={{ marginTop: 16 }}>סקירת הקצאת התיק</h2>
+        {bought.length > 0 && (
+          <div className="bought-box">
+            <h2 style={{ margin: 0 }}>✅ נקנה כבר להפקדה הזו</h2>
+            <div className="label">לפי העסקאות באינטראקטיב. עברו ל<a href="#folio">״התיק שלי״</a> ולא מוצעות שוב; למטה רק מה שעוד לא נקנה.</div>
+            <div className="bought-list">
+              {bought.map((b) => (
+                <span key={b.symbol} className="bought-item">
+                  <Logo id={b.symbol} label={b.symbol} size={18} />
+                  <IbLink conid={market.bySymbol[b.symbol]?.ibkr?.conid} ib={market.bySymbol[b.symbol]?.ibkr}><b>{b.symbol}</b></IbLink>
+                  {" "}{Math.round(b.units * 1000) / 1000} × ${b.price.toFixed(2)} = <b>${Math.round(b.money).toLocaleString("en-US")}</b>
+                  <span className="label"> · {b.last.toLocaleDateString("he-IL", { timeZone: "UTC" })}</span>
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+        <h2 style={{ marginTop: 16 }}>{bought.length ? "מה עוד לקנות" : "סקירת הקצאת התיק"}</h2>
+        {bought.length > 0 && picks.length === 0 && <p className="label">כל ההמלצות להפקדה הזו כבר נקנו. ההמלצות הבאות יופיעו בהפקדה הבאה.</p>}
         <div className="table-scroll">
           <table className="alloc-table">
             <thead>
@@ -238,7 +257,14 @@ export default async function Invest({ searchParams }) {
             {p.symbol} לא נקנה החודש: יחידה אחת עולה {unitPrice(p.priceIls)}, יותר מהחלק שלו בהפקדה ({money(p.target)}). הסכום נשאר כמזומן.
           </p>
         ))}
-        {leftover > 1 && <p className="label">נשאר כמזומן בחשבון: {money(leftover)} (קונים רק יחידות שלמות, אז האחוזים בפועל קרובים ליעד אבל לא זהים). יישאר להפקדה הבאה.</p>}
+        {leftover > 1 && (
+          <p className="label">
+            נשאר כמזומן בחשבון: {money(leftover)}{" "}
+            {bought.length
+              ? "(החלקים שכבר קנית להפקדה הזו לא מקבלים כסף שוב). יישאר להפקדה הבאה."
+              : "(קונים רק יחידות שלמות, אז האחוזים בפועל קרובים ליעד אבל לא זהים). יישאר להפקדה הבאה."}
+          </p>
+        )}
         <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
           {folio.broker ? (
             <span className="label">הקניות מזוהות לבד מאינטראקטיב (כל בוקר, או ״רענון מאינטראקטיב״) ומופיעות בהתראות ובתיק למטה. אין צורך לסמן ״קניתי״.</span>
