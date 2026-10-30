@@ -325,3 +325,7 @@ table.rank tr.chosen td { font-weight: 700; background: var(--accent-soft); }
   box-shadow: 0 4px 14px rgba(0, 0, 0, .18);
 }
 .info[data-tip]:hover, .info[data-tip]:focus { background: var(--accent); color: #fff; outline: none; }
+
+/* Next candidates for cash left over (lib/portfolio.js extraPicks) */
+.extra-box { margin-top: 14px; padding: 10px 12px; border-radius: 10px; background: #fff8e6; border-inline-start: 4px solid #d4a017; }
+.extra-box table { margin-top: 6px; }

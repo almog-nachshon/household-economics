@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { getSettings } from "@/lib/data";
 import { ils } from "@/lib/goal";
-import { BUCKETS, REVIEW_DAY, loadMarket, completePicks, gapShares, sizePicks, isMetal, bucketPct, DEFAULT_METALS_PCT, ABOUT } from "@/lib/portfolio";
+import { BUCKETS, REVIEW_DAY, loadMarket, completePicks, gapShares, sizePicks, extraPicks, isMetal, bucketPct, DEFAULT_METALS_PCT, ABOUT } from "@/lib/portfolio";
 import { advisorEnabled } from "@/lib/advisor";
 import AiButton from "@/components/AiButton";
 import SyncButton from "@/components/SyncButton";
@@ -131,7 +131,11 @@ export default async function Invest({ searchParams }) {
   const valid = Object.values(market.bySymbol).filter((q) => !q.error && q.buyable);
   const [lo, hi] = [Math.min(...valid.map((q) => q.score)), Math.max(...valid.map((q) => q.score))];
   const ranked = valid.map((q) => ({ ...q, rankScore: hi > lo ? ((q.score - lo) / (hi - lo)) * 100 : 50 })).sort((x, y) => y.score - x.score);
-  const signals = await signalsFor(market.bySymbol, [...picks.map((p) => p.symbol), ...folio.rows.map((h) => h.symbol)]);
+  const signals = await signalsFor(market.bySymbol, [...picks.map((p) => p.symbol), ...folio.rows.map((h) => h.symbol), ...ranked.map((q) => q.symbol)]);
+  // What the split leaves over goes to the next candidates in the ranking with a buy signal, so no cash sits idle.
+  const taken = new Set([...picks.map((p) => p.symbol), ...bought.map((b) => b.symbol)]);
+  const indexes = new Set([...picks, ...folio.rows, ...bought].map((x) => market.bySymbol[x.symbol]?.index).filter(Boolean));
+  const { extras, left: extraLeft } = leftover > 1 ? extraPicks(ranked, signals, leftover, taken, indexes) : { extras: [], left: leftover };
   const changes = plan
     ? JSON.parse(plan.changes)
     : held.map((h) => ({ symbol: h.symbol, action: picks.some((p) => p.symbol === h.symbol) ? "add" : "hold", reason: null }));
@@ -256,12 +260,33 @@ export default async function Invest({ searchParams }) {
             {p.symbol} לא נקנה החודש: יחידה אחת עולה {unitPrice(p.priceIls)}, יותר מהחלק שלו בהפקדה ({money(p.target)}). הסכום נשאר כמזומן.
           </p>
         ))}
-        {leftover > 1 && (
+        {extras.length > 0 && (
+          <div className="extra-box">
+            <h2 style={{ margin: 0 }}>
+              💡 עוד {money(leftover)} פנויים: הבאים בתור{" "}
+              <Info text="כדי שלא יישאר מזומן בלי השקעה: הכסף שנשאר אחרי החלוקה הולך למניות והקרנות הבאות בטבלת הדירוג שיש להן סימן קנייה (🟢 או ⚪). מדלגים על מה שכבר נקנה או מתוכנן, על 🟡 / 🔴, ועל קרן שני על מדד שכבר בתיק. כל אחת מקבלת עד שליש מהסכום, והשארית מוסיפה יחידות לראשונות." />
+            </h2>
+            <table className="compact">
+              <thead><tr><th>החזקה</th><th>תחום</th><th>סימן</th><th>לקנות</th><th>סכום</th><th>למה</th></tr></thead>
+              <tbody>
+                {extras.map((p) => (
+                  <tr key={p.symbol}>
+                    <td><span className="sym"><Logo id={p.symbol} label={p.name} size={18} /><IbLink conid={p.ibkr?.conid} ib={p.ibkr}><b>{p.symbol}</b></IbLink></span></td>
+                    <td><span className="tag" style={{ background: BUCKET_COLORS[p.bucket], color: "#fff", marginInlineStart: 0 }}>{bucketName[p.bucket]}</span></td>
+                    <td><SignalTag s={p.signal} /></td>
+                    <td><b>{units(p)}</b> <span className="label">× {unitPrice(p.priceIls)}</span></td>
+                    <td><b>{money(p.cost)}</b></td>
+                    <td className="label">{p.signal.reasons[0]}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {extraLeft > 1 && (
           <p className="label">
-            נשאר כמזומן בחשבון: {money(leftover)}{" "}
-            {bought.length
-              ? "(החלקים שכבר קנית להפקדה הזו לא מקבלים כסף שוב). יישאר להפקדה הבאה."
-              : "(קונים רק יחידות שלמות, אז האחוזים בפועל קרובים ליעד אבל לא זהים). יישאר להפקדה הבאה."}
+            נשאר כמזומן בחשבון: {money(extraLeft)}{" "}
+            <Info text={extras.length ? "פחות ממחיר יחידה אחת של המועמדים עם סימן קנייה. יישאר להפקדה הבאה." : "אין כרגע מועמד נוסף עם סימן קנייה (🟢 / ⚪) שנכנס בסכום הזה. יישאר להפקדה הבאה."} />
           </p>
         )}
         <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
