@@ -234,7 +234,11 @@ table.rank tr.chosen td { font-weight: 700; background: var(--accent-soft); }
 .xtag-stars { color: #d4a017; letter-spacing: 1px; }
 .xcard-ils { font-size: 11px; color: var(--muted); }
 .sources { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; font-size: 11px; color: var(--muted); }
-.sources-k { font-weight: 600; }
+.src-conf { padding: 1px 7px; border-radius: 999px; font-weight: 600; color: #fff; }
+.src-conf-high { background: var(--pos); }
+.src-conf-medium { background: var(--accent); }
+.src-conf-low, .src-conf-none { background: var(--warn); }
+.sources .src-out { text-decoration: line-through; opacity: 0.6; }
 .sources .src { padding: 1px 7px; border: 1px solid var(--track); border-radius: 999px; color: inherit; text-decoration: none; }
 .sources .src b { color: var(--text, inherit); }
 .sources .src-ref { opacity: 0.6; }
