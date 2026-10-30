@@ -99,7 +99,7 @@ export default async function Invest({ searchParams }) {
   const unitPrice = (x) => (usd ? `$${(x / rate).toLocaleString("en-US", { maximumFractionDigits: 2 })}` : ils(x));
   const chosen = plan ? JSON.parse(plan.picks) : [];
   const metalsPct = plan ? plan.metalsPct : DEFAULT_METALS_PCT;
-  const { picks, leftover } = sizePicks(completePicks(chosen, market.bySymbol, amount, metalsPct), amount);
+  const { picks, skipped, leftover } = sizePicks(completePicks(chosen, market.bySymbol, amount, metalsPct), amount);
   // Every candidate with data, best score first, the score scaled 0-100.
   const valid = Object.values(market.bySymbol).filter((q) => !q.error && q.buyable);
   const [lo, hi] = [Math.min(...valid.map((q) => q.score)), Math.max(...valid.map((q) => q.score))];
@@ -192,6 +192,11 @@ export default async function Invest({ searchParams }) {
             </tbody>
           </table>
         </div>
+        {skipped.map((p) => (
+          <p key={p.symbol} className="label">
+            {p.symbol} לא נקנה החודש: יחידה אחת עולה {unitPrice(p.priceIls)}, יותר מהחלק שלו בהפקדה ({money(p.target)}). הסכום נשאר כמזומן.
+          </p>
+        ))}
         {leftover > 1 && <p className="label">נשאר כמזומן בחשבון: {money(leftover)} (קונים רק יחידות שלמות, אז האחוזים בפועל קרובים ליעד אבל לא זהים). יישאר להפקדה הבאה.</p>}
         <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
           {done.length ? (
