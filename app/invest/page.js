@@ -260,7 +260,7 @@ export default async function Invest({ searchParams }) {
                 <div className="xcard-name" dir="auto" title={p.name}><IbLink conid={p.ibkr?.conid} ib={p.ibkr}>{p.name}</IbLink></div>
                 {p.ibkr && (
                   <a className="ib-verified" href={ibkrDetailsUrl(p.ibkr.conid)} target="_blank" rel="noreferrer" title="פרטי החוזה הרשמיים של אינטראקטיב">
-                    ✓ אומת באינטראקטיב{p.ibkr.isin ? ` · ISIN ${p.ibkr.isin}` : ` · ${p.ibkr.ibSymbol}`}
+                    ✓ אומת באינטראקטיב · ID {p.ibkr.conid}{p.ibkr.isin ? ` · ISIN ${p.ibkr.isin}` : ` · ${p.ibkr.ibSymbol}`}
                   </a>
                 )}
               </div>
