@@ -4,6 +4,7 @@ import { startOfMonth, monthBudget } from "@/lib/budget";
 import { fixedItems, monthlyIncome } from "@/lib/base";
 import { homeGoal, monthsBetween, ils } from "@/lib/goal";
 import { portfolio, projectPortfolio } from "@/lib/holdings";
+import Alerts from "@/components/Alerts";
 import { depositMonth, depositDate } from "@/lib/invest-run";
 
 export const dynamic = "force-dynamic";
@@ -51,6 +52,7 @@ export default async function Home() {
   return (
     <>
       <h1>בית עד {settings.targetDate.getFullYear()}</h1>
+      <Alerts />
 
       <div className="card hero">
         <div className="hero-row">
@@ -76,8 +78,8 @@ export default async function Home() {
         </Tile>
         <Tile href="/invest" title="תיק השקעות" value={ils(folio.value)} valueClass={folio.profit >= 0 ? "pos" : "neg"}>
           {folio.rows.length
-            ? `הושקע ${ils(folio.cost)} · רווח ${ils(folio.profit)} (${(folio.pct * 100).toFixed(1)}%) · צפי ביעד ${ils(portfolioAtTarget)}`
-            : `עוד אין קניות · עם ${ils(settings.monthlyInvest)} בחודש: צפי ביעד ${ils(portfolioAtTarget)}`}
+            ? `הושקע ${ils(folio.cost)} · רווח ${ils(folio.profit)} (${(folio.pct * 100).toFixed(1)}%)${folio.cash >= 1 ? ` · מזומן ${ils(folio.cash)}` : ""} · צפי ביעד ${ils(portfolioAtTarget)}`
+            : `${folio.cash >= 1 ? `מזומן בחשבון ${ils(folio.cash)}, עוד לא הושקע` : "עוד אין קניות"} · עם ${ils(settings.monthlyInvest)} בחודש: צפי ביעד ${ils(portfolioAtTarget)}`}
         </Tile>
         <Tile href="/funds" title="קרנות השתלמות" value={ils(kerens.reduce((t, f) => t + f.balance, 0))}>
           לבית ב-{date(settings.targetDate)}: {ils(g.kerenAtTarget)}

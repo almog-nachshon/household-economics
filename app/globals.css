@@ -270,3 +270,19 @@ table.rank tr.chosen td { font-weight: 700; background: var(--accent-soft); }
 .xcard-why span { color: var(--pos); }
 .xcard-risk span { color: #a07200; }
 .xcard-why p, .xcard-risk p { margin: 0; font-size: 13px; line-height: 1.55; }
+
+/* Alerts from the IBKR sync (components/Alerts.js) */
+.alerts { display: grid; gap: 6px; margin: 8px 0 12px; }
+.alert { display: flex; align-items: center; gap: 8px; max-width: none; padding: 8px 12px; border-radius: 10px; background: var(--accent-soft); border-inline-start: 4px solid var(--accent); }
+.alert-msg { flex: 1; }
+.alert-msg a { color: inherit; }
+.alert-stop { border-color: var(--neg); }
+.alert-target { border-color: var(--pos); }
+.alert-advisor { border-color: #d4a017; }
+.alert button.secondary { padding: 0 8px; background: transparent; color: var(--muted); }
+.alert button.secondary:hover { color: var(--neg); }
+.ib-verified { display: inline-block; margin-top: 2px; font-size: 11px; color: var(--pos); text-decoration: none; }
+.ib-verified:hover { text-decoration: underline; }
+.xcard-sym a, .xcard-name a { color: inherit; text-decoration: none; }
+.xcard-sym a:hover, .xcard-name a:hover, .sym a:hover { text-decoration: underline; }
+.sym a { color: inherit; text-decoration: none; }

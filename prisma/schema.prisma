@@ -163,6 +163,66 @@ model FundReview {
   createdAt DateTime @default(now())
 }
 
+// The latest Interactive Brokers statement (Flex Web Service, lib/ibkr.js): open positions and cash at the end of
+// the last trading day. When it exists it is the portfolio, instead of the "קניתי" buys in InvestPick.
+model BrokerState {
+  id        Int       @id @default(1)
+  fetchedAt DateTime? // the last successful sync
+  asOf      DateTime? // the statement's last day
+  positions String    @default("[]") // JSON: [{symbol, ibSymbol, name, assetClass, currency, units, markPrice, value, cost}]
+  cash      String    @default("[]") // JSON: [{currency, amount}]
+  rates     String    @default("{}") // JSON: ILS per unit of each currency on the statement's last day
+  error     String    @default("")   // the last sync's failure, cleared on success
+}
+
+// Every IBKR trade seen, so each new one raises a single alert.
+model BrokerTrade {
+  tradeId    String   @id
+  date       DateTime
+  symbol     String
+  name       String
+  assetClass String
+  side       String   // BUY | SELL
+  units      Float
+  price      Float
+  currency   String
+  money      Float
+}
+
+// The account on each synced statement day (ILS): value with cash, and the holdings' profit, for the week's change.
+model BrokerDay {
+  date   DateTime @id
+  value  Float
+  profit Float
+}
+
+// Each candidate's exact instrument at IBKR (public product search, lib/ibkr.js). Only candidates found here are
+// researched and bought, and their names link to that instrument.
+model IbkrContract {
+  symbol    String   @id // the candidate's symbol in lib/portfolio.js
+  conid     Int?     // null = not at IBKR
+  ibSymbol  String   @default("")
+  exchange  String   @default("")
+  currency  String   @default("")
+  isin      String   @default("")
+  name      String   @default("")
+  checkedAt DateTime
+}
+
+// An alert shown on the home and invest pages until dismissed (lib/alerts.js).
+model Alert {
+  id        Int      @id @default(autoincrement())
+  key       String   // the same key is not raised again within a week
+  kind      String   // trade | stop | target | advisor | cash
+  symbol    String   @default("")
+  message   String
+  href      String   @default("")
+  createdAt DateTime @default(now())
+  dismissed Boolean  @default(false)
+
+  @@index([key])
+}
+
 // A credit card, shown by its last 4 digits, so each fixed expense can say which card pays it.
 model Card {
   id    Int    @id @default(autoincrement())

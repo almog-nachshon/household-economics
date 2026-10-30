@@ -11,6 +11,9 @@ import Sources from "@/components/Sources";
 import { LiveQuotes, LiveChange, LiveWeek, LivePrice, MarketStatus, IntradayChart } from "@/components/Live";
 import { portfolio } from "@/lib/holdings";
 import { generatePlan, depositMonth, depositDate, holdings } from "@/lib/invest-run";
+import { ibkrEnabled, syncIbkr, ibkrQuoteUrl, ibkrDetailsUrl } from "@/lib/ibkr";
+import { STOP, TARGET } from "@/lib/alerts";
+import Alerts from "@/components/Alerts";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 600;
@@ -34,7 +37,20 @@ const Div = ({ q }) => (q.divYield > 0 ? <span className="tag tag-div">דיבי�
 // A small ⓘ with an explanation on hover / tap.
 const Info = ({ text }) => <span className="info" title={text} tabIndex={0}>i</span>;
 const sharpe = (x) => (x == null ? "—" : x.toFixed(2));
+// A name that opens the exact instrument at IBKR (the conid verified by lib/ibkr.js), with its exchange and ISIN on hover.
+const IbLink = ({ conid, ib, children }) =>
+  conid ? <a href={ibkrQuoteUrl(conid)} target="_blank" rel="noreferrer" title={ib ? `באינטראקטיב: ${ib.ibSymbol} · ${ib.exchange} · ${ib.currency}${ib.isin ? ` · ISIN ${ib.isin}` : ""}` : "פתיחה באינטראקטיב"}>{children}</a> : children;
 const CHANGES = { add: "להוסיף", hold: "להחזיק, בלי כסף חדש", reduce: "לצמצם (למכור חלק)", sell: "למכור" };
+
+async function syncNow() {
+  "use server";
+  try {
+    await syncIbkr();
+  } catch (e) {
+    redirect(`/invest?error=${encodeURIComponent(e.message)}`);
+  }
+  redirect("/invest");
+}
 
 async function runNow() {
   "use server";
@@ -93,7 +109,10 @@ export default async function Invest({ searchParams }) {
   const usd = searchParams?.cur !== "ILS" && market.usdIls > 0; // dollars by default: IBKR trades in USD
   const rate = usd ? market.usdIls : 1;
   const typed = Number(searchParams?.amount) > 0 ? Number(searchParams.amount) : null;
-  const amount = typed ? typed * rate : settings.monthlyInvest;
+  // With IBKR synced, the default is the dollars waiting in the account; otherwise the standing order.
+  const cashUsd = folio.broker ? folio.cashBy.find((c) => c.currency === "USD")?.amount ?? 0 : 0;
+  const base = cashUsd >= 1 && market.usdIls ? cashUsd * market.usdIls : settings.monthlyInvest;
+  const amount = typed ? typed * rate : base;
   const shown = Math.round(amount / rate);
   const money = (x) => (usd ? `${x < 0 ? "-" : ""}$${Math.round(Math.abs(x) / rate).toLocaleString("en-US")}` : ils(x));
   const unitPrice = (x) => (usd ? `$${(x / rate).toLocaleString("en-US", { maximumFractionDigits: 2 })}` : ils(x));
@@ -113,6 +132,11 @@ export default async function Invest({ searchParams }) {
       <div className="page-head">
         <h1>השקעות: הפקדה ב-{date(day)}</h1>
         <MarketStatus />
+        {ibkrEnabled() && (
+          <form action={syncNow} style={{ maxWidth: "none" }}>
+            <button type="submit" className="secondary">רענון מאינטראקטיב</button>
+          </form>
+        )}
         {advisorEnabled() && (
           <form action={runNow} style={{ maxWidth: "none" }}>
             <AiButton label="בדיקה מהירה של Claude" updated={plan?.createdAt.toLocaleString("he-IL", { timeZone: "Asia/Jerusalem" })} />
@@ -126,7 +150,14 @@ export default async function Invest({ searchParams }) {
             ? "Claude עוד לא בדק את ההפקדה הזו. עד אז החלוקה לפי הביצועים בלבד."
             : "חסר ANTHROPIC_API_KEY, אז החלוקה לפי הביצועים בלבד (בלי Claude)."}
       </p>
-      {searchParams?.error && <p className="warn">הבדיקה נכשלה: {searchParams.error}</p>}
+      {folio.broker && (
+        <p className="label">
+          אינטראקטיב: דוח סוף יום מ-{folio.asOf.toLocaleDateString("he-IL", { timeZone: "UTC" })}, עודכן {folio.fetchedAt.toLocaleString("he-IL", { timeZone: "Asia/Jerusalem" })} (כל בוקר אוטומטית).
+          {folio.error && <span className="warn"> העדכון האחרון נכשל: {folio.error}</span>}
+        </p>
+      )}
+      <Alerts />
+      {searchParams?.error && <p className="warn">הפעולה נכשלה: {searchParams.error}</p>}
       {market.rateError && <p className="warn">לא הצלחתי למשוך שערי מטבע ({market.rateError}).</p>}
 
       <form method="get" style={{ display: "flex", gap: 8, alignItems: "center", maxWidth: "none", marginBottom: 12, flexWrap: "wrap" }}>
@@ -140,7 +171,8 @@ export default async function Invest({ searchParams }) {
         <button type="submit">חשב חלוקה</button>
         {market.usdIls && <span className="label">דולר = {market.usdIls.toFixed(3)} ₪ ({market.usdFx?.official ? "שער יציג של בנק ישראל" : "שער עכשיו, מתעדכן כל דקה"})</span>}
         <Sources q={market.usdFx} currency="ILS" digits={3} />
-        {Math.round(amount) !== settings.monthlyInvest && <a href="/invest">חזרה להוראת הקבע ({ils(settings.monthlyInvest)})</a>}
+        {Math.round(amount) !== Math.round(base) && <a href="/invest">{cashUsd >= 1 ? `חזרה למזומן הפנוי בחשבון ($${Math.floor(cashUsd).toLocaleString("en-US")})` : `חזרה להוראת הקבע (${ils(settings.monthlyInvest)})`}</a>}
+        {!typed && cashUsd >= 1 && <span className="label">הסכום = המזומן הפנוי בחשבון אינטראקטיב</span>}
       </form>
 
       <LiveQuotes symbols={picks.map((p) => p.symbol)}>
@@ -174,7 +206,7 @@ export default async function Invest({ searchParams }) {
             <tbody>
               {picks.map((p) => (
                 <tr key={p.symbol}>
-                  <td><span className="sym"><Logo id={p.symbol} label={p.name} size={20} /><b>{p.symbol}</b></span></td>
+                  <td><span className="sym"><Logo id={p.symbol} label={p.name} size={20} /><IbLink conid={p.ibkr?.conid} ib={p.ibkr}><b>{p.symbol}</b></IbLink></span></td>
                   <td className="alloc-bar-col">
                     <div className="alloc-bar">
                       <div style={{ width: `${Math.min(100, p.pct * 4)}%`, background: BUCKET_COLORS[p.bucket] }} />
@@ -199,7 +231,9 @@ export default async function Invest({ searchParams }) {
         ))}
         {leftover > 1 && <p className="label">נשאר כמזומן בחשבון: {money(leftover)} (קונים רק יחידות שלמות, אז האחוזים בפועל קרובים ליעד אבל לא זהים). יישאר להפקדה הבאה.</p>}
         <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
-          {done.length ? (
+          {folio.broker ? (
+            <span className="label">הקניות מזוהות לבד מאינטראקטיב (כל בוקר, או ״רענון מאינטראקטיב״) ומופיעות בהתראות ובתיק למטה. אין צורך לסמן ״קניתי״.</span>
+          ) : done.length ? (
             <form action={undo} style={{ maxWidth: "none" }}>
               <span>✅ סומן כנקנה: {done.map((p) => p.symbol).join(", ")} </span>
               <input type="hidden" name="month" value={month.toISOString()} />
@@ -222,8 +256,13 @@ export default async function Invest({ searchParams }) {
             <div className="xcard-head">
               <Logo id={p.symbol} label={p.name} size={36} />
               <div className="xcard-id">
-                <div className="xcard-sym">{p.symbol}</div>
-                <div className="xcard-name" dir="auto" title={p.name}>{p.name}</div>
+                <div className="xcard-sym"><IbLink conid={p.ibkr?.conid} ib={p.ibkr}>{p.symbol}</IbLink></div>
+                <div className="xcard-name" dir="auto" title={p.name}><IbLink conid={p.ibkr?.conid} ib={p.ibkr}>{p.name}</IbLink></div>
+                {p.ibkr && (
+                  <a className="ib-verified" href={ibkrDetailsUrl(p.ibkr.conid)} target="_blank" rel="noreferrer" title="פרטי החוזה הרשמיים של אינטראקטיב">
+                    ✓ אומת באינטראקטיב{p.ibkr.isin ? ` · ISIN ${p.ibkr.isin}` : ` · ${p.ibkr.ibSymbol}`}
+                  </a>
+                )}
               </div>
               <div className="xcard-money">
                 <div className="xcard-pct" style={{ color: BUCKET_COLORS[p.bucket] }}>{Math.round(p.pct * 10) / 10}%</div>
@@ -286,20 +325,30 @@ export default async function Invest({ searchParams }) {
       </div>
       </LiveQuotes>
 
-      <div className="card" style={{ marginTop: 12 }}>
+      <div className="card" id="folio" style={{ marginTop: 12 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
           <h2 style={{ margin: 0 }}>התיק שלי</h2>
-          <span className="label">לפי כל ההפקדות שסימנת ״קניתי״, במחירי היום</span>
+          <span className="label">
+            {folio.broker
+              ? `מאינטראקטיב, במחירי הסגירה של ${folio.asOf.toLocaleDateString("he-IL", { timeZone: "UTC" })} · התראה ב-${Math.round(STOP * 100)}% או ב-+${Math.round(TARGET * 100)}% ממחיר הקנייה`
+              : "לפי כל ההפקדות שסימנת ״קניתי״, במחירי היום"}
+          </span>
         </div>
         {folio.rows.length === 0 ? (
-          <p className="label">עוד אין קניות. אחרי ״קניתי״ התיק, הרווח והתשואה יחושבו כאן ובדף הראשי.</p>
+          <p className="label">
+            {folio.broker
+              ? `עוד אין החזקות בחשבון. מזומן בחשבון: ${money(folio.cash)}. אחרי הקנייה באינטראקטיב, התיק יתעדכן כאן לבד.`
+              : "עוד אין קניות. אחרי ״קניתי״ התיק, הרווח והתשואה יחושבו כאן ובדף הראשי."}
+          </p>
         ) : (
           <>
             <div className="hero-row" style={{ marginTop: 8 }}>
               <div><div className="label">הושקע</div><div className="value">{money(folio.cost)}</div></div>
-              <div><div className="label">שווי היום</div><div className="value">{money(folio.value)}</div></div>
+              <div><div className="label">שווי היום</div><div className="value">{money(folio.held)}</div></div>
               <div><div className="label">רווח / הפסד</div><div className={`value ${folio.profit >= 0 ? "pos" : "neg"}`}>{money(folio.profit)}</div></div>
               <div><div className="label">תשואה</div><div className={`value ${folio.pct >= 0 ? "pos" : "neg"}`}>{pct(folio.pct)}</div></div>
+              {folio.broker && <div><div className="label">מזומן בחשבון</div><div className="value">{money(folio.cash)}</div></div>}
+              {folio.week != null && <div><div className="label">רווח השבוע</div><div className={`value ${folio.week >= 0 ? "pos" : "neg"}`}>{money(folio.week)}</div></div>}
             </div>
             <div style={{ overflowX: "auto", marginTop: 8 }}>
               <table className="compact">
@@ -307,9 +356,9 @@ export default async function Invest({ searchParams }) {
                 <tbody>
                   {folio.rows.map((h) => (
                     <tr key={h.symbol}>
-                      <td><span className="sym"><Logo id={h.symbol} label={h.name} size={18} /><b>{h.symbol}</b></span></td>
+                      <td><span className="sym"><Logo id={h.symbol} label={h.name} size={18} /><IbLink conid={h.conid ?? market.bySymbol[h.symbol]?.ibkr?.conid}><b>{h.symbol}</b></IbLink></span></td>
                       <td className="line-name" title={h.name}>{h.name}</td>
-                      <td>{h.units ? h.units.toFixed(3) : "—"}</td>
+                      <td>{h.units ? Math.round(h.units * 1000) / 1000 : "—"}</td>
                       <td>{money(h.cost)}</td>
                       <td>{money(h.value)}</td>
                       <td className={h.profit >= 0 ? "pos" : "neg"}>{money(h.profit)}</td>
@@ -362,7 +411,7 @@ export default async function Invest({ searchParams }) {
               {ranked.map((q, i) => (
                 <tr key={q.symbol} className={picks.some((p) => p.symbol === q.symbol) ? "chosen" : ""}>
                   <td className="label">{i + 1}</td>
-                  <td><span className="sym"><Logo id={q.symbol} label={q.name} size={18} /><b>{q.symbol}</b></span></td>
+                  <td><span className="sym"><Logo id={q.symbol} label={q.name} size={18} /><IbLink conid={q.ibkr?.conid} ib={q.ibkr}><b>{q.symbol}</b></IbLink></span></td>
                   <td className="line-name">
                     <details>
                       <summary title={q.name}>{q.name}</summary>
