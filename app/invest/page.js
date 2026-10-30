@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { getSettings } from "@/lib/data";
 import { ils } from "@/lib/goal";
-import { BUCKETS, REVIEW_DAY, loadMarket, completePicks, gapShares, sizePicks, extraPicks, isMetal, bucketPct, DEFAULT_METALS_PCT, ABOUT } from "@/lib/portfolio";
+import { BUCKETS, REVIEW_DAY, loadMarket, completePicks, gapShares, sizePicks, extraPicks, nextSteps, isMetal, bucketPct, DEFAULT_METALS_PCT, ABOUT } from "@/lib/portfolio";
 import { advisorEnabled } from "@/lib/advisor";
 import AiButton from "@/components/AiButton";
 import SyncButton from "@/components/SyncButton";
@@ -136,6 +136,13 @@ export default async function Invest({ searchParams }) {
   const taken = new Set([...picks.map((p) => p.symbol), ...bought.map((b) => b.symbol)]);
   const indexes = new Set([...picks, ...folio.rows, ...bought].map((x) => market.bySymbol[x.symbol]?.index).filter(Boolean));
   const { extras, left: extraLeft } = leftover > 1 ? extraPicks(ranked, signals, leftover, taken, indexes) : { extras: [], left: leftover };
+  const steps = folio.broker
+    ? nextSteps({
+        rows: folio.rows, cash: folio.cash, signals, metalsPct, money,
+        waiting: picks.filter((p) => signals[p.symbol]?.level === "wait"),
+        nextDeposit: date(day),
+      })
+    : [];
   // The detailed cards: the plan's picks, then the next in line in priority order.
   const cards = [...picks, ...extras.map((p, i) => ({ ...p, amount: p.cost, pct: (p.cost / amount) * 100, next: i + 1 }))];
   const changes = plan
@@ -456,6 +463,13 @@ export default async function Invest({ searchParams }) {
           </>
         )}
       </div>
+
+      {steps.length > 0 && (
+        <div className="card next-steps" style={{ marginTop: 12 }}>
+          <h2>📌 המלצות להמשך <Info text="מחושב מחדש בכל רענון: לפי מה שבאמת יש בתיק מול החלוקה הרצויה, סימני הכניסה / יציאה ותאריכי הדוחות. לא ייעוץ השקעות." /></h2>
+          <ul>{steps.map((s) => <li key={s.text}><span>{s.icon}</span> {s.text}</li>)}</ul>
+        </div>
+      )}
 
       <div className="card" style={{ marginTop: 12 }}>
         <h2>המלצות ושינויים מהחודש הקודם <Info text="מכירה ברווח = 25% מס רווחי הון בישראל, ולכן ההמלצה למכור רק כשיש סיבה ממשית." /></h2>

@@ -330,3 +330,5 @@ table.rank tr.chosen td { font-weight: 700; background: var(--accent-soft); }
 .extra-box { margin-top: 14px; padding: 10px 12px; border-radius: 10px; background: #fff8e6; border-inline-start: 4px solid #d4a017; }
 .extra-box table { margin-top: 6px; }
 .next-badge { display: inline-block; margin-bottom: 2px; padding: 0 8px; border-radius: 999px; background: #fff3cd; color: #9a6b00; font-size: 11px; font-weight: 700; }
+.next-steps ul { list-style: none; padding: 0; margin: 6px 0 0; display: grid; gap: 8px; }
+.next-steps li { display: flex; gap: 8px; line-height: 1.5; }
