@@ -7,6 +7,7 @@ import { BUCKETS, loadMarket, completePicks, sizePicks, isMetal, bucketPct, DEFA
 import { advisorEnabled } from "@/lib/advisor";
 import AiButton from "@/components/AiButton";
 import Logo from "@/components/Logo";
+import Sources from "@/components/Sources";
 import { LiveQuotes, LiveChange, LiveWeek, LivePrice, MarketStatus, IntradayChart } from "@/components/Live";
 import { portfolio } from "@/lib/holdings";
 import { generatePlan, depositMonth, depositDate, holdings } from "@/lib/invest-run";
@@ -137,7 +138,8 @@ export default async function Invest({ searchParams }) {
           <a href={`/invest?amount=${Math.round(amount)}&cur=ILS`} className={usd ? "" : "on"}>₪ שקל</a>
         </span>
         <button type="submit">חשב חלוקה</button>
-        {market.usdIls && <span className="label">דולר = {market.usdIls.toFixed(3)} ₪ (שער עכשיו, מתעדכן כל דקה)</span>}
+        {market.usdIls && <span className="label">דולר = {market.usdIls.toFixed(3)} ₪ ({market.usdFx?.official ? "שער יציג של בנק ישראל" : "שער עכשיו, מתעדכן כל דקה"})</span>}
+        <Sources q={market.usdFx} currency="ILS" digits={3} />
         {Math.round(amount) !== settings.monthlyInvest && <a href="/invest">חזרה להוראת הקבע ({ils(settings.monthlyInvest)})</a>}
       </form>
 
@@ -231,6 +233,7 @@ export default async function Invest({ searchParams }) {
               </div>
               <div className="xcard-today"><span className="xcard-k">היום</span><LiveChange symbol={p.symbol} fallback={p.d1} /></div>
             </div>
+            <Sources q={p} currency={p.currency} />
             <div className="xcard-buyrow">
               <span className="xcard-k">לקנות</span>
               <b>{units(p)}</b>

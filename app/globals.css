@@ -233,6 +233,13 @@ table.rank tr.chosen td { font-weight: 700; background: var(--accent-soft); }
 .xtag-sector { font-weight: 600; background: var(--card); }
 .xtag-stars { color: #d4a017; letter-spacing: 1px; }
 .xcard-ils { font-size: 11px; color: var(--muted); }
+.sources { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; font-size: 11px; color: var(--muted); }
+.sources-k { font-weight: 600; }
+.sources .src { padding: 1px 7px; border: 1px solid var(--track); border-radius: 999px; color: inherit; text-decoration: none; }
+.sources .src b { color: var(--text, inherit); }
+.sources .src-ref { opacity: 0.6; }
+.sources .src-link { color: inherit; }
+.sources .src-gap { color: var(--warn); font-weight: 600; }
 .ils-small { font-size: 11px; }
 .usd-price { font-weight: 800; color: var(--text); direction: ltr; unicode-bidi: isolate; }
 .xcard-strip .usd-price { font-size: 18px; }
