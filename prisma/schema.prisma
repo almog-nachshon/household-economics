@@ -172,6 +172,7 @@ model BrokerState {
   positions String    @default("[]") // JSON: [{symbol, ibSymbol, name, assetClass, currency, units, markPrice, value, cost}]
   cash      String    @default("[]") // JSON: [{currency, amount}]
   rates     String    @default("{}") // JSON: ILS per unit of each currency on the statement's last day
+  todayFills Int      @default(0)    // fills from today's Trade Confirmation query applied on top of the statement
   error     String    @default("")   // the last sync's failure, cleared on success
 }
 

@@ -159,7 +159,8 @@ export default async function Invest({ searchParams }) {
       </p>
       {folio.broker && (
         <p className="label">
-          אינטראקטיב: דוח סוף יום מ-{folio.asOf.toLocaleDateString("he-IL", { timeZone: "UTC" })}, עודכן {folio.fetchedAt.toLocaleString("he-IL", { timeZone: "Asia/Jerusalem" })} (כל בוקר אוטומטית).
+          אינטראקטיב: דוח סוף יום מ-{folio.asOf.toLocaleDateString("he-IL", { timeZone: "UTC" })}
+          {folio.todayFills ? ` + ${folio.todayFills} עסקאות מהיום` : ""}, עודכן {folio.fetchedAt.toLocaleString("he-IL", { timeZone: "Asia/Jerusalem" })} (כל בוקר אוטומטית, ועסקאות של היום בכל ״רענון מאינטראקטיב״).
           {folio.error && <span className="warn"> העדכון האחרון נכשל: {folio.error}</span>}
         </p>
       )}
