@@ -15,6 +15,9 @@ export function LiveQuotes({ symbols, children }) {
   return <LiveContext.Provider value={quotes}>{children}</LiveContext.Provider>;
 }
 
+// All live quotes under the nearest LiveQuotes, by symbol.
+export const useLiveQuotes = () => useContext(LiveContext);
+
 // A change as a colored pill with an arrow; live (from /api/live) when available, else the cached daily figure.
 function Pill({ x, live }) {
   if (x == null) return <span className="label">—</span>;

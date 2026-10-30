@@ -8,7 +8,7 @@ import { advisorEnabled } from "@/lib/advisor";
 import AiButton from "@/components/AiButton";
 import SyncButton from "@/components/SyncButton";
 import Info from "@/components/Info";
-import { HoldingsPie } from "@/components/Charts";
+import HoldingsMap from "@/components/HoldingsMap";
 import Logo from "@/components/Logo";
 import Sources from "@/components/Sources";
 import { LiveQuotes, LiveChange, LiveWeek, LivePrice, MarketStatus, IntradayChart } from "@/components/Live";
@@ -168,7 +168,7 @@ export default async function Invest({ searchParams }) {
       const value = rows.reduce((t, h) => t + h.value, 0);
       return {
         key: b.key, name: b.name, color: BUCKET_COLORS[b.key], value, pct: (value / total) * 100, target: bucketPct(b, metalsPct), valueText: withIls(value),
-        rows: rows.map((h) => ({ symbol: h.symbol, name: h.name, type: typeOf(h), about: [ABOUT[h.symbol], signals[h.symbol] && SIGNAL[signals[h.symbol].level].join(" ") + ": " + signals[h.symbol].reasons[0]].filter(Boolean).join(" · "), value: h.value, pct: (h.value / total) * 100, valueText: withIls(h.value) })),
+        rows: rows.map((h) => ({ symbol: h.symbol, name: h.name, type: typeOf(h), change: market.bySymbol[h.symbol]?.d1 ?? null, profitPct: h.pct, about: [ABOUT[h.symbol], signals[h.symbol] && SIGNAL[signals[h.symbol].level].join(" ") + ": " + signals[h.symbol].reasons[0]].filter(Boolean).join(" · "), value: h.value, pct: (h.value / total) * 100, valueText: withIls(h.value) })),
       };
     }),
     ...(folio.rows.some((h) => !h.bucket)
@@ -241,7 +241,22 @@ export default async function Invest({ searchParams }) {
               {folio.broker && <div><div className="label">מזומן בחשבון</div><div className="value">{both(folio.cash)}</div></div>}
               {folio.week != null && <div><div className="label">רווח השבוע</div><div className={`value ${folio.week >= 0 ? "pos" : "neg"}`}>{both(folio.week)}</div></div>}
             </div>
-            {folio.broker && <HoldingsPie groups={groups} totalText={money(folio.value)} />}
+            {folio.broker && (
+              <>
+                <LiveQuotes symbols={folio.rows.map((h) => h.symbol)}>
+                  <HoldingsMap groups={groups} />
+                </LiveQuotes>
+                <div className="bucket-chips">
+                  {groups.filter((g) => g.value > 0).map((g) => (
+                    <span key={g.key} className="bucket-chip">
+                      <span className="swatch" style={{ background: g.color }} /> {g.name} <b>{g.pct.toFixed(1)}%</b>
+                      {g.target != null && <span className={`label ${Math.abs(g.pct - g.target) > 5 ? "neg" : ""}`}> (יעד {Math.round(g.target)}%)</span>}
+                      <span className="label"> · {g.valueText}</span>
+                    </span>
+                  ))}
+                </div>
+              </>
+            )}
             <div style={{ overflowX: "auto", marginTop: 8 }}>
               <table className="compact">
                 <thead><tr><th>סימול</th><th>שם</th><th>יחידות</th><th>הושקע</th><th>שווי</th><th>רווח</th><th>%</th><th>כניסה / יציאה</th></tr></thead>
