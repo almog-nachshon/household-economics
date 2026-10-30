@@ -7,6 +7,7 @@ import { BUCKETS, REVIEW_DAY, loadMarket, completePicks, gapShares, sizePicks, i
 import { advisorEnabled } from "@/lib/advisor";
 import AiButton from "@/components/AiButton";
 import SyncButton from "@/components/SyncButton";
+import Info from "@/components/Info";
 import Logo from "@/components/Logo";
 import Sources from "@/components/Sources";
 import { LiveQuotes, LiveChange, LiveWeek, LivePrice, MarketStatus, IntradayChart } from "@/components/Live";
@@ -36,8 +37,6 @@ const Risk = ({ vol }) => {
 };
 const typeOf = (p) => (isMetal(p.symbol) ? "מתכת" : /ETF|קרן|UCITS|SPDR|iShares|Vanguard|Invesco|VanEck/.test(p.name) ? "קרן סל" : "מניה");
 const Div = ({ q }) => (q.divYield > 0 ? <span className="tag tag-div">דיבידנד ~{(q.divYield * 100).toFixed(1)}%</span> : null);
-// A small ⓘ with an explanation on hover / tap.
-const Info = ({ text }) => <span className="info" title={text} tabIndex={0}>i</span>;
 const sharpe = (x) => (x == null ? "—" : x.toFixed(2));
 // A name that opens the exact instrument at IBKR (the conid verified by lib/ibkr.js), with its exchange and ISIN on hover.
 const IbLink = ({ conid, ib, children }) =>
@@ -144,29 +143,27 @@ export default async function Invest({ searchParams }) {
         <MarketStatus />
         {ibkrEnabled() && (
           <form action={syncNow} style={{ maxWidth: "none" }}>
-            <SyncButton />
+            <SyncButton
+              updated={folio.fetchedAt?.toLocaleString("he-IL", { timeZone: "Asia/Jerusalem", dateStyle: "short", timeStyle: "short" })}
+              info={folio.broker
+                ? `דוח סוף היום של אינטראקטיב מ-${folio.asOf.toLocaleDateString("he-IL", { timeZone: "UTC" })}${folio.todayFills ? ` + ${folio.todayFills} עסקאות מהיום` : ""}. מתעדכן לבד כל בוקר ב-9:00; עסקאות של היום נמשכות בכל רענון, כמה דקות אחרי הביצוע. הקניות מזוהות לבד, אין צורך לסמן ״קניתי״.`
+                : "עוד לא נמשך דוח מאינטראקטיב."}
+            />
           </form>
         )}
         {advisorEnabled() && (
           <form action={runNow} style={{ maxWidth: "none" }}>
-            <AiButton label="בדיקה מהירה של Claude" updated={plan?.createdAt.toLocaleString("he-IL", { timeZone: "Asia/Jerusalem" })} />
+            <AiButton
+              label="בדיקה מהירה של Claude"
+              updated={plan?.createdAt.toLocaleString("he-IL", { timeZone: "Asia/Jerusalem", dateStyle: "short", timeStyle: "short" })}
+              info={plan
+                ? `${plan.final ? "בדיקה סופית" : "בדיקה יומית"} של Claude (${plan.model}). ${plan.final ? "" : `הבדיקה הסופית ב-${date(day)}, לפני ההפקדה. `}הכפתור מריץ בדיקה מהירה; מחקר מלא נעשה ב-Claude Code.`
+                : "Claude עוד לא בדק את ההפקדה הזו. עד אז החלוקה לפי הביצועים בלבד."}
+            />
           </form>
         )}
       </div>
-      <p className="label">
-        {plan
-          ? `${plan.final ? "בדיקה סופית" : "בדיקה יומית"} של Claude מ-${plan.createdAt.toLocaleString("he-IL", { timeZone: "Asia/Jerusalem" })}. ${plan.final ? "" : `הבדיקה הסופית ב-${date(day)}, לפני ההפקדה.`}`
-          : advisorEnabled()
-            ? "Claude עוד לא בדק את ההפקדה הזו. עד אז החלוקה לפי הביצועים בלבד."
-            : "חסר ANTHROPIC_API_KEY, אז החלוקה לפי הביצועים בלבד (בלי Claude)."}
-      </p>
-      {folio.broker && (
-        <p className="label">
-          אינטראקטיב: דוח סוף יום מ-{folio.asOf.toLocaleDateString("he-IL", { timeZone: "UTC" })}
-          {folio.todayFills ? ` + ${folio.todayFills} עסקאות מהיום` : ""}, עודכן {folio.fetchedAt.toLocaleString("he-IL", { timeZone: "Asia/Jerusalem" })} (כל בוקר אוטומטית, ועסקאות של היום בכל ״רענון מאינטראקטיב״).
-          {folio.error && <span className="warn"> העדכון האחרון נכשל: {folio.error}</span>}
-        </p>
-      )}
+      {folio.error && <p className="warn">העדכון האחרון מאינטראקטיב נכשל: {folio.error}</p>}
       <Alerts />
       {searchParams?.error && <p className="warn">הפעולה נכשלה: {searchParams.error}</p>}
       {market.rateError && <p className="warn">לא הצלחתי למשוך שערי מטבע ({market.rateError}).</p>}
@@ -180,10 +177,10 @@ export default async function Invest({ searchParams }) {
           <a href={`/invest?amount=${Math.round(amount)}&cur=ILS`} className={usd ? "" : "on"}>₪ שקל</a>
         </span>
         <button type="submit">חשב חלוקה</button>
-        {market.usdIls && <span className="label">דולר = {market.usdIls.toFixed(3)} ₪ ({market.usdFx?.official ? "שער יציג של בנק ישראל" : "שער עכשיו, מתעדכן כל דקה"})</span>}
+        {market.usdIls && <span className="label">דולר = {market.usdIls.toFixed(3)} ₪ <Info text={market.usdFx?.official ? "שער יציג של בנק ישראל" : "שער עכשיו, חציון של כמה מקורות, מתעדכן כל דקה"} /></span>}
         <Sources q={market.usdFx} currency="ILS" digits={3} />
         {Math.round(amount) !== Math.round(base) && <a href="/invest">{cashUsd >= 1 ? `חזרה למזומן הפנוי בחשבון ($${Math.floor(cashUsd).toLocaleString("en-US")})` : `חזרה להוראת הקבע (${ils(settings.monthlyInvest)})`}</a>}
-        {!typed && cashUsd >= 1 && <span className="label">הסכום = המזומן הפנוי בחשבון אינטראקטיב</span>}
+        {!typed && cashUsd >= 1 && <Info text="הסכום = המזומן הפנוי בחשבון אינטראקטיב. אפשר להקליד סכום אחר." />}
       </form>
 
       <LiveQuotes symbols={picks.map((p) => p.symbol)}>
@@ -193,8 +190,10 @@ export default async function Invest({ searchParams }) {
             <div className="label">הפקדה ב-{date(day)}</div>
             <div className="value big">{money(amount)}</div>
             {usd && <div className="label">≈ {ils(amount)} לפי דולר = {market.usdIls.toFixed(3)} ₪</div>}
-            <div className="label">{picks.length} החזקות · {plan ? `לפי מחקר של Claude` : "לפי ציון ביצועים"}</div>
-            {shares && <div className="label">החלוקה משלימה את מה שכבר בתיק: יותר כסף לחלקים שרחוקים מהיעד</div>}
+            <div className="label">
+              {picks.length} החזקות · {plan ? `לפי מחקר של Claude` : "לפי ציון ביצועים"}{" "}
+              <Info text={shares ? "החלוקה משלימה את מה שכבר בתיק: יותר כסף לחלקים שרחוקים מהיעד (מדדים 45%, סקטור 10%, ביטחוניות 25%, סיכון 20%)." : "חלוקה קבועה: מדדים 45%, סקטור 10%, ביטחוניות 25%, סיכון 20%, ומתכות לפי המחקר."} />
+            </div>
           </div>
           <div className="bucket-bars">
             {BUCKETS.map((b) => {
@@ -211,8 +210,7 @@ export default async function Invest({ searchParams }) {
         </div>
         {bought.length > 0 && (
           <div className="bought-box">
-            <h2 style={{ margin: 0 }}>✅ נקנה כבר להפקדה הזו</h2>
-            <div className="label">לפי העסקאות באינטראקטיב. עברו ל<a href="#folio">״התיק שלי״</a> ולא מוצעות שוב; למטה רק מה שעוד לא נקנה.</div>
+            <h2 style={{ margin: 0 }}>✅ נקנה כבר להפקדה הזו <Info text="לפי העסקאות באינטראקטיב. הן עברו ל״התיק שלי״ ולא מוצעות שוב; למטה רק מה שעוד לא נקנה." /></h2>
             <div className="bought-list">
               {bought.map((b) => (
                 <span key={b.symbol} className="bought-item">
@@ -267,9 +265,7 @@ export default async function Invest({ searchParams }) {
           </p>
         )}
         <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
-          {folio.broker ? (
-            <span className="label">הקניות מזוהות לבד מאינטראקטיב (כל בוקר, או ״רענון מאינטראקטיב״) ומופיעות בהתראות ובתיק למטה. אין צורך לסמן ״קניתי״.</span>
-          ) : done.length ? (
+          {folio.broker ? null : done.length ? (
             <form action={undo} style={{ maxWidth: "none" }}>
               <span>✅ סומן כנקנה: {done.map((p) => p.symbol).join(", ")} </span>
               <input type="hidden" name="month" value={month.toISOString()} />
@@ -384,12 +380,12 @@ export default async function Invest({ searchParams }) {
 
       <div className="card" id="folio" style={{ marginTop: 12 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
-          <h2 style={{ margin: 0 }}>התיק שלי</h2>
-          <span className="label">
-            {folio.broker
-              ? `מאינטראקטיב, במחירי הסגירה של ${folio.asOf.toLocaleDateString("he-IL", { timeZone: "UTC" })} · התראה ב-${Math.round(STOP * 100)}% או ב-+${Math.round(TARGET * 100)}% ממחיר הקנייה`
-              : "לפי כל ההפקדות שסימנת ״קניתי״, במחירי היום"}
-          </span>
+          <h2 style={{ margin: 0 }}>
+            התיק שלי{" "}
+            <Info text={folio.broker
+              ? `מאינטראקטיב, במחירי הסגירה של ${folio.asOf.toLocaleDateString("he-IL", { timeZone: "UTC" })} (קניות מהיום במחיר הקנייה). התראה ב-${Math.round(STOP * 100)}% או ב-+${Math.round(TARGET * 100)}% ממחיר הקנייה. הרווח בדולרים, מומר לשקלים בשער היום.`
+              : "לפי כל ההפקדות שסימנת ״קניתי״, במחירי היום"} />
+          </h2>
         </div>
         {folio.rows.length === 0 ? (
           <p className="label">
@@ -431,7 +427,7 @@ export default async function Invest({ searchParams }) {
       </div>
 
       <div className="card" style={{ marginTop: 12 }}>
-        <h2>המלצות ושינויים מהחודש הקודם</h2>
+        <h2>המלצות ושינויים מהחודש הקודם <Info text="מכירה ברווח = 25% מס רווחי הון בישראל, ולכן ההמלצה למכור רק כשיש סיבה ממשית." /></h2>
         {changes.length === 0 ? (
           <p className="label">עוד אין החזקות. אחרי שתסמן ״קניתי״, כאן יופיעו המלצות להוסיף, להחזיק, לצמצם או למכור.</p>
         ) : (
@@ -443,7 +439,6 @@ export default async function Invest({ searchParams }) {
             ))}
           </ul>
         )}
-        <p className="label">מכירה ברווח = 25% מס רווחי הון בישראל, ולכן ההמלצה למכור רק כשיש סיבה ממשית.</p>
       </div>
 
       {plan && (
@@ -460,8 +455,7 @@ export default async function Invest({ searchParams }) {
       )}
 
       <div className="card" style={{ marginTop: 20 }}>
-        <h2>דירוג כל המניות והקרנות</h2>
-        <div className="label">ציון 0-100: תשואת 3, 6 ו-12 חודשים פחות חצי מהתנודתיות · מודגש = נבחר · לחיצה על שם לפרטים</div>
+        <h2>דירוג כל המניות והקרנות <Info text="ציון 0-100: תשואת 3, 6 ו-12 חודשים פחות חצי מהתנודתיות. מודגש = נבחר. לחיצה על סימול פותחת אותו באינטראקטיב, לחיצה על שם מציגה פרטים. המחירים מ-Yahoo Finance (מתעדכנים כל 12 שעות) ומקורות חיים נוספים. זו המלצה לפי נתוני עבר וחדשות, לא ייעוץ השקעות." /></h2>
         <div className="table-scroll">
           <table className="compact wide rank">
             <thead><tr><th>#</th><th>סימול</th><th>שם</th><th>תחום</th><th>ציון</th><th>שנה</th><th>שארפ</th><th>סיכון</th><th>דיבידנד</th><th>מחיר</th></tr></thead>
@@ -490,9 +484,6 @@ export default async function Invest({ searchParams }) {
         </div>
       </div>
 
-      <p className="label" style={{ marginTop: 12 }}>
-        הטבלה מ-Yahoo Finance (מתעדכנת כל 12 שעות); Claude מצליב מחירים וחדשות מול Reuters, Bloomberg, CNBC, Morningstar, Investing.com ודוחות החברות. זו המלצה של מודל לפי נתוני עבר וחדשות, לא ייעוץ השקעות.
-      </p>
     </>
   );
 }
