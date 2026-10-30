@@ -347,10 +347,11 @@ table.rank tr.chosen td { font-weight: 700; background: var(--accent-soft); }
 
 /* Alerts behind one header button (components/Alerts.js) */
 .alerts-menu { position: relative; }
-.alerts-menu summary { list-style: none; cursor: pointer; padding: 6px 12px; border-radius: 999px; background: var(--track); font-size: 13px; font-weight: 600; white-space: nowrap; }
+.alerts-btn { display: inline-block; box-sizing: border-box; min-width: 200px; text-align: center; list-style: none; padding: 6px 12px; border-radius: 999px; background: var(--track); color: var(--muted); font-size: 13px; font-weight: 600; white-space: nowrap; }
+.alerts-menu summary { cursor: pointer; }
 .alerts-menu summary::-webkit-details-marker { display: none; }
-.alerts-menu.has summary { background: #fff3cd; color: #8a5a00; box-shadow: 0 0 0 2px #f2c94c inset; }
-.alerts-menu.urgent summary { background: #fde4e2; color: var(--neg); box-shadow: 0 0 0 2px var(--neg) inset; animation: blink 1.6s ease-in-out 3; }
+.alerts-menu.has .alerts-btn { background: #fff3cd; color: #8a5a00; box-shadow: 0 0 0 2px #f2c94c inset; }
+.alerts-menu.urgent .alerts-btn { background: #fde4e2; color: var(--neg); box-shadow: 0 0 0 2px var(--neg) inset; animation: blink 1.6s ease-in-out 3; }
 .alerts-panel { position: absolute; top: calc(100% + 6px); inset-inline-end: 0; z-index: 40; width: min(560px, 92vw); max-height: 70vh; overflow: auto; display: grid; gap: 6px; padding: 10px; border-radius: 12px; background: #fff; border: 1px solid var(--track); box-shadow: 0 10px 30px rgba(0,0,0,.15); }
 .topup-tag { margin-inline-start: 4px; font-size: 12px; }
 .next-badge.topup { background: #e3f4e8; color: var(--pos); }
