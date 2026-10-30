@@ -21,7 +21,7 @@ export default async function Alerts() {
             <form key={a.id} action={dismissAlert} className={`alert alert-${a.kind}`}>
               <span>{ICON[a.kind]}</span>
               <span className="alert-msg">{a.href ? <a href={a.href}>{a.message}</a> : a.message}</span>
-              <span className="label">{a.createdAt.toLocaleDateString("he-IL", { timeZone: "Asia/Jerusalem" })}</span>
+              <span className="label alert-time">{a.createdAt.toLocaleString("he-IL", { timeZone: "Asia/Jerusalem", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>
               <input type="hidden" name="id" value={a.id} />
               <button type="submit" className="secondary" title="סמן כנקרא">✕</button>
             </form>
