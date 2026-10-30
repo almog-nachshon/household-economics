@@ -156,6 +156,8 @@ export default async function Invest({ searchParams }) {
   const steps = folio.broker
     ? nextSteps({ rows: folio.rows, cash: folio.cash, signals, metalsPct, money, waiting })
     : [];
+  // Everything to buy now (the split and the next in line), with its cost.
+  const buys = [...picks, ...extras].map((p) => ({ ...p, cost: p.cost ?? p.amount }));
   // The detailed cards: the split's picks, then the next in line in priority order.
   const cards = [...picks, ...extras.map((p, i) => ({ ...p, amount: p.cost, pct: (p.cost / amount) * 100, next: i + 1, topUp: heldRows.some((h) => h.symbol === p.symbol) }))];
   // The donut: each bucket's holdings and the cash, as % of the whole account.
@@ -166,7 +168,7 @@ export default async function Invest({ searchParams }) {
       const value = rows.reduce((t, h) => t + h.value, 0);
       return {
         key: b.key, name: b.name, color: BUCKET_COLORS[b.key], value, pct: (value / total) * 100, target: bucketPct(b, metalsPct), valueText: withIls(value),
-        rows: rows.map((h) => ({ symbol: h.symbol, name: h.name, value: h.value, pct: (h.value / total) * 100, valueText: withIls(h.value) })),
+        rows: rows.map((h) => ({ symbol: h.symbol, name: h.name, type: typeOf(h), about: [ABOUT[h.symbol], signals[h.symbol] && SIGNAL[signals[h.symbol].level].join(" ") + ": " + signals[h.symbol].reasons[0]].filter(Boolean).join(" · "), value: h.value, pct: (h.value / total) * 100, valueText: withIls(h.value) })),
       };
     }),
     ...(folio.rows.some((h) => !h.bucket)
@@ -247,7 +249,7 @@ export default async function Invest({ searchParams }) {
                   {folio.rows.map((h) => (
                     <tr key={h.symbol}>
                       <td><span className="sym"><Logo id={h.symbol} label={h.name} size={18} /><IbLink conid={h.conid ?? market.bySymbol[h.symbol]?.ibkr?.conid}><b>{h.symbol}</b></IbLink></span></td>
-                      <td className="line-name" title={h.name}>{h.name}</td>
+                      <td className="line-name" title={h.name}>{h.name} <span className="xtag hpie-type">{typeOf(h)}</span> <Info text={ABOUT[h.symbol]} /></td>
                       <td>{h.units ? Math.round(h.units * 1000) / 1000 : "—"}</td>
                       <td>{both(h.cost)}</td>
                       <td>{both(h.value)}</td>
@@ -305,12 +307,16 @@ export default async function Invest({ searchParams }) {
             </div>
           </div>
           <div className="bucket-bars">
-            {BUCKETS.map((b) => {
-              const share = shares ? shares[b.key] : bucketPct(b, metalsPct);
+            {/* What is actually bought, per bucket, and what stays as cash: together 100% of the amount. */}
+            {[
+              ...BUCKETS.map((b) => ({ key: b.key, name: b.name, color: BUCKET_COLORS[b.key], value: buys.filter((p) => p.bucket === b.key).reduce((t, p) => t + p.cost, 0) })),
+              { key: "cash", name: "נשאר כמזומן בתיק", color: CASH_COLOR, value: Math.max(0, extraLeft) },
+            ].filter((x) => x.value > 0.5).map((x) => {
+              const share = (x.value / amount) * 100;
               return (
-                <div key={b.key} className="bucket-bar">
-                  <span>{b.name}</span>
-                  <div className="meter thin"><div style={{ width: `${share}%`, background: BUCKET_COLORS[b.key] }} /></div>
+                <div key={x.key} className="bucket-bar">
+                  <span>{x.name}</span>
+                  <div className="meter thin"><div style={{ width: `${share}%`, background: x.color }} /></div>
                   <b>{Math.round(share * 10) / 10}%</b>
                 </div>
               );

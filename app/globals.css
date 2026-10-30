@@ -356,3 +356,4 @@ table.rank tr.chosen td { font-weight: 700; background: var(--accent-soft); }
 .next-badge.topup { background: #e3f4e8; color: var(--pos); }
 .cash-line { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 14px 0 10px; }
 .ils-under { display: block; font-size: 11px; font-weight: 400; color: var(--muted); }
+.hpie-type { margin-inline-start: 6px; font-size: 10px; padding: 0 6px; }

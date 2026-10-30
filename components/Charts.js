@@ -1,6 +1,7 @@
 "use client";
 import { Fragment } from "react";
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from "recharts";
+import Info from "@/components/Info";
 
 // Turquoise-led palette for pie slices; the "left over" slice is always green.
 const PIE = ["#0fa3a3", "#3b82c4", "#f2a541", "#e0607e", "#8e6fd1", "#5bb98c", "#c98a4b", "#7a8b99", "#2bb3d6", "#d1495b", "#a3b18a", "#6d597a"];
@@ -42,7 +43,7 @@ export function SplitPie({ data, centerLabel = "סה״כ" }) {
 
 // The portfolio as a two-ring donut: themes (buckets) inside, each holding outside in its theme's color, cash in gray;
 // % of the whole account. Beside it a legend table grouped by theme (share vs target), so identity is never color
-// alone. groups: [{key, name, color, value, pct, target, valueText, rows: [{symbol, name, value, pct, valueText}]}].
+// alone. groups: [{key, name, color, value, pct, target, valueText, rows: [{symbol, name, type, about, value, pct, valueText}]}].
 export function HoldingsPie({ groups, totalText }) {
   const inner = groups.filter((g) => g.value > 0);
   const outer = inner.flatMap((g) => g.rows.map((r) => ({ ...r, color: g.color, group: g.name })));
@@ -95,7 +96,7 @@ export function HoldingsPie({ groups, totalText }) {
               {g.rows.length > 1 || g.rows[0]?.symbol !== g.name
                 ? g.rows.map((r) => (
                     <tr key={r.symbol} className="hpie-row">
-                      <td><b>{r.symbol}</b> <span className="label">{r.name}</span></td>
+                      <td><b>{r.symbol}</b> <span className="label">{r.name}</span>{r.type && <span className="xtag hpie-type">{r.type}</span>} <Info text={r.about} /></td>
                       <td>{r.pct.toFixed(1)}%</td>
                       <td><div className="meter thin"><div style={{ width: `${Math.min(100, r.pct * 3)}%`, background: g.color }} /></div></td>
                       <td>{r.valueText}</td>
