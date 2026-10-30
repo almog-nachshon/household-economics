@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import { dismissAlert } from "@/lib/alert-actions";
 
-const ICON = { trade: "🔔", stop: "🔻", target: "🎯", advisor: "💡", cash: "💵" };
+const ICON = { trade: "🔔", stop: "🔻", target: "🎯", advisor: "💡", cash: "💵", enter: "🟢", exit: "🔴" };
 
 // The open alerts (lib/alerts.js), newest first; ✕ dismisses one.
 export default async function Alerts() {

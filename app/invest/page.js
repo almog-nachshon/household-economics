@@ -14,6 +14,7 @@ import { generatePlan, depositMonth, depositDate, holdings } from "@/lib/invest-
 import { ibkrEnabled, syncIbkr, ibkrQuoteUrl, ibkrDetailsUrl } from "@/lib/ibkr";
 import { STOP, TARGET } from "@/lib/alerts";
 import Alerts from "@/components/Alerts";
+import { signalsFor, SIGNAL, finvizUrl, onFinviz } from "@/lib/signals";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 600;
@@ -40,6 +41,9 @@ const sharpe = (x) => (x == null ? "—" : x.toFixed(2));
 // A name that opens the exact instrument at IBKR (the conid verified by lib/ibkr.js), with its exchange and ISIN on hover.
 const IbLink = ({ conid, ib, children }) =>
   conid ? <a href={ibkrQuoteUrl(conid)} target="_blank" rel="noreferrer" title={ib ? `באינטראקטיב: ${ib.ibSymbol} · ${ib.exchange} · ${ib.currency}${ib.isin ? ` · ISIN ${ib.isin}` : ""}` : "פתיחה באינטראקטיב"}>{children}</a> : children;
+// The entry / exit signal (lib/signals.js) as a colored tag; the reasons on hover.
+const SignalTag = ({ s }) => (s ? <span className={`signal signal-${s.level}`} title={s.reasons.join(" · ")}>{SIGNAL[s.level][0]} {SIGNAL[s.level][1]}</span> : null);
+const signed = (x) => (x == null ? "—" : `${x > 0 ? "+" : ""}${(x * 100).toFixed(1)}%`);
 const CHANGES = { add: "להוסיף", hold: "להחזיק, בלי כסף חדש", reduce: "לצמצם (למכור חלק)", sell: "למכור" };
 
 async function syncNow() {
@@ -123,6 +127,7 @@ export default async function Invest({ searchParams }) {
   const valid = Object.values(market.bySymbol).filter((q) => !q.error && q.buyable);
   const [lo, hi] = [Math.min(...valid.map((q) => q.score)), Math.max(...valid.map((q) => q.score))];
   const ranked = valid.map((q) => ({ ...q, rankScore: hi > lo ? ((q.score - lo) / (hi - lo)) * 100 : 50 })).sort((x, y) => y.score - x.score);
+  const signals = await signalsFor(market.bySymbol, [...picks.map((p) => p.symbol), ...folio.rows.map((h) => h.symbol)]);
   const changes = plan
     ? JSON.parse(plan.changes)
     : held.map((h) => ({ symbol: h.symbol, action: picks.some((p) => p.symbol === h.symbol) ? "add" : "hold", reason: null }));
@@ -301,6 +306,27 @@ export default async function Invest({ searchParams }) {
                 <p>{p.outlook}</p>
               </div>
             )}
+            {signals[p.symbol] && (() => {
+              const g = signals[p.symbol];
+              return (
+                <div className={`xcard-signal signal-box-${g.level}`}>
+                  <div className="xcard-signal-head">
+                    <span>⏱️ כניסה / יציאה</span>
+                    <SignalTag s={g} />
+                  </div>
+                  <ul>{g.reasons.map((r) => <li key={r}>{r}</li>)}</ul>
+                  <div className="xcard-signal-metrics">
+                    <span>RSI<Info text="מדד מומנטום 0-100: מעל 70 = עלתה מהר מדי (״מחוממת״), מתחת ל-30 = ירדה מהר מדי" /> <b>{g.rsi != null ? Math.round(g.rsi) : "—"}</b></span>
+                    <span>מול ממוצע 50 יום <b>{signed(g.sma50)}</b></span>
+                    <span>מול ממוצע 200 יום<Info text="מעל הממוצע = מגמת עלייה ארוכה; ירידה של 5% מתחתיו = סימן יציאה" /> <b>{signed(g.sma200)}</b></span>
+                    <span>מהשיא השנתי <b>{signed(g.fromHigh)}</b></span>
+                    {g.analysts && <span>אנליסטים <b>{g.analysts.buy} קנייה · {g.analysts.hold} החזקה · {g.analysts.sell} מכירה</b></span>}
+                    {g.earnings && <span>דוח רבעוני הבא <b>{g.earnings.toLocaleDateString("he-IL", { timeZone: "UTC" })}</b></span>}
+                  </div>
+                  {onFinviz(p.symbol) && <a href={finvizUrl(p.symbol)} target="_blank" rel="noreferrer" className="label">לגרף ולנתונים המלאים ב-Finviz ←</a>}
+                </div>
+              );
+            })()}
             <IntradayChart symbol={p.symbol} />
             <div className="xcard-metrics">
               <div><span>תשואה שנתית<Info text="השינוי במחיר (כולל דיבידנדים) ב-12 החודשים האחרונים" /></span><Ret x={p.m12} /></div>
@@ -352,7 +378,7 @@ export default async function Invest({ searchParams }) {
             </div>
             <div style={{ overflowX: "auto", marginTop: 8 }}>
               <table className="compact">
-                <thead><tr><th>סימול</th><th>שם</th><th>יחידות</th><th>הושקע</th><th>שווי</th><th>רווח</th><th>%</th></tr></thead>
+                <thead><tr><th>סימול</th><th>שם</th><th>יחידות</th><th>הושקע</th><th>שווי</th><th>רווח</th><th>%</th><th>כניסה / יציאה</th></tr></thead>
                 <tbody>
                   {folio.rows.map((h) => (
                     <tr key={h.symbol}>
@@ -363,6 +389,7 @@ export default async function Invest({ searchParams }) {
                       <td>{money(h.value)}</td>
                       <td className={h.profit >= 0 ? "pos" : "neg"}>{money(h.profit)}</td>
                       <td><Ret x={h.pct} /></td>
+                      <td><SignalTag s={signals[h.symbol]} /></td>
                     </tr>
                   ))}
                 </tbody>

@@ -213,7 +213,7 @@ model IbkrContract {
 model Alert {
   id        Int      @id @default(autoincrement())
   key       String   // the same key is not raised again within a week
-  kind      String   // trade | stop | target | advisor | cash
+  kind      String   // trade | stop | target | advisor | cash | enter | exit
   symbol    String   @default("")
   message   String
   href      String   @default("")
