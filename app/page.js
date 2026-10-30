@@ -51,8 +51,10 @@ export default async function Home() {
 
   return (
     <>
-      <h1>בית עד {settings.targetDate.getFullYear()}</h1>
-      <Alerts />
+      <div className="page-head">
+        <h1>בית עד {settings.targetDate.getFullYear()}</h1>
+        <Alerts />
+      </div>
 
       <div className="card hero">
         <div className="hero-row">
@@ -73,9 +75,15 @@ export default async function Home() {
         <Tile href="/expenses" title="נשאר אחרי הוצאות קבועות" value={ils(b.leftAfterFixed)} valueClass={b.leftAfterFixed > 0 ? "pos" : "neg"}>
           הכנסה {ils(income)} · הוצאות קבועות {ils(fixed)} ({income ? Math.round((fixed / income) * 100) : 0}%)
         </Tile>
-        <Tile href="/invest" title={`השקעה ב-${date(depositDate(dMonth))}`} value={ils(settings.monthlyInvest)}>
-          {plan ? `${plan.final ? "בדיקה סופית" : "בדיקה"} של Claude מ-${date(plan.createdAt)} · מתכות ${plan.metalsPct}%` : "Claude עוד לא בדק את ההפקדה הזו"}
-        </Tile>
+        {folio.broker ? (
+          <Tile href="/invest" title="כסף לא מושקע באינטראקטיב" value={ils(folio.cash)} valueClass={folio.cash >= 300 ? "neg" : "pos"}>
+            {folio.cash >= 300 ? "מחכה לחלוקה: החלוקה המומלצת בדף ההשקעות" : "החשבון מנוצל במלואו"}
+          </Tile>
+        ) : (
+          <Tile href="/invest" title={`השקעה ב-${date(depositDate(dMonth))}`} value={ils(settings.monthlyInvest)}>
+            {plan ? `${plan.final ? "בדיקה סופית" : "בדיקה"} של Claude מ-${date(plan.createdAt)} · מתכות ${plan.metalsPct}%` : "Claude עוד לא בדק את ההפקדה הזו"}
+          </Tile>
+        )}
         <Tile href="/invest" title="תיק השקעות" value={ils(folio.value)} valueClass={folio.profit >= 0 ? "pos" : "neg"}>
           {folio.rows.length
             ? `הושקע ${ils(folio.cost)} · רווח ${ils(folio.profit)} (${(folio.pct * 100).toFixed(1)}%)${folio.cash >= 1 ? ` · מזומן ${ils(folio.cash)}` : ""} · צפי ביעד ${ils(portfolioAtTarget)}`
