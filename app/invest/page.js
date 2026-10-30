@@ -136,6 +136,8 @@ export default async function Invest({ searchParams }) {
   const taken = new Set([...picks.map((p) => p.symbol), ...bought.map((b) => b.symbol)]);
   const indexes = new Set([...picks, ...folio.rows, ...bought].map((x) => market.bySymbol[x.symbol]?.index).filter(Boolean));
   const { extras, left: extraLeft } = leftover > 1 ? extraPicks(ranked, signals, leftover, taken, indexes) : { extras: [], left: leftover };
+  // The detailed cards: the plan's picks, then the next in line in priority order.
+  const cards = [...picks, ...extras.map((p, i) => ({ ...p, amount: p.cost, pct: (p.cost / amount) * 100, next: i + 1 }))];
   const changes = plan
     ? JSON.parse(plan.changes)
     : held.map((h) => ({ symbol: h.symbol, action: picks.some((p) => p.symbol === h.symbol) ? "add" : "hold", reason: null }));
@@ -187,7 +189,7 @@ export default async function Invest({ searchParams }) {
         {!typed && cashUsd >= 1 && <Info text="הסכום = המזומן הפנוי בחשבון אינטראקטיב. אפשר להקליד סכום אחר." />}
       </form>
 
-      <LiveQuotes symbols={picks.map((p) => p.symbol)}>
+      <LiveQuotes symbols={cards.map((p) => p.symbol)}>
       <div className="card invest-hero">
         <div className="invest-hero-head">
           <div>
@@ -306,13 +308,17 @@ export default async function Invest({ searchParams }) {
         </div>
       </div>
 
-      <h2 style={{ marginTop: 20 }}>{picks.length} הבחירות: ניתוח מפורט</h2>
+      <h2 style={{ marginTop: 20 }}>
+        {cards.length} הבחירות: ניתוח מפורט{" "}
+        {extras.length > 0 && <Info text="קודם ההמלצות של התוכנית, ואחריהן ״הבאים בתור״ לפי סדר העדיפות בדירוג (הכסף שנשאר אחרי החלוקה)." />}
+      </h2>
       <div className="pick-grid">
-        {picks.map((p) => (
+        {cards.map((p) => (
           <div key={p.symbol} className="xcard" style={{ borderTopColor: BUCKET_COLORS[p.bucket] }}>
             <div className="xcard-head">
               <Logo id={p.symbol} label={p.name} size={36} />
               <div className="xcard-id">
+                {p.next && <span className="next-badge">💡 הבא בתור #{p.next}</span>}
                 <div className="xcard-sym"><IbLink conid={p.ibkr?.conid} ib={p.ibkr}>{p.symbol}</IbLink></div>
                 <div className="xcard-name" dir="auto" title={p.name}><IbLink conid={p.ibkr?.conid} ib={p.ibkr}>{p.name}</IbLink></div>
                 {p.ibkr && (
