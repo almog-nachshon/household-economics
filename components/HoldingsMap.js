@@ -114,6 +114,12 @@ export default function HoldingsMap({ groups, mode = "today" }) {
                     }}
                   >
                     <rect x={t.x + 1} y={t.y + 1} width={Math.max(0, t.w - 2)} height={Math.max(0, t.h - 2)} rx={3} fill={cash ? "#c9d2d6" : tileColor(metric(t))} />
+                    {/* too narrow for the name across: write it upward along the tile */}
+                    {t.w <= 30 && t.w > 12 && t.h > 40 && (
+                      <text x={t.x + t.w / 2} y={t.y + t.h / 2} transform={`rotate(-90 ${t.x + t.w / 2} ${t.y + t.h / 2})`} textAnchor="middle" dominantBaseline="central" fill={cash ? "#3d4a50" : "#fff"} fontWeight={700} fontSize={Math.max(9, Math.min(14, t.w * 0.55))}>
+                        {t.symbol}
+                      </text>
+                    )}
                     {t.w > 30 && t.h > 18 && (
                       <text x={t.x + t.w / 2} y={t.y + t.h / 2} textAnchor="middle" fill={cash ? "#3d4a50" : "#fff"} fontWeight={700}>
                         <tspan x={t.x + t.w / 2} dy={t.h > fs * 2.4 ? -fs * 0.35 : fs * 0.35} fontSize={fs}>{t.symbol}</tspan>
