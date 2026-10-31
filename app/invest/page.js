@@ -171,9 +171,9 @@ export default async function Invest({ searchParams }) {
   const verdicts = Object.fromEntries(ranked.map((q) => [q.symbol, verdictOf(signals[q.symbol], q.rankScore)]));
   const options = extraLeft > 1
     ? ranked
-        // not metals while their share is 0 (no IBKR permission yet), and never a "strong sell"
+        // not metals while their share is 0 (no IBKR permission yet), and never a "sell" or "strong sell"
         .filter((q) => q.priceIls && q.priceIls <= extraLeft && !picks.some((p) => p.symbol === q.symbol) && !extras.some((p) => p.symbol === q.symbol))
-        .filter((q) => !(q.bucket === "metals" && !metalsPct) && verdicts[q.symbol]?.key !== "strong-sell")
+        .filter((q) => !(q.bucket === "metals" && !metalsPct) && !["sell", "strong-sell"].includes(verdicts[q.symbol]?.key))
         .slice(0, 4)
         .map((q) => ({ ...q, units: Math.floor(extraLeft / q.priceIls), signal: signals[q.symbol], verdict: verdicts[q.symbol], rank: ranked.indexOf(q) + 1 }))
     : [];
