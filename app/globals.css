@@ -366,7 +366,7 @@ table.rank tr.chosen td { font-weight: 700; background: var(--accent-soft); }
 .hmap svg g g:hover rect { stroke: #1f2a30; stroke-width: 2px; }
 .hmap-tip { position: absolute; z-index: 30; transform: translate(-50%, 14px); min-width: 200px; max-width: 300px; padding: 8px 10px; border-radius: 8px; background: #fff; border: 1px solid var(--track); box-shadow: 0 6px 20px rgba(0,0,0,.18); font-size: 13px; pointer-events: none; }
 .hmap-scale { display: flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 12px; flex-wrap: wrap; }
-.hmap-ramp { display: inline-block; width: 140px; height: 8px; border-radius: 4px; background: linear-gradient(to left, #d93025, #7d8a90, #1e8e3e); }
+.hmap-ramp { display: inline-block; width: 140px; height: 8px; border-radius: 4px; background: linear-gradient(to left, #e5132a 0%, #c0474f 22%, #8f7b80 42%, #7d8a90 50%, #79947f 58%, #4f9f66 78%, #12b347 100%); }
 .bucket-chips { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 8px; font-size: 13px; }
 .bucket-chip { white-space: nowrap; }
 .hmap-about { margin: 4px 0; max-width: 280px; line-height: 1.45; white-space: normal; }

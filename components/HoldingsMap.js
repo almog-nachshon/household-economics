@@ -4,8 +4,9 @@ import { useLiveQuotes } from "@/components/Live";
 
 // The portfolio as a heat map, like Finviz's market map: each holding a tile sized by its share of the account,
 // grouped by theme (bucket) under a header in the theme's color, and colored on a diverging scale (red down, gray
-// flat, green up). mode "today": today's change, full color at ±3%, live from the surrounding LiveQuotes (else the last
-// daily close). mode "profit": the user's own profit or loss since buying, full color at ±10%. Hover shows the
+// flat, green up): a small move (up to +2% / down to -1.5%) is a faint greenish / reddish gray, a bigger one a bright,
+// strong color. mode "today": today's change, live from the surrounding LiveQuotes (else the last daily close).
+// mode "profit": the user's own profit or loss since buying. Hover shows the
 // details. groups: [{key, name, color, rows: [{symbol, name, type, value, change, pct, profitPct, profitText,
 // valueText}]}]; cash is a plain gray group.
 // The map's drawing size: wide on a computer, nearly square on a phone so the tiles keep readable text.
@@ -13,14 +14,25 @@ const WIDE = { W: 900, H: 440 };
 const NARROW = { W: 420, H: 460 };
 const HEAD = 20;
 const GAP = 2;
-const FULL = { today: 0.03, profit: 0.1 };
+// Where a move stops being "small" (the user's thresholds), and the move at which the color is at its strongest.
+const UP = 0.02;
+const DOWN = 0.015;
 
 const mix = (a, b, t) => {
   const [p, q] = [a, b].map((c) => [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16)));
   return `rgb(${p.map((v, i) => Math.round(v + (q[i] - v) * t)).join(",")})`;
 };
 const NEUTRAL = "#7d8a90";
-const tileColor = (chg, full) => (chg == null ? NEUTRAL : mix(NEUTRAL, chg >= 0 ? "#1e8e3e" : "#d93025", Math.min(1, Math.abs(chg) / full)));
+const GREEN = "#12b347";
+const RED = "#e5132a";
+// Small: 15-40% of the way from gray to the color; past the threshold: 70% rising to the full color at twice it.
+function tileColor(chg) {
+  if (chg == null || Math.abs(chg) < 0.0005) return NEUTRAL;
+  const limit = chg > 0 ? UP : DOWN;
+  const a = Math.abs(chg);
+  const t = a <= limit ? 0.15 + 0.25 * (a / limit) : 0.7 + 0.3 * Math.min(1, (a - limit) / limit);
+  return mix(NEUTRAL, chg > 0 ? GREEN : RED, t);
+}
 const signed = (x, d = 2) => (x == null ? "—" : `${x > 0 ? "+" : ""}${(x * 100).toFixed(d)}%`);
 
 // Squarified treemap of `nodes` ({value}) in the rectangle, laid out right to left for Hebrew.
@@ -60,7 +72,6 @@ function squarify(nodes, { x, y, w, h }) {
 }
 
 export default function HoldingsMap({ groups, mode = "today" }) {
-  const full = FULL[mode];
   const metric = (r) => (mode === "profit" ? r.profitPct : r.change);
   const live = useLiveQuotes();
   const [tip, setTip] = useState(null);
@@ -102,7 +113,7 @@ export default function HoldingsMap({ groups, mode = "today" }) {
                       setTip({ t, g, left: e.clientX - r.left, top: e.clientY - r.top });
                     }}
                   >
-                    <rect x={t.x + 1} y={t.y + 1} width={Math.max(0, t.w - 2)} height={Math.max(0, t.h - 2)} rx={3} fill={cash ? "#c9d2d6" : tileColor(metric(t), full)} />
+                    <rect x={t.x + 1} y={t.y + 1} width={Math.max(0, t.w - 2)} height={Math.max(0, t.h - 2)} rx={3} fill={cash ? "#c9d2d6" : tileColor(metric(t))} />
                     {t.w > 30 && t.h > 18 && (
                       <text x={t.x + t.w / 2} y={t.y + t.h / 2} textAnchor="middle" fill={cash ? "#3d4a50" : "#fff"} fontWeight={700}>
                         <tspan x={t.x + t.w / 2} dy={t.h > fs * 2.4 ? -fs * 0.35 : fs * 0.35} fontSize={fs}>{t.symbol}</tspan>
@@ -132,9 +143,10 @@ export default function HoldingsMap({ groups, mode = "today" }) {
         </div>
       )}
       <div className="hmap-scale">
-        <span>-{Math.round(full * 100)}%</span>
+        <span>ירידה חזקה</span>
         <span className="hmap-ramp" />
-        <span>+{Math.round(full * 100)}%</span>
+        <span>עלייה חזקה</span>
+        <span className="label">(עד ‎-1.5% / ‎+2% צבע חלש)</span>
         <span className="label">גודל = חלק מהחשבון · צבע = {mode === "profit" ? "הרווח / ההפסד שלי מאז הקנייה" : "השינוי היום"}</span>
       </div>
     </div>
