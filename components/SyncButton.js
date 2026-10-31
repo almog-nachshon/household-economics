@@ -10,7 +10,7 @@ export default function SyncButton({ updated, info }) {
     <span className="ai-button">
       <button type="submit" disabled={pending} className={`secondary sync-btn${pending ? " busy" : ""}`}>
         {pending && <span className="spinner sync-spinner" />}
-        {pending ? "מושך נתונים מאינטראקטיב…" : "🔄 רענון מאינטראקטיב"}
+        {pending ? "מושך נתונים…" : <>🔄 רענון<span className="btn-long"> מאינטראקטיב</span></>}
       </button>
       {pending && (
         <span className="sync-progress">

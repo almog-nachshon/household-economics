@@ -393,3 +393,22 @@ table.rank tr.chosen td { font-weight: 700; background: var(--accent-soft); }
   .card { padding: 12px; }
 }
 .hmap-title { margin: 16px 0 0; font-size: 16px; }
+
+/* Phone: a compact header (menu on one row, small market clock, small buttons side by side) */
+@media (max-width: 700px) {
+  nav { flex-wrap: nowrap; overflow-x: auto; gap: 2px; padding: 6px 8px; scrollbar-width: none; }
+  nav::-webkit-scrollbar { display: none; }
+  nav a { white-space: nowrap; font-size: 14px; padding: 6px 8px; }
+  .page-head { gap: 6px; }
+  .page-head h1 { font-size: 24px; margin: 8px 0 0; flex: 1 1 100%; }
+  .market { font-size: 11px; padding: 4px 8px; white-space: nowrap; }
+  .market-long { display: none; }
+  .alerts-menu { flex: 0 0 auto; }
+  .alerts-btn { width: auto; min-width: 0; padding: 4px 10px; font-size: 12px; }
+  .page-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 4px 0 10px; }
+  .page-actions form { min-width: 0; }
+  .page-actions .ai-button { display: flex; flex-direction: column; align-items: stretch; gap: 2px; }
+  .page-actions .ai-button button { width: 100%; justify-content: center; padding: 7px 8px; font-size: 13px; white-space: nowrap; }
+  .page-actions .ai-button .label { font-size: 11px; text-align: center; }
+  .btn-long { display: none; }
+}

@@ -206,7 +206,7 @@ export default async function Invest({ searchParams }) {
         {advisorEnabled() && (
           <form action={runNow} style={{ maxWidth: "none" }}>
             <AiButton
-              label="בדיקה מהירה של Claude"
+              label={<><span className="btn-long">בדיקה מהירה של </span>Claude</>}
               updated={plan?.createdAt.toLocaleString("he-IL", { timeZone: "Asia/Jerusalem", dateStyle: "short", timeStyle: "short" })}
               info={plan
                 ? `${plan.final ? "בדיקה סופית" : "בדיקה יומית"} של Claude (${plan.model}). ${plan.final ? "" : `הבדיקה הסופית ב-${date(day)}, לפני ההפקדה. `}הכפתור מריץ בדיקה מהירה; מחקר מלא נעשה ב-Claude Code.`

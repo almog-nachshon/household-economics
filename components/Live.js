@@ -125,7 +125,10 @@ export function MarketStatus() {
       {s.state === "open" && <span className="market-sub"> · נסגר בעוד <span className="market-clock">{clock(s.left)}</span></span>}
       {s.state === "pre" && <span className="market-sub"> · נפתח בעוד <span className="market-clock">{clock(s.left)}</span></span>}
       {s.state !== "open" && s.state !== "pre" && open && (
-        <span className="market-sub"> · נפתח {whenIl(open, now)} שעון ישראל{hoursLeft >= 1 ? ` (בעוד ${hoursLeft >= 24 ? `${Math.floor(hoursLeft / 24)} ימים ו-` : ""}${hoursLeft % 24} שעות)` : ""}</span>
+        <span className="market-sub">
+          {" "}· נפתח {whenIl(open, now)}<span className="market-long"> שעון ישראל</span>
+          {hoursLeft >= 1 && <span className="market-long">{` (בעוד ${hoursLeft >= 24 ? `${Math.floor(hoursLeft / 24)} ימים ו-` : ""}${hoursLeft % 24} שעות)`}</span>}
+        </span>
       )}
     </span>
   );
