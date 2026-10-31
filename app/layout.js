@@ -7,8 +7,7 @@ export default function RootLayout({ children }) {
     <html lang="he" dir="rtl">
       <body>
         <nav>
-          <a href="/" className="brand">תכנית פיננסית לבית ב-2030</a>
-          <a href="/">ראשי</a>
+          <a href="/" className="brand">🏠 <span className="btn-long">תכנית פיננסית לבית ב-</span>2030</a>
           <a href="/expenses">הוצאות / הכנסות</a>
           <a href="/invest">השקעות</a>
           <a href="/funds">קרנות ופנסיה</a>
