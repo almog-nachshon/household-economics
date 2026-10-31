@@ -151,10 +151,9 @@ export default async function Invest({ searchParams }) {
   const { picks, skipped, leftover } = sizePicks(top.picks, amount);
   // What is left goes to more units of holdings with a buy signal in the buckets that need it (never new names when
   // something is held), so no cash sits idle.
-  const pool = folio.broker && heldRows.length ? ranked.filter((q) => heldRows.some((h) => h.symbol === q.symbol) && (shares?.[q.bucket] ?? 0) > 0) : ranked;
   const indexes = new Set([...picks, ...folio.rows].map((x) => market.bySymbol[x.symbol]?.index).filter(Boolean));
   const { extras, left: extraLeft } = leftover > 1
-    ? extraPicks(pool, signals, leftover, new Set(picks.map((p) => p.symbol)), folio.broker && heldRows.length ? new Set() : indexes)
+    ? extraPicks(ranked, signals, leftover, new Set(picks.map((p) => p.symbol)), indexes, new Set(folio.rows.map((h) => h.symbol)))
     : { extras: [], left: leftover };
   const steps = folio.broker
     ? nextSteps({ rows: folio.rows, cash: folio.cash, signals, metalsPct, money, waiting })
@@ -323,7 +322,7 @@ export default async function Invest({ searchParams }) {
             {usd && <div className="label">≈ {ils(amount)}{folio.broker ? "" : ` לפי דולר = ${fx.toFixed(3)} ₪`}</div>}
             <div className="label">
               {picks.length} החזקות · {plan ? `לפי מחקר של Claude` : "לפי ציון ביצועים"}{" "}
-              <Info text={shares ? `החלוקה משלימה את מה שכבר בתיק: כסף לחלקים שרחוקים מהיעד (${splitText(metalsPct)}). בכל חלק מוסיפים קודם למניה שכבר מחזיקים בו, כדי לא לפצל להרבה מניות. רק מניות עם סימן 🟢 / ⚪.` : `חלוקה קבועה: ${splitText(metalsPct)}, ומתכות לפי המחקר.`} />
+              <Info text={shares ? `החלוקה משלימה את מה שכבר בתיק: כסף לחלקים שרחוקים מהיעד (${splitText(metalsPct)}). בכל חלק מוסיפים קודם למניה שכבר מחזיקים בו, כדי לא לפצל להרבה מניות. רק מה שבירוק (🟢) עם המלצת אנליסטים.` : `חלוקה קבועה: ${splitText(metalsPct)}, ומתכות לפי המחקר.`} />
             </div>
           </div>
           <div className="bucket-bars">
@@ -380,7 +379,7 @@ export default async function Invest({ searchParams }) {
           <div className="extra-box">
             <h2 style={{ margin: 0 }}>
               💡 עוד {money(leftover)} פנויים: הבאים בתור{" "}
-              <Info text="כדי שלא יישאר מזומן בלי השקעה: הכסף שנשאר אחרי החלוקה מוסיף יחידות להחזקות הקיימות עם סימן קנייה (🟢 או ⚪), בחלקים של התיק שעוד מתחת ליעד. בלי מניות חדשות." />
+              <Info text="כדי שלא יישאר מזומן בלי השקעה: הכסף שנשאר אחרי החלוקה יורד בטבלת הדירוג, להחזקה קיימת או למניה חדשה, לפי הסדר. רק מה שבירוק (🟢) ושהאנליסטים ממליצים עליו (ממוצע 2.5 ומטה, כמו Recom ב-Finviz)." />
             </h2>
             <table className="compact">
               <thead><tr><th>החזקה</th><th>תחום</th><th>סימן</th><th>לקנות</th><th>סכום</th><th>למה</th></tr></thead>
@@ -408,7 +407,7 @@ export default async function Invest({ searchParams }) {
         {extraLeft > 1 && (
           <p className="label">
             נשאר כמזומן בחשבון: {money(extraLeft)}{" "}
-            <Info text={extras.length ? "פחות ממחיר יחידה אחת של המועמדים עם סימן קנייה. יישאר להפקדה הבאה." : "אין כרגע מועמד נוסף עם סימן קנייה (🟢 / ⚪) שנכנס בסכום הזה. יישאר להפקדה הבאה."} />
+            <Info text={extras.length ? "פחות ממחיר יחידה אחת של מה שבירוק. יתחלק לבד כשיגיע עוד כסף או כשמניה זולה יותר תהפוך לירוקה." : "אין כרגע מניה בירוק (🟢, עם המלצת אנליסטים) שיחידה שלה נכנסת בסכום הזה. יתחלק לבד ברגע שתהיה."} />
           </p>
         )}
         <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
