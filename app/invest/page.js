@@ -170,7 +170,7 @@ export default async function Invest({ searchParams }) {
       const value = rows.reduce((t, h) => t + h.value, 0);
       return {
         key: b.key, name: b.name, color: BUCKET_COLORS[b.key], ink: ink(b.key), value, pct: (value / total) * 100, target: bucketPct(b, metalsPct), valueText: withIls(value),
-        rows: rows.map((h) => ({ symbol: h.symbol, name: h.name, type: typeOf(h), change: market.bySymbol[h.symbol]?.d1 ?? null, profitPct: h.pct, about: [ABOUT[h.symbol], signals[h.symbol] && SIGNAL[signals[h.symbol].level].join(" ") + ": " + signals[h.symbol].reasons[0]].filter(Boolean).join(" · "), value: h.value, pct: (h.value / total) * 100, valueText: withIls(h.value) })),
+        rows: rows.map((h) => ({ symbol: h.symbol, name: h.name, type: typeOf(h), change: market.bySymbol[h.symbol]?.d1 ?? null, profitPct: h.pct, profitText: withIls(h.profit), about: [ABOUT[h.symbol], signals[h.symbol] && SIGNAL[signals[h.symbol].level].join(" ") + ": " + signals[h.symbol].reasons[0]].filter(Boolean).join(" · "), value: h.value, pct: (h.value / total) * 100, valueText: withIls(h.value) })),
       };
     }),
     ...(folio.rows.some((h) => !h.bucket)
@@ -248,7 +248,10 @@ export default async function Invest({ searchParams }) {
             {folio.broker && (
               <>
                 <LiveQuotes symbols={folio.rows.map((h) => h.symbol)}>
+                  <h3 className="hmap-title">📈 השינוי היום</h3>
                   <HoldingsMap groups={groups} />
+                  <h3 className="hmap-title">💰 הרווח / ההפסד שלי מאז הקנייה: <span className={folio.profit >= 0 ? "pos" : "neg"}>{withIls(folio.profit)} ({pct(folio.pct)})</span></h3>
+                  <HoldingsMap groups={groups} mode="profit" />
                 </LiveQuotes>
                 <div className="bucket-chips">
                   {groups.filter((g) => g.value > 0).map((g) => (
@@ -343,7 +346,7 @@ export default async function Invest({ searchParams }) {
           </div>
         </div>
         <h2 style={{ marginTop: 16 }}>{folio.broker ? "מה לקנות עכשיו" : "סקירת הקצאת התיק"}</h2>
-        {folio.broker && picks.length === 0 && extras.length === 0 && <p className="label">אין כרגע קנייה מומלצת בסכום הזה: אין מניה עם סימן 🟢 / ⚪ שיחידה שלה נכנסת בחלק שחסר. הכסף יחכה להפקדה הבאה או לשינוי בסימנים.</p>}
+        {folio.broker && picks.length === 0 && extras.length === 0 && <p className="label">אין כרגע קנייה מומלצת בסכום הזה: אין מניה בירוק (🟢, עם המלצת אנליסטים) שיחידה שלה נכנסת בסכום. הכסף יתחלק לבד ברגע שתהיה.</p>}
         <div className="table-scroll">
           <table className="alloc-table">
             <thead>

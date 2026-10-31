@@ -3,23 +3,24 @@ import { useEffect, useState } from "react";
 import { useLiveQuotes } from "@/components/Live";
 
 // The portfolio as a heat map, like Finviz's market map: each holding a tile sized by its share of the account,
-// grouped by theme (bucket) under a header in the theme's color, and colored by today's change on a diverging scale
-// (red down, gray flat, green up, full color at ±3%). Live changes come from the surrounding LiveQuotes; otherwise the
-// last daily close. Hover shows the details. groups: [{key, name, color, rows: [{symbol, name, type, value, change,
-// pct, profitPct, valueText}]}]; cash is a plain gray group.
+// grouped by theme (bucket) under a header in the theme's color, and colored on a diverging scale (red down, gray
+// flat, green up). mode "today": today's change, full color at ±3%, live from the surrounding LiveQuotes (else the last
+// daily close). mode "profit": the user's own profit or loss since buying, full color at ±10%. Hover shows the
+// details. groups: [{key, name, color, rows: [{symbol, name, type, value, change, pct, profitPct, profitText,
+// valueText}]}]; cash is a plain gray group.
 // The map's drawing size: wide on a computer, nearly square on a phone so the tiles keep readable text.
 const WIDE = { W: 900, H: 440 };
 const NARROW = { W: 420, H: 460 };
 const HEAD = 20;
 const GAP = 2;
-const FULL = 0.03;
+const FULL = { today: 0.03, profit: 0.1 };
 
 const mix = (a, b, t) => {
   const [p, q] = [a, b].map((c) => [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16)));
   return `rgb(${p.map((v, i) => Math.round(v + (q[i] - v) * t)).join(",")})`;
 };
 const NEUTRAL = "#7d8a90";
-const tileColor = (chg) => (chg == null ? NEUTRAL : mix(NEUTRAL, chg >= 0 ? "#1e8e3e" : "#d93025", Math.min(1, Math.abs(chg) / FULL)));
+const tileColor = (chg, full) => (chg == null ? NEUTRAL : mix(NEUTRAL, chg >= 0 ? "#1e8e3e" : "#d93025", Math.min(1, Math.abs(chg) / full)));
 const signed = (x, d = 2) => (x == null ? "—" : `${x > 0 ? "+" : ""}${(x * 100).toFixed(d)}%`);
 
 // Squarified treemap of `nodes` ({value}) in the rectangle, laid out right to left for Hebrew.
@@ -58,7 +59,9 @@ function squarify(nodes, { x, y, w, h }) {
   return out.map((n) => ({ ...n, x: x + (w - n.x - n.w), y: y + n.y }));
 }
 
-export default function HoldingsMap({ groups }) {
+export default function HoldingsMap({ groups, mode = "today" }) {
+  const full = FULL[mode];
+  const metric = (r) => (mode === "profit" ? r.profitPct : r.change);
   const live = useLiveQuotes();
   const [tip, setTip] = useState(null);
   const [{ W, H }, setSize] = useState(WIDE);
@@ -78,7 +81,7 @@ export default function HoldingsMap({ groups }) {
 
   return (
     <div className="hmap" onMouseLeave={() => setTip(null)}>
-      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label="מפת התיק: גודל לפי חלק מהחשבון, צבע לפי השינוי היום">
+      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`מפת התיק: גודל לפי חלק מהחשבון, צבע לפי ${mode === "profit" ? "הרווח מאז הקנייה" : "השינוי היום"}`}>
         {boxes.map((g) => {
           const inner = { x: g.x + GAP, y: g.y + HEAD, w: g.w - 2 * GAP, h: g.h - HEAD - GAP };
           const tiles = squarify(g.rows, inner);
@@ -99,11 +102,12 @@ export default function HoldingsMap({ groups }) {
                       setTip({ t, g, left: e.clientX - r.left, top: e.clientY - r.top });
                     }}
                   >
-                    <rect x={t.x + 1} y={t.y + 1} width={Math.max(0, t.w - 2)} height={Math.max(0, t.h - 2)} rx={3} fill={cash ? "#c9d2d6" : tileColor(t.change)} />
+                    <rect x={t.x + 1} y={t.y + 1} width={Math.max(0, t.w - 2)} height={Math.max(0, t.h - 2)} rx={3} fill={cash ? "#c9d2d6" : tileColor(metric(t), full)} />
                     {t.w > 30 && t.h > 18 && (
                       <text x={t.x + t.w / 2} y={t.y + t.h / 2} textAnchor="middle" fill={cash ? "#3d4a50" : "#fff"} fontWeight={700}>
                         <tspan x={t.x + t.w / 2} dy={t.h > fs * 2.4 ? -fs * 0.35 : fs * 0.35} fontSize={fs}>{t.symbol}</tspan>
-                        {t.h > fs * 2.4 && <tspan x={t.x + t.w / 2} dy={fs * 1.05} fontSize={fs * 0.62} fontWeight={600}>{cash ? `${Math.round(t.pct)}%` : signed(t.change)}</tspan>}
+                        {t.h > fs * 2.4 && <tspan x={t.x + t.w / 2} dy={fs * 1.05} fontSize={fs * 0.62} fontWeight={600}>{cash ? `${Math.round(t.pct)}%` : signed(metric(t), mode === "profit" ? 1 : 2)}</tspan>}
+                        {!cash && mode === "profit" && t.h > fs * 3.6 && t.profitText && <tspan x={t.x + t.w / 2} dy={fs * 0.8} fontSize={fs * 0.5} fontWeight={500}>{t.profitText}</tspan>}
                       </text>
                     )}
                   </g>
@@ -122,16 +126,16 @@ export default function HoldingsMap({ groups }) {
           {tip.g.key !== "cash" && (
             <>
               <div>היום: <b className={tip.t.change >= 0 ? "pos" : "neg"}>{signed(tip.t.change)}</b></div>
-              {tip.t.profitPct != null && <div>מאז הקנייה: <b className={tip.t.profitPct >= 0 ? "pos" : "neg"}>{signed(tip.t.profitPct, 1)}</b></div>}
+              {tip.t.profitPct != null && <div>מאז הקנייה: <b className={tip.t.profitPct >= 0 ? "pos" : "neg"}>{signed(tip.t.profitPct, 1)}</b>{tip.t.profitText ? ` (${tip.t.profitText})` : ""}</div>}
             </>
           )}
         </div>
       )}
       <div className="hmap-scale">
-        <span>-3%</span>
+        <span>-{Math.round(full * 100)}%</span>
         <span className="hmap-ramp" />
-        <span>+3%</span>
-        <span className="label">גודל = חלק מהחשבון · צבע = השינוי היום</span>
+        <span>+{Math.round(full * 100)}%</span>
+        <span className="label">גודל = חלק מהחשבון · צבע = {mode === "profit" ? "הרווח / ההפסד שלי מאז הקנייה" : "השינוי היום"}</span>
       </div>
     </div>
   );
