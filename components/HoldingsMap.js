@@ -76,7 +76,7 @@ export default function HoldingsMap({ groups }) {
           return (
             <g key={g.key}>
               <rect x={g.x + 1} y={g.y + 1} width={g.w - 2} height={g.h - 2} rx={4} fill={g.key === "cash" ? "#eef2f3" : g.color} />
-              <text x={g.x + g.w - 6} y={g.y + 14} fill={g.key === "cash" ? "#3d4a50" : "#fff"} fontSize={12} fontWeight={700} textAnchor="start" direction="rtl">
+              <text x={g.x + g.w - 6} y={g.y + 14} fill={g.key === "cash" ? "#3d4a50" : g.ink ?? "#fff"} fontSize={12} fontWeight={700} textAnchor="start" direction="rtl">
                 {g.w > 70 ? `${g.name} ${Math.round(g.pct)}%` : `${Math.round(g.pct)}%`}
               </text>
               {tiles.map((t) => {

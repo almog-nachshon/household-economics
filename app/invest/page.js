@@ -29,7 +29,10 @@ const date = (d) => d.toLocaleDateString("he-IL");
 const bucketName = Object.fromEntries(BUCKETS.map((b) => [b.key, b.name]));
 // One color per bucket, used by the pie and the type tags.
 // Checked with the dataviz palette validator (lightness, chroma, color-blind and normal-vision separation).
-const BUCKET_COLORS = { index: "#0fa3a3", sector: "#6d5bd0", defense: "#b5651d", risk: "#d6457a", metals: "#c9a227" };
+const BUCKET_COLORS = { index: "#0fa3a3", sector: "#6d5bd0", defense: "#b5651d", risk: "#d6457a", photonics: "#8fb0ff", metals: "#c9a227" };
+// Text on a bucket color: dark on the light ones.
+const ink = (key) => (key === "photonics" || key === "metals" ? "#1f2a30" : "#fff");
+const splitText = (metalsPct) => BUCKETS.filter((b) => b.pct).map((b) => `${b.name} ${Math.round(bucketPct(b, metalsPct))}%`).join(", ");
 const CASH_COLOR = "#9aa7ad";
 // Risk level from the yearly volatility.
 const RISK = [[0.15, "נמוך", "risk-low"], [0.25, "בינוני", "risk-mid"], [0.4, "גבוה", "risk-high"], [Infinity, "גבוה מאוד", "risk-vhigh"]];
@@ -167,7 +170,7 @@ export default async function Invest({ searchParams }) {
       const rows = folio.rows.filter((h) => h.bucket === b.key);
       const value = rows.reduce((t, h) => t + h.value, 0);
       return {
-        key: b.key, name: b.name, color: BUCKET_COLORS[b.key], value, pct: (value / total) * 100, target: bucketPct(b, metalsPct), valueText: withIls(value),
+        key: b.key, name: b.name, color: BUCKET_COLORS[b.key], ink: ink(b.key), value, pct: (value / total) * 100, target: bucketPct(b, metalsPct), valueText: withIls(value),
         rows: rows.map((h) => ({ symbol: h.symbol, name: h.name, type: typeOf(h), change: market.bySymbol[h.symbol]?.d1 ?? null, profitPct: h.pct, about: [ABOUT[h.symbol], signals[h.symbol] && SIGNAL[signals[h.symbol].level].join(" ") + ": " + signals[h.symbol].reasons[0]].filter(Boolean).join(" · "), value: h.value, pct: (h.value / total) * 100, valueText: withIls(h.value) })),
       };
     }),
@@ -318,7 +321,7 @@ export default async function Invest({ searchParams }) {
             {usd && <div className="label">≈ {ils(amount)}{folio.broker ? "" : ` לפי דולר = ${fx.toFixed(3)} ₪`}</div>}
             <div className="label">
               {picks.length} החזקות · {plan ? `לפי מחקר של Claude` : "לפי ציון ביצועים"}{" "}
-              <Info text={shares ? "החלוקה משלימה את מה שכבר בתיק: כסף לחלקים שרחוקים מהיעד (מדדים 45%, סקטור 10%, ביטחוניות 25%, סיכון 20%). בכל חלק מוסיפים קודם למניה שכבר מחזיקים בו, כדי לא לפצל להרבה מניות. רק מניות עם סימן 🟢 / ⚪." : "חלוקה קבועה: מדדים 45%, סקטור 10%, ביטחוניות 25%, סיכון 20%, ומתכות לפי המחקר."} />
+              <Info text={shares ? `החלוקה משלימה את מה שכבר בתיק: כסף לחלקים שרחוקים מהיעד (${splitText(metalsPct)}). בכל חלק מוסיפים קודם למניה שכבר מחזיקים בו, כדי לא לפצל להרבה מניות. רק מניות עם סימן 🟢 / ⚪.` : `חלוקה קבועה: ${splitText(metalsPct)}, ומתכות לפי המחקר.`} />
             </div>
           </div>
           <div className="bucket-bars">
@@ -383,7 +386,7 @@ export default async function Invest({ searchParams }) {
                 {extras.map((p) => (
                   <tr key={p.symbol}>
                     <td><span className="sym"><Logo id={p.symbol} label={p.name} size={18} /><IbLink conid={p.ibkr?.conid} ib={p.ibkr}><b>{p.symbol}</b></IbLink></span></td>
-                    <td><span className="tag" style={{ background: BUCKET_COLORS[p.bucket], color: "#fff", marginInlineStart: 0 }}>{bucketName[p.bucket]}</span></td>
+                    <td><span className="tag" style={{ background: BUCKET_COLORS[p.bucket], color: ink(p.bucket), marginInlineStart: 0 }}>{bucketName[p.bucket]}</span></td>
                     <td><SignalTag s={p.signal} /></td>
                     <td><b>{units(p)}</b> <span className="label">× {unitPrice(p.priceIls)}</span></td>
                     <td><b>{both(p.cost)}</b></td>
@@ -569,7 +572,7 @@ export default async function Invest({ searchParams }) {
                       <div className="pick-more">{ABOUT[q.symbol]}</div>
                     </details>
                   </td>
-                  <td><span className="tag" style={{ background: BUCKET_COLORS[q.bucket], color: "#fff", marginInlineStart: 0 }}>{bucketName[q.bucket]}</span></td>
+                  <td><span className="tag" style={{ background: BUCKET_COLORS[q.bucket], color: ink(q.bucket), marginInlineStart: 0 }}>{bucketName[q.bucket]}</span></td>
                   <td><b className="score">{Math.round(q.rankScore)}</b></td>
                   <td><Ret x={q.m12} /></td>
                   <td>{sharpe(q.sharpe)}</td>
