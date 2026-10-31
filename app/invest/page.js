@@ -160,8 +160,14 @@ export default async function Invest({ searchParams }) {
   // What is left goes to more units of holdings with a buy signal in the buckets that need it (never new names when
   // something is held), so no cash sits idle.
   const indexes = new Set([...picks, ...folio.rows].map((x) => market.bySymbol[x.symbol]?.index).filter(Boolean));
+  // Themes already more than 5 points over their target get no new money (the "what next" card says the same).
+  const accountTotal = folio.value || 1;
+  const overweight = new Set(
+    BUCKETS.filter((b) => (folio.rows.filter((h) => h.bucket === b.key).reduce((t, h) => t + h.value, 0) / accountTotal) * 100 > bucketPct(b, metalsPct) + 5).map((b) => b.key),
+  );
+  const open = ranked.filter((q) => !overweight.has(q.bucket));
   const { extras, left: extraLeft } = leftover > 1
-    ? extraPicks(ranked, signals, leftover, new Set(picks.map((p) => p.symbol)), indexes, new Set(folio.rows.map((h) => h.symbol)))
+    ? extraPicks(open, signals, leftover, new Set(picks.map((p) => p.symbol)), indexes, new Set(folio.rows.map((h) => h.symbol)))
     : { extras: [], left: leftover };
   const steps = folio.broker
     ? nextSteps({ rows: folio.rows, cash: folio.cash, signals, metalsPct, money, waiting })
@@ -170,7 +176,7 @@ export default async function Invest({ searchParams }) {
   // of which fits it, as options for the user to decide on (whatever their signal).
   const verdicts = Object.fromEntries(ranked.map((q) => [q.symbol, verdictOf(signals[q.symbol], q.rankScore)]));
   const options = extraLeft > 1
-    ? ranked
+    ? open
         // not metals while their share is 0 (no IBKR permission yet), and never a "sell" or "strong sell"
         .filter((q) => q.priceIls && q.priceIls <= extraLeft && !picks.some((p) => p.symbol === q.symbol) && !extras.some((p) => p.symbol === q.symbol))
         .filter((q) => !(q.bucket === "metals" && !metalsPct) && !["sell", "strong-sell"].includes(verdicts[q.symbol]?.key))
@@ -430,7 +436,7 @@ export default async function Invest({ searchParams }) {
           <div className="options-box">
             <h2 style={{ margin: 0 }}>
               🎯 אופציות ל-{money(extraLeft)} שנשארו: הגבוהות בדירוג{" "}
-              <Info text="עד 4 מניות או קרנות מהמדורגות הכי גבוה שיחידה שלהן נכנסת בסכום שנשאר. זו בחירה שלך, לא חלק מהרשימה הירוקה: שים לב להמלצה ולסימן של כל אחת. כל אופציה מחושבת על כל הסכום, אז בוחרים אחת." />
+              <Info text="עד 4 מניות או קרנות מהמדורגות הכי גבוה שיחידה שלהן נכנסת בסכום שנשאר, בלי תחומים שכבר מעל היעד. זו בחירה שלך, לא חלק מהרשימה הירוקה: שים לב להמלצה ולסימן של כל אחת. כל אופציה מחושבת על כל הסכום, אז בוחרים אחת." />
             </h2>
             <div className="options-list">
               {options.map((q, i) => (
