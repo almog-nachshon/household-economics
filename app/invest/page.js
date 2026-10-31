@@ -177,9 +177,11 @@ export default async function Invest({ searchParams }) {
   const verdicts = Object.fromEntries(ranked.map((q) => [q.symbol, verdictOf(signals[q.symbol], q.rankScore)]));
   const options = extraLeft > 1
     ? open
-        // not metals while their share is 0 (no IBKR permission yet), and never a "sell" or "strong sell"
+        // not metals while their share is 0 (no IBKR permission yet)
         .filter((q) => q.priceIls && q.priceIls <= extraLeft && !picks.some((p) => p.symbol === q.symbol) && !extras.some((p) => p.symbol === q.symbol))
-        .filter((q) => !(q.bucket === "metals" && !metalsPct) && !["sell", "strong-sell"].includes(verdicts[q.symbol]?.key))
+        .filter((q) => !(q.bucket === "metals" && !metalsPct))
+        // only a 🟢 / ⚪ timing signal and a buy or hold verdict: nothing that says "consider exiting" or "wait"
+        .filter((q) => ["enter", "ok"].includes(signals[q.symbol]?.level) && ["strong-buy", "buy", "hold"].includes(verdicts[q.symbol]?.key))
         .slice(0, 4)
         .map((q) => ({ ...q, units: Math.floor(extraLeft / q.priceIls), signal: signals[q.symbol], verdict: verdicts[q.symbol], rank: ranked.indexOf(q) + 1 }))
     : [];
@@ -349,7 +351,7 @@ export default async function Invest({ searchParams }) {
             <div className="value big">{money(amount)}</div>
             {usd && <div className="label">≈ {ils(amount)}{folio.broker ? "" : ` לפי דולר = ${fx.toFixed(3)} ₪`}</div>}
             <div className="label">
-              {picks.length} החזקות · {plan ? `לפי מחקר של Claude` : "לפי ציון ביצועים"}{" "}
+              {picks.length ? `${picks.length} החזקות · ` : ""}{plan ? `לפי מחקר של Claude` : "לפי ציון ביצועים"}{" "}
               <Info text={shares ? `החלוקה משלימה את מה שכבר בתיק: כסף לחלקים שרחוקים מהיעד (${splitText(metalsPct)}). בכל חלק מוסיפים קודם למניה שכבר מחזיקים בו, כדי לא לפצל להרבה מניות. רק מה שבירוק (🟢) עם המלצת אנליסטים.` : `חלוקה קבועה: ${splitText(metalsPct)}, ומתכות לפי המחקר.`} />
             </div>
           </div>
@@ -372,6 +374,7 @@ export default async function Invest({ searchParams }) {
         </div>
         <h2 style={{ marginTop: 16 }}>{folio.broker ? "מה לקנות עכשיו" : "סקירת הקצאת התיק"}</h2>
         {folio.broker && picks.length === 0 && extras.length === 0 && <p className="label">אין כרגע קנייה מומלצת בסכום הזה: אין מניה בירוק (🟢, עם המלצת אנליסטים) שיחידה שלה נכנסת בסכום. הכסף יתחלק לבד ברגע שתהיה.</p>}
+        {picks.length > 0 && (
         <div className="table-scroll">
           <table className="alloc-table">
             <thead>
@@ -398,6 +401,7 @@ export default async function Invest({ searchParams }) {
             </tbody>
           </table>
         </div>
+        )}
         {skipped.map((p) => (
           <p key={p.symbol} className="label">
             {p.symbol} לא נקנה החודש: יחידה אחת עולה {unitPrice(p.priceIls)}, יותר מהחלק שלו בהפקדה ({money(p.target)}). הסכום נשאר כמזומן.
@@ -436,7 +440,7 @@ export default async function Invest({ searchParams }) {
           <div className="options-box">
             <h2 style={{ margin: 0 }}>
               🎯 אופציות ל-{money(extraLeft)} שנשארו: הגבוהות בדירוג{" "}
-              <Info text="עד 4 מניות או קרנות מהמדורגות הכי גבוה שיחידה שלהן נכנסת בסכום שנשאר, בלי תחומים שכבר מעל היעד. זו בחירה שלך, לא חלק מהרשימה הירוקה: שים לב להמלצה ולסימן של כל אחת. כל אופציה מחושבת על כל הסכום, אז בוחרים אחת." />
+              <Info text="עד 4 מניות או קרנות מהמדורגות הכי גבוה שיחידה שלהן נכנסת בסכום שנשאר: רק עם סימן 🟢 / ⚪ והמלצה קנייה או החזקה, ובלי תחומים שכבר מעל היעד. זו בחירה שלך, לא חלק מהרשימה הירוקה: שים לב להמלצה ולסימן של כל אחת. כל אופציה מחושבת על כל הסכום, אז בוחרים אחת." />
             </h2>
             <div className="options-list">
               {options.map((q, i) => (
