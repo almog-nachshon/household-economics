@@ -88,14 +88,17 @@ export default function HoldingsMap({ groups, mode = "today" }) {
     rows: g.rows.map((r) => ({ ...r, change: live[r.symbol]?.change ?? r.change })),
     value: g.rows.reduce((t, r) => t + r.value, 0),
   })).filter((g) => g.value > 0);
-  const boxes = squarify(withLive, { x: 0, y: 0, w: W, h: H });
+  // Drawn sizes have a floor so a small holding stays readable: a group at least 7% of the map, a holding at least 14% of
+  // its group. The numbers shown are always the real ones.
+  const total = withLive.reduce((t, g) => t + g.value, 0);
+  const boxes = squarify(withLive.map((g) => ({ ...g, real: g.value, value: Math.max(g.value, total * 0.07) })), { x: 0, y: 0, w: W, h: H });
 
   return (
     <div className="hmap" onMouseLeave={() => setTip(null)}>
       <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`מפת התיק: גודל לפי חלק מהחשבון, צבע לפי ${mode === "profit" ? "הרווח מאז הקנייה" : "השינוי היום"}`}>
         {boxes.map((g) => {
           const inner = { x: g.x + GAP, y: g.y + HEAD, w: g.w - 2 * GAP, h: g.h - HEAD - GAP };
-          const tiles = squarify(g.rows, inner);
+          const tiles = squarify(g.rows.map((r) => ({ ...r, value: Math.max(r.value, g.real * 0.14) })), inner);
           return (
             <g key={g.key}>
               <rect x={g.x + 1} y={g.y + 1} width={g.w - 2} height={g.h - 2} rx={4} fill={g.key === "cash" ? "#eef2f3" : g.color} />
