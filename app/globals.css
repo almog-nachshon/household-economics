@@ -372,3 +372,23 @@ table.rank tr.chosen td { font-weight: 700; background: var(--accent-soft); }
 .hmap-about { margin: 4px 0; max-width: 280px; line-height: 1.45; white-space: normal; }
 .alert-time { white-space: nowrap; }
 .page-actions { display: flex; flex-wrap: wrap; gap: 8px 24px; align-items: center; margin: -4px 0 12px; }
+
+/* Phone layout */
+@media (max-width: 700px) {
+  .page-head h1 { margin: 10px 0 4px; font-size: 28px; }
+  .market { font-size: 12px; padding: 5px 10px; line-height: 1.4; }
+  .alerts-btn { min-width: 0; width: 100%; }
+  .alerts-menu { flex: 1 1 100%; }
+  /* the panel opens full width under the header instead of running off the screen */
+  .alerts-panel { position: fixed; top: 64px; inset-inline: 8px; width: auto; max-height: 75vh; z-index: 60; }
+  .page-actions { gap: 8px; }
+  .page-actions .ai-button { flex-wrap: wrap; }
+  /* the summary numbers two per row, smaller */
+  .hero-row { grid-template-columns: 1fr 1fr; gap: 10px 12px; }
+  .hero-row .value { font-size: 19px; }
+  .value.big { font-size: 28px; }
+  .bucket-chips { gap: 4px 10px; font-size: 12px; }
+  .bucket-chip { white-space: normal; }
+  .hmap-tip { position: fixed; left: 8px !important; right: 8px; top: auto !important; bottom: 12px; transform: none; max-width: none; }
+  .card { padding: 12px; }
+}

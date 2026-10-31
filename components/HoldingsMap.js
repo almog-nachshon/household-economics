@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useLiveQuotes } from "@/components/Live";
 
 // The portfolio as a heat map, like Finviz's market map: each holding a tile sized by its share of the account,
@@ -7,8 +7,9 @@ import { useLiveQuotes } from "@/components/Live";
 // (red down, gray flat, green up, full color at ±3%). Live changes come from the surrounding LiveQuotes; otherwise the
 // last daily close. Hover shows the details. groups: [{key, name, color, rows: [{symbol, name, type, value, change,
 // pct, profitPct, valueText}]}]; cash is a plain gray group.
-const W = 900;
-const H = 440;
+// The map's drawing size: wide on a computer, nearly square on a phone so the tiles keep readable text.
+const WIDE = { W: 900, H: 440 };
+const NARROW = { W: 420, H: 460 };
 const HEAD = 20;
 const GAP = 2;
 const FULL = 0.03;
@@ -60,6 +61,14 @@ function squarify(nodes, { x, y, w, h }) {
 export default function HoldingsMap({ groups }) {
   const live = useLiveQuotes();
   const [tip, setTip] = useState(null);
+  const [{ W, H }, setSize] = useState(WIDE);
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 700px)");
+    const pick = () => setSize(mq.matches ? NARROW : WIDE);
+    pick();
+    mq.addEventListener("change", pick);
+    return () => mq.removeEventListener("change", pick);
+  }, []);
   const withLive = groups.map((g) => ({
     ...g,
     rows: g.rows.map((r) => ({ ...r, change: live[r.symbol]?.change ?? r.change })),
