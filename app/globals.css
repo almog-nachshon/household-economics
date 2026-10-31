@@ -412,3 +412,18 @@ table.rank tr.chosen td { font-weight: 700; background: var(--accent-soft); }
   .page-actions .ai-button .label { font-size: 11px; text-align: center; }
   .btn-long { display: none; }
 }
+
+/* Combined verdict (lib/signals.js verdictOf) and the options box */
+.verdict-cell { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.verdict { display: inline-block; padding: 1px 8px; border-radius: 6px; font-size: 12px; font-weight: 700; color: #fff; }
+.verdict-strong-buy { background: #12823a; }
+.verdict-buy { background: #3fa362; }
+.verdict-hold { background: #8a969b; }
+.verdict-sell { background: #d0555f; }
+.verdict-strong-sell { background: #b3141f; }
+.options-box { margin-top: 14px; padding: 10px 12px; border-radius: 10px; background: #eef4ff; border-inline-start: 4px solid #8fb0ff; }
+.options-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; margin-top: 8px; }
+.option { background: #fff; border: 1px solid var(--track); border-radius: 10px; padding: 10px; display: grid; gap: 6px; }
+.option-head { display: grid; gap: 2px; }
+.option-buy { font-size: 15px; }
+.option-tags { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }

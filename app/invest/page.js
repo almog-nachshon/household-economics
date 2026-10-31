@@ -17,7 +17,7 @@ import { generatePlan, depositMonth, depositDate, holdings } from "@/lib/invest-
 import { ibkrEnabled, syncIbkr, ibkrQuoteUrl, ibkrDetailsUrl } from "@/lib/ibkr";
 import { STOP, TARGET } from "@/lib/alerts";
 import Alerts from "@/components/Alerts";
-import { signalsFor, SIGNAL, finvizUrl, onFinviz } from "@/lib/signals";
+import { signalsFor, SIGNAL, finvizUrl, onFinviz, verdictOf } from "@/lib/signals";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 600;
@@ -49,6 +49,14 @@ const IbLink = ({ conid, ib, children }) =>
   conid ? <a href={ibkrQuoteUrl(conid)} target="_blank" rel="noreferrer" title={ib ? `באינטראקטיב: ${ib.ibSymbol} · ${ib.exchange} · ${ib.currency}${ib.isin ? ` · ISIN ${ib.isin}` : ""}` : "פתיחה באינטראקטיב"}>{children}</a> : children;
 // The entry / exit signal (lib/signals.js) as a colored tag; the reasons on hover.
 const SignalTag = ({ s }) => (s ? <span className={`signal signal-${s.level}`} title={s.reasons.join(" · ")}>{SIGNAL[s.level][0]} {SIGNAL[s.level][1]}</span> : null);
+// The combined verdict (lib/signals.js verdictOf) as a colored tag; how it was reached in the ⓘ.
+const VerdictTag = ({ v }) =>
+  v ? (
+    <span className="verdict-cell">
+      <span className={`verdict verdict-${v.key}`}>{v.label}</span>
+      <Info text={`${v.label} (ניקוד ${v.total > 0 ? "+" : ""}${v.total}): ${v.parts.join(" · ")}`} />
+    </span>
+  ) : null;
 const signed = (x) => (x == null ? "—" : `${x > 0 ? "+" : ""}${(x * 100).toFixed(1)}%`);
 const CHANGES = { add: "להוסיף", hold: "להחזיק, בלי כסף חדש", reduce: "לצמצם (למכור חלק)", sell: "למכור" };
 
@@ -157,6 +165,15 @@ export default async function Invest({ searchParams }) {
     : { extras: [], left: leftover };
   const steps = folio.broker
     ? nextSteps({ rows: folio.rows, cash: folio.cash, signals, metalsPct, money, waiting })
+    : [];
+  // The verdict for every ranked candidate, and, while any cash is left, up to four of the best-ranked candidates a unit
+  // of which fits it, as options for the user to decide on (whatever their signal).
+  const verdicts = Object.fromEntries(ranked.map((q) => [q.symbol, verdictOf(signals[q.symbol], q.rankScore)]));
+  const options = extraLeft > 1
+    ? ranked
+        .filter((q) => q.priceIls && q.priceIls <= extraLeft && !picks.some((p) => p.symbol === q.symbol) && !extras.some((p) => p.symbol === q.symbol))
+        .slice(0, 4)
+        .map((q) => ({ ...q, units: Math.floor(extraLeft / q.priceIls), signal: signals[q.symbol], verdict: verdicts[q.symbol], rank: ranked.indexOf(q) + 1 }))
     : [];
   // Everything to buy now (the split and the next in line), with its cost.
   const buys = [...picks, ...extras].map((p) => ({ ...p, cost: p.cost ?? p.amount }));
@@ -407,6 +424,29 @@ export default async function Invest({ searchParams }) {
             <Info text={waiting.map((w) => `${w.symbol}: ${signals[w.symbol]?.reasons?.[0] ?? ""}`).join(" · ")} />
           </p>
         )}
+        {options.length > 0 && (
+          <div className="options-box">
+            <h2 style={{ margin: 0 }}>
+              🎯 אופציות ל-{money(extraLeft)} שנשארו: הגבוהות בדירוג{" "}
+              <Info text="עד 4 מניות או קרנות מהמדורגות הכי גבוה שיחידה שלהן נכנסת בסכום שנשאר. זו בחירה שלך, לא חלק מהרשימה הירוקה: שים לב להמלצה ולסימן של כל אחת. כל אופציה מחושבת על כל הסכום, אז בוחרים אחת." />
+            </h2>
+            <div className="options-list">
+              {options.map((q, i) => (
+                <div key={q.symbol} className="option">
+                  <div className="option-head">
+                    <span className="label">אופציה {i + 1} · מקום {q.rank} בדירוג</span>
+                    <span className="sym"><Logo id={q.symbol} label={q.name} size={22} /><IbLink conid={q.ibkr?.conid} ib={q.ibkr}><b>{q.symbol}</b></IbLink></span>
+                    <span className="label">{q.name} · {bucketName[q.bucket]}</span>
+                  </div>
+                  <div className="option-buy"><b>{units(q)}</b> × {unitPrice(q.priceIls)} = <b>{money(q.units * q.priceIls)}</b></div>
+                  <div className="option-tags"><VerdictTag v={q.verdict} /> <SignalTag s={q.signal} /></div>
+                  <div className="label">{q.signal?.reasons[0]}</div>
+                  {!q.signal || q.signal.level !== "enter" ? <div className="label warn">לא בירוק: לפי הסימנים עדיף לחכות. אם קונים, זו החלטה מודעת.</div> : null}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
         {extraLeft > 1 && (
           <p className="label">
             נשאר כמזומן בחשבון: {money(extraLeft)}{" "}
@@ -561,15 +601,17 @@ export default async function Invest({ searchParams }) {
       )}
 
       <div className="card" style={{ marginTop: 20 }}>
-        <h2>דירוג כל המניות והקרנות <Info text="ציון 0-100: תשואת 3, 6 ו-12 חודשים פחות חצי מהתנודתיות. מודגש = נבחר. לחיצה על סימול פותחת אותו באינטראקטיב, לחיצה על שם מציגה פרטים. המחירים מ-Yahoo Finance (מתעדכנים כל 12 שעות) ומקורות חיים נוספים. זו המלצה לפי נתוני עבר וחדשות, לא ייעוץ השקעות." /></h2>
+        <h2>דירוג כל המניות והקרנות <Info text="המלצה = שילוב של סימן הכניסה / יציאה, המלצות האנליסטים (Finnhub, אותם מקורות כמו Finviz) וביצועי השנה, להמלצה אחת; ריחוף על ה-i שלה מראה את החישוב. ציון 0-100: תשואת 3, 6 ו-12 חודשים פחות חצי מהתנודתיות. מודגש = נבחר. לחיצה על סימול פותחת אותו באינטראקטיב, לחיצה על שם מציגה פרטים. המחירים מ-Yahoo Finance (מתעדכנים כל 12 שעות) ומקורות חיים נוספים. זו המלצה לפי נתוני עבר וחדשות, לא ייעוץ השקעות." /></h2>
         <div className="table-scroll">
           <table className="compact wide rank">
-            <thead><tr><th>#</th><th>סימול</th><th>שם</th><th>תחום</th><th>ציון</th><th>שנה</th><th>שארפ</th><th>סיכון</th><th>דיבידנד</th><th>מחיר</th></tr></thead>
+            <thead><tr><th>#</th><th>סימול</th><th>המלצה</th><th>כניסה / יציאה</th><th>שם</th><th>תחום</th><th>ציון</th><th>שנה</th><th>שארפ</th><th>סיכון</th><th>דיבידנד</th><th>מחיר</th></tr></thead>
             <tbody>
               {ranked.map((q, i) => (
                 <tr key={q.symbol} className={picks.some((p) => p.symbol === q.symbol) ? "chosen" : ""}>
                   <td className="label">{i + 1}</td>
                   <td><span className="sym"><Logo id={q.symbol} label={q.name} size={18} /><IbLink conid={q.ibkr?.conid} ib={q.ibkr}><b>{q.symbol}</b></IbLink></span></td>
+                  <td><VerdictTag v={verdicts[q.symbol]} /></td>
+                  <td><SignalTag s={signals[q.symbol]} /></td>
                   <td className="line-name">
                     <details>
                       <summary title={q.name}>{q.name}</summary>
