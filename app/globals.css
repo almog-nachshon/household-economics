@@ -491,3 +491,55 @@ tr.chosen { background: var(--accent-soft); }
 .hmap-tip.pinned { pointer-events: auto; padding-inline-end: 34px; }
 .hmap-close { position: absolute; top: 6px; inset-inline-end: 6px; width: 26px; height: 26px; padding: 0; border-radius: 50%; background: var(--track); color: var(--text); font-size: 13px; line-height: 26px; box-shadow: none; }
 .hmap-close:hover { background: #d9e2e5; filter: none; box-shadow: none; }
+
+/* ===== Trading-app layer (light): denser, thinner lines, Inter digits, ticker tape ===== */
+:root { --bg: #f2f5f7; --line: #e1e8eb; --radius: 10px; --shadow: 0 1px 2px rgba(16, 42, 48, .06); --up: #0f9d58; --down: #d93025; }
+body { font-family: "Inter", "Heebo", system-ui, sans-serif; font-size: 14px; }
+.pos { color: var(--up); }
+.neg { color: var(--down); }
+main { padding-top: 14px; }
+
+/* menu: slimmer */
+nav { padding: 6px 16px; min-height: 46px; }
+nav a { font-size: 14px; }
+
+/* page head */
+.page-head h1 { font-size: 24px; margin: 6px 0; }
+.page-actions .ai-button button { padding: 6px 12px; font-size: 13px; }
+
+/* ticker tape */
+.ticker { overflow: hidden; background: #fff; border: 1px solid var(--line); border-radius: var(--radius); margin: 0 0 12px; height: 36px; display: flex; align-items: center; mask-image: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent); }
+.ticker-track { display: inline-flex; gap: 28px; white-space: nowrap; padding-inline: 14px; animation: ticker linear infinite; }
+.ticker:hover .ticker-track { animation-play-state: paused; }
+.ticker-item { display: inline-flex; gap: 8px; align-items: baseline; font-size: 13px; font-variant-numeric: tabular-nums; }
+.ticker-item b { font-weight: 700; color: var(--text); }
+.ticker-item span:nth-child(2) { color: var(--muted); }
+@keyframes ticker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+/* cards: flat, thin border, a slim title rule */
+.card { border-radius: var(--radius); box-shadow: var(--shadow); padding: 14px 16px; }
+.card h2, h2 { font-size: 15px; font-weight: 700; }
+.card > h2:first-child, .card > div:first-child > h2 { padding-inline-start: 10px; border-inline-start: 3px solid var(--accent); line-height: 1.2; }
+.hero, .invest-hero, #folio { border-top: 1px solid var(--line); }
+
+/* key numbers: label small, number in Inter */
+.hero-row { gap: 8px; }
+.hero-row > div { background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; }
+.hero-row .label { font-size: 12px; }
+.value { font-family: "Inter", "Heebo", sans-serif; font-size: 20px; font-weight: 700; letter-spacing: -.4px; }
+.value.big { font-size: 30px; letter-spacing: -.8px; }
+
+/* tables: compact, like a watchlist */
+th, td { padding: 6px 8px; font-size: 13px; }
+th { position: sticky; top: 0; font-size: 11px; letter-spacing: .2px; }
+table.compact td, table.rank td { font-variant-numeric: tabular-nums; }
+
+/* pills */
+.signal, .verdict, .tag, .xtag { font-size: 11px; padding: 1px 8px; }
+.chg { font-variant-numeric: tabular-nums; }
+.market { font-size: 12px; }
+@media (max-width: 700px) {
+  .hero-row .value { font-size: 17px; }
+  .ticker { height: 32px; }
+  .ticker-item { font-size: 12px; }
+}

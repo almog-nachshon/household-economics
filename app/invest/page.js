@@ -11,7 +11,7 @@ import Info from "@/components/Info";
 import HoldingsMap from "@/components/HoldingsMap";
 import Logo from "@/components/Logo";
 import Sources from "@/components/Sources";
-import { LiveQuotes, LiveChange, LiveWeek, LivePrice, MarketStatus, IntradayChart } from "@/components/Live";
+import { LiveQuotes, LiveChange, LiveWeek, LivePrice, MarketStatus, IntradayChart, Ticker } from "@/components/Live";
 import { portfolio } from "@/lib/holdings";
 import { generatePlan, depositMonth, depositDate, holdings } from "@/lib/invest-run";
 import { ibkrEnabled, syncIbkr, ibkrQuoteUrl, ibkrDetailsUrl } from "@/lib/ibkr";
@@ -242,6 +242,11 @@ export default async function Invest({ searchParams }) {
           </form>
         )}
       </div>
+      {folio.broker && folio.rows.length > 0 && (
+        <LiveQuotes symbols={[...new Set(["VOO", "QQQM", ...folio.rows.map((h) => h.symbol)])]}>
+          <Ticker symbols={[...new Set(["VOO", "QQQM", ...folio.rows.map((h) => h.symbol)])]} labels={{ VOO: "S&P 500", QQQM: "NASDAQ 100" }} />
+        </LiveQuotes>
+      )}
       {folio.error && <p className="warn">העדכון האחרון מאינטראקטיב נכשל: {folio.error}</p>}
       {searchParams?.error && <p className="warn">הפעולה נכשלה: {searchParams.error}</p>}
       {market.rateError && <p className="warn">לא הצלחתי למשוך שערי מטבע ({market.rateError}).</p>}

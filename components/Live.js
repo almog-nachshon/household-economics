@@ -167,3 +167,26 @@ export function IntradayChart({ symbol }) {
     </div>
   );
 }
+
+// A trading-app ticker tape: each symbol with its live price and today's change, scrolling slowly (paused on hover).
+// The list is drawn twice so the loop is seamless. labels: optional display names (e.g. VOO as "S&P 500").
+export function Ticker({ symbols, labels = {} }) {
+  const live = useContext(LiveContext);
+  const items = symbols.map((s) => ({ s, q: live[s] })).filter((x) => x.q?.price);
+  if (!items.length) return <div className="ticker ticker-empty" />;
+  const row = items.map(({ s, q }) => (
+    <span key={s} className="ticker-item">
+      <b>{labels[s] ?? s}</b>
+      <span>{(CUR[q.currency] ?? "") + q.price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+      <span className={q.change >= 0 ? "pos" : "neg"}>{q.change >= 0 ? "▲" : "▼"} {Math.abs(q.change * 100).toFixed(2)}%</span>
+    </span>
+  ));
+  return (
+    <div className="ticker" dir="ltr">
+      <div className="ticker-track" style={{ animationDuration: `${Math.max(20, items.length * 5)}s` }}>
+        {row}
+        {row.map((el) => ({ ...el, key: `${el.key}-2` }))}
+      </div>
+    </div>
+  );
+}
