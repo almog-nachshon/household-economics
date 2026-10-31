@@ -427,3 +427,67 @@ table.rank tr.chosen td { font-weight: 700; background: var(--accent-soft); }
 .option-head { display: grid; gap: 2px; }
 .option-buy { font-size: 15px; }
 .option-tags { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+
+/* ===== Design layer: a calmer, more professional look (white and turquoise kept) ===== */
+:root {
+  --bg: #f4f7f8; --card: #ffffff; --text: #17262c; --muted: #6b7a81; --accent: #0e9a9b; --accent-dark: #0b6f72;
+  --accent-soft: #e7f5f5; --track: #e4ebed; --line: #e8eef0;
+  --shadow: 0 1px 2px rgba(16, 42, 48, .05), 0 4px 14px rgba(16, 42, 48, .05);
+  --radius: 14px;
+}
+body { font-family: "Heebo", system-ui, sans-serif; font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+main { max-width: 1120px; padding: 20px 16px 32px; }
+.value, .hero-row, table, .market-clock, .xcard-amount, .usd-price { font-variant-numeric: tabular-nums; }
+
+/* menu: deep teal bar that stays on top */
+nav { position: sticky; top: 0; z-index: 50; background: linear-gradient(90deg, var(--accent-dark), var(--accent)); border: 0; box-shadow: 0 2px 10px rgba(11, 111, 114, .25); padding: 10px 20px; gap: 6px; }
+nav a { font-weight: 500; opacity: .92; padding: 6px 12px; border-radius: 8px; transition: background .15s; }
+nav a:hover { background: rgba(255, 255, 255, .16); opacity: 1; }
+nav .brand { font-weight: 800; opacity: 1; margin-inline-end: 10px; letter-spacing: -.2px; }
+
+/* headings */
+h1 { color: var(--text); font-weight: 800; letter-spacing: -.5px; font-size: 30px; }
+h2 { font-weight: 700; font-size: 17px; letter-spacing: -.2px; color: var(--text); }
+.label { font-size: 13px; }
+
+/* cards: white on the light background, soft shadow instead of the heavy top border */
+.card { border: 1px solid var(--line); border-top: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 18px 20px; }
+.hero, .invest-hero { border-top: 3px solid var(--accent); }
+#folio { border-top: 3px solid var(--accent); }
+.value { font-size: 22px; font-weight: 700; letter-spacing: -.3px; }
+.value.big { font-size: 32px; font-weight: 800; }
+.hero-row > div { background: #f8fbfb; border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; }
+
+/* buttons and inputs */
+button { border-radius: 10px; padding: 8px 16px; transition: filter .15s, box-shadow .15s; }
+button:hover { filter: brightness(1.05); box-shadow: 0 2px 8px rgba(14, 154, 155, .25); }
+button.secondary { background: #fff; border: 1px solid var(--line); color: var(--text); }
+button.secondary:hover { background: var(--accent-soft); box-shadow: none; }
+input, select, textarea { border-color: var(--line); }
+input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent-soft); border-color: var(--accent); }
+
+/* tables */
+th { font-size: 12px; font-weight: 600; color: var(--muted); background: #f8fbfb; border-bottom: 1px solid var(--line); }
+td { border-bottom: 1px solid var(--line); }
+tbody tr { transition: background .12s; }
+tbody tr:hover { background: #f6fafa; }
+tr.chosen { background: var(--accent-soft); }
+
+/* small parts */
+.tag, .xtag, .signal, .verdict { border-radius: 999px; }
+.market { border-color: var(--line); box-shadow: var(--shadow); }
+.alerts-btn { box-shadow: var(--shadow); }
+.xcard { border-radius: var(--radius); box-shadow: var(--shadow); }
+.hmap svg { border-radius: 12px; }
+.extra-box, .options-box, .bought-box, .xcard-signal { border-radius: 12px; }
+.site-footer { border-top: 1px solid var(--line); background: #fff; }
+@media (max-width: 700px) {
+  .card { padding: 14px; }
+  h1 { font-size: 24px; }
+  .hero-row > div { padding: 8px 10px; }
+  nav { padding: 6px 8px; }
+}
+.hmap svg g g { cursor: pointer; }
+.hmap-tip.pinned { pointer-events: auto; padding-inline-end: 34px; }
+.hmap-close { position: absolute; top: 6px; inset-inline-end: 6px; width: 26px; height: 26px; padding: 0; border-radius: 50%; background: var(--track); color: var(--text); font-size: 13px; line-height: 26px; box-shadow: none; }
+.hmap-close:hover { background: #d9e2e5; filter: none; box-shadow: none; }

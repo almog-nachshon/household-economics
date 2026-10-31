@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLiveQuotes } from "@/components/Live";
 
 // The portfolio as a heat map, like Finviz's market map: each holding a tile sized by its share of the account,
@@ -74,7 +74,20 @@ function squarify(nodes, { x, y, w, h }) {
 export default function HoldingsMap({ groups, mode = "today" }) {
   const metric = (r) => (mode === "profit" ? r.profitPct : r.change);
   const live = useLiveQuotes();
+  // Details of one tile: follow the mouse on a computer; a tap pins them (a phone has no hover), and a second tap on the
+  // same tile, the ✕, or a tap outside the map closes them.
   const [tip, setTip] = useState(null);
+  const box = useRef(null);
+  useEffect(() => {
+    if (!tip?.pinned) return;
+    const away = (e) => !box.current?.contains(e.target) && setTip(null);
+    document.addEventListener("pointerdown", away);
+    return () => document.removeEventListener("pointerdown", away);
+  }, [tip?.pinned]);
+  const place = (e, t, g, pinned) => {
+    const r = box.current.getBoundingClientRect();
+    return { t, g, pinned, left: e.clientX - r.left, top: e.clientY - r.top };
+  };
   const [{ W, H }, setSize] = useState(WIDE);
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 700px)");
@@ -94,7 +107,7 @@ export default function HoldingsMap({ groups, mode = "today" }) {
   const boxes = squarify(withLive.map((g) => ({ ...g, real: g.value, value: Math.max(g.value, total * 0.07) })), { x: 0, y: 0, w: W, h: H });
 
   return (
-    <div className="hmap" onMouseLeave={() => setTip(null)}>
+    <div className="hmap" ref={box} onMouseLeave={() => !tip?.pinned && setTip(null)}>
       <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`מפת התיק: גודל לפי חלק מהחשבון, צבע לפי ${mode === "profit" ? "הרווח מאז הקנייה" : "השינוי היום"}`}>
         {boxes.map((g) => {
           const inner = { x: g.x + GAP, y: g.y + HEAD, w: g.w - 2 * GAP, h: g.h - HEAD - GAP };
@@ -111,10 +124,8 @@ export default function HoldingsMap({ groups, mode = "today" }) {
                 return (
                   <g
                     key={t.symbol}
-                    onMouseMove={(e) => {
-                      const r = e.currentTarget.ownerSVGElement.parentNode.getBoundingClientRect();
-                      setTip({ t, g, left: e.clientX - r.left, top: e.clientY - r.top });
-                    }}
+                    onMouseMove={(e) => e.pointerType !== "touch" && !tip?.pinned && setTip(place(e, t, g, false))}
+                    onClick={(e) => setTip(tip?.pinned && tip.t.symbol === t.symbol ? null : place(e, t, g, true))}
                   >
                     <rect x={t.x + 1} y={t.y + 1} width={Math.max(0, t.w - 2)} height={Math.max(0, t.h - 2)} rx={3} fill={cash ? "#c9d2d6" : tileColor(metric(t))} />
                     {/* too narrow for the name across: write it upward along the tile */}
@@ -138,7 +149,8 @@ export default function HoldingsMap({ groups, mode = "today" }) {
         })}
       </svg>
       {tip && (
-        <div className="hmap-tip" style={{ left: tip.left, top: tip.top }}>
+        <div className={`hmap-tip${tip.pinned ? " pinned" : ""}`} style={{ left: tip.left, top: tip.top }}>
+          {tip.pinned && <button type="button" className="hmap-close" aria-label="סגירה" onClick={() => setTip(null)}>✕</button>}
           <b>{tip.t.symbol}</b> <span className="label">{tip.t.name}</span>
           {tip.t.type && <div className="label">{tip.t.type} · תחום: {tip.g.name}</div>}
           {tip.t.about && <div className="hmap-about">{tip.t.about}</div>}
