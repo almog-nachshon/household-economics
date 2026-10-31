@@ -191,6 +191,9 @@ export default async function Invest({ searchParams }) {
       <div className="page-head">
         <h1>{folio.broker ? "השקעות" : `השקעות: הפקדה ב-${date(day)}`}</h1>
         <MarketStatus />
+        <Alerts />
+      </div>
+      <div className="page-actions">
         {ibkrEnabled() && (
           <form action={syncNow} style={{ maxWidth: "none" }}>
             <SyncButton
@@ -212,7 +215,6 @@ export default async function Invest({ searchParams }) {
             />
           </form>
         )}
-        <Alerts />
       </div>
       {folio.error && <p className="warn">העדכון האחרון מאינטראקטיב נכשל: {folio.error}</p>}
       {searchParams?.error && <p className="warn">הפעולה נכשלה: {searchParams.error}</p>}

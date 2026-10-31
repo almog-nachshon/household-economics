@@ -80,11 +80,30 @@ function status(d) {
   return { state: "closed", label: "סגור" };
 }
 
-// Israel time of 9:30 / 16:00 in New York today (the gap changes with daylight saving in each country).
-const ilTime = (d, nyMinutes) => {
-  const { min } = nyNow(d);
-  return new Date(d.getTime() + (nyMinutes - min) * 60000).toLocaleTimeString("he-IL", { timeZone: "Asia/Jerusalem", hour: "2-digit", minute: "2-digit" });
-};
+// The next regular open (9:30 New York) after `d`, as a real moment: found on that trading day itself, since the gap
+// to Israel changes with daylight saving in each country (the US moves a week after Israel in the autumn).
+function nextOpen(d) {
+  for (let i = 0; i < 10; i++) {
+    const { date, weekday } = nyNow(new Date(d.getTime() + i * 864e5));
+    if (weekday === "Sat" || weekday === "Sun" || HOLIDAYS.includes(date)) continue;
+    const [y, m, day] = date.split("-").map(Number);
+    let t = Date.UTC(y, m - 1, day, 14, 30); // about 9:30 in New York; corrected below
+    t += (570 - nyNow(new Date(t)).min) * 60000;
+    if (t > d.getTime()) return new Date(t);
+  }
+  return null;
+}
+
+const IL = { timeZone: "Asia/Jerusalem" };
+const ilClock = (t) => t.toLocaleTimeString("he-IL", { ...IL, hour: "2-digit", minute: "2-digit" });
+const ilDay = (t) => t.toLocaleDateString("en-CA", IL);
+// "היום ב-16:30" / "מחר ב-16:30" / "ביום שני 2.11 ב-16:30", in Israel time.
+function whenIl(t, now) {
+  const tomorrow = new Date(now.getTime() + 864e5);
+  if (ilDay(t) === ilDay(now)) return `היום ב-${ilClock(t)}`;
+  if (ilDay(t) === ilDay(tomorrow)) return `מחר ב-${ilClock(t)}`;
+  return `ביום ${t.toLocaleDateString("he-IL", { ...IL, weekday: "long" }).replace("יום ", "")} ${t.toLocaleDateString("he-IL", { ...IL, day: "numeric", month: "numeric" })} ב-${ilClock(t)}`;
+}
 
 export function MarketStatus() {
   const [now, setNow] = useState(null);
@@ -97,13 +116,17 @@ export function MarketStatus() {
   const s = status(now);
   const pad = (n) => String(n).padStart(2, "0");
   const clock = (t) => `${Math.floor(t / 3600)}:${pad(Math.floor((t % 3600) / 60))}:${pad(t % 60)}`;
+  const open = nextOpen(now);
+  const hoursLeft = open ? Math.floor((open - now) / 3600000) : null;
   return (
-    <span className={`market market-${s.state}`} title={`שעות מסחר רגילות בשעון ישראל: ${ilTime(now, 570)}–${ilTime(now, 960)}`}>
+    <span className={`market market-${s.state}`} title={open ? `המסחר הרגיל הבא: ${whenIl(open, now)} עד ${ilClock(new Date(open.getTime() + 390 * 60000))} שעון ישראל` : ""}>
       <span className="market-dot" />
       שוק ארה״ב: {s.label}
       {s.state === "open" && <span className="market-sub"> · נסגר בעוד <span className="market-clock">{clock(s.left)}</span></span>}
       {s.state === "pre" && <span className="market-sub"> · נפתח בעוד <span className="market-clock">{clock(s.left)}</span></span>}
-      {s.state !== "open" && s.state !== "pre" && <span className="market-sub"> · נפתח ב-{ilTime(now, 570)} שעון ישראל</span>}
+      {s.state !== "open" && s.state !== "pre" && open && (
+        <span className="market-sub"> · נפתח {whenIl(open, now)} שעון ישראל{hoursLeft >= 1 ? ` (בעוד ${hoursLeft >= 24 ? `${Math.floor(hoursLeft / 24)} ימים ו-` : ""}${hoursLeft % 24} שעות)` : ""}</span>
+      )}
     </span>
   );
 }
