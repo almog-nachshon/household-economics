@@ -9,6 +9,7 @@ import AiButton from "@/components/AiButton";
 import SyncButton from "@/components/SyncButton";
 import Info from "@/components/Info";
 import HoldingsMap from "@/components/HoldingsMap";
+import TargetBars from "@/components/TargetBars";
 import Logo from "@/components/Logo";
 import Sources from "@/components/Sources";
 import ExpandRow from "@/components/ExpandRow";
@@ -113,8 +114,9 @@ export default async function Invest({ searchParams }) {
   const settings = await getSettings();
   const month = depositMonth();
   const day = depositDate(month);
-  const [plan, done, market, folio, research] = await Promise.all([
+  const [plan, latestPlan, done, market, folio, research] = await Promise.all([
     db.aiPlan.findUnique({ where: { month } }),
+    db.aiPlan.findFirst({ orderBy: { month: "desc" } }),
     db.investPick.findMany({ where: { month } }),
     loadMarket(),
     portfolio(),
@@ -140,7 +142,9 @@ export default async function Invest({ searchParams }) {
   const withIls = (x) => (usd ? `${money(x)} · ${ils(x)}` : ils(x));
   const unitPrice = (x) => (usd ? `$${(x / rate).toLocaleString("en-US", { maximumFractionDigits: 2 })}` : ils(x));
   const chosen = plan ? JSON.parse(plan.picks) : [];
-  const metalsPct = plan ? plan.metalsPct : DEFAULT_METALS_PCT;
+  // The themes' targets and "the picture now" stay as the last plan set them until a newer one is saved; past the 10th
+  // the deposit month moves on before there is a plan for it.
+  const metalsPct = latestPlan ? latestPlan.metalsPct : DEFAULT_METALS_PCT;
   // Every candidate with data, best score first, the score scaled 0-100.
   const valid = Object.values(market.bySymbol).filter((q) => !q.error && q.buyable);
   const [lo, hi] = [Math.min(...valid.map((q) => q.score)), Math.max(...valid.map((q) => q.score))];
@@ -193,7 +197,7 @@ export default async function Invest({ searchParams }) {
   const swap = sells.length ? planCash({ held: afterCash, amount: proceeds, bySymbol: market.bySymbol, statuses, metalsPct, ranked, chosen, room: roomAfter }) : null;
   const swapBuys = swap ? [...swap.picks, ...swap.extras].map((p) => ({ ...p, cost: p.cost ?? p.amount })) : [];
   const steps = folio.broker
-    ? nextSteps({ rows: folio.rows, statuses, signals, waiting, metalsPct, dupes: heldRows.filter((h) => statuses[h.symbol]?.dup), heavy })
+    ? nextSteps({ rows: folio.rows, total, statuses, signals, waiting, metalsPct, dupes: heldRows.filter((h) => statuses[h.symbol]?.dup), heavy })
     : [];
 
   // The maps: each theme's holdings and the cash, as % of the whole account.
@@ -300,17 +304,10 @@ export default async function Invest({ searchParams }) {
               </div>
               {folio.broker && (
                 <>
+                  <h3 className="hmap-title">🎯 כמה יש בכל תחום מול היעד <Info text="היעד הוא החלוקה הקבועה שקבענו. הפס הוא מה שיש עכשיו, הקו השחור הוא היעד, והכול באחוזים מכל החשבון כולל מזומן. פער של יותר מ-5 נקודות מסומן באדום." /></h3>
+                  <TargetBars groups={groups} total={total} money={money} />
                   <h3 className="hmap-title">📈 השינוי היום</h3>
                   <HoldingsMap groups={groups} />
-                  <div className="bucket-chips">
-                    {groups.filter((g) => g.value > 0).map((g) => (
-                      <span key={g.key} className="bucket-chip">
-                        <span className="swatch" style={{ background: g.color }} /> {g.name} <b>{g.pct.toFixed(1)}%</b>
-                        {g.target != null && <span className={`label ${Math.abs(g.pct - g.target) > 5 ? "neg" : ""}`}> (יעד {Math.round(g.target)}%)</span>}
-                        <span className="label"> · {g.valueText}</span>
-                      </span>
-                    ))}
-                  </div>
                 </>
               )}
               <div className="table-scroll" style={{ marginTop: 8 }}>
@@ -676,21 +673,24 @@ export default async function Invest({ searchParams }) {
           <span className="st st-sell">🔴 למכור: {count("sell")}</span>
           <span className="st st-dup">⛔ כפילות: {count("dup") + sells.filter((h) => statuses[h.symbol]?.dup).length}</span>
         </div>
-        {plan && (
+        {latestPlan && (
           <>
-            <div className="picture-text">{plan.summary}</div>
+            <div className="picture-text">{latestPlan.summary}</div>
             <h3>סיכונים</h3>
-            <ul>{JSON.parse(plan.risks).map((r) => <li key={r}>{r}</li>)}</ul>
+            <ul>{JSON.parse(latestPlan.risks).map((r) => <li key={r}>{r}</li>)}</ul>
             <details>
               <summary style={{ cursor: "pointer" }}>המחקר המלא</summary>
-              <div className="picture-text" style={{ marginTop: 8 }}>{plan.research}</div>
+              <div className="picture-text" style={{ marginTop: 8 }}>{latestPlan.research}</div>
             </details>
           </>
         )}
         <details style={{ marginTop: 8 }}>
           <summary style={{ cursor: "pointer" }}>איך נקבע הסטטוס</summary>
           <ul className="method">
-            <li>לכל מניה, קרן ומתכת: 8 מקורות ומעלה. ריכוזי אנליסטים (MarketBeat, TipRanks, Zacks, StockAnalysis ועוד), שינויי המלצות ויעדים, הדוח האחרון, דירוגים טכניים (TradingView, Investing.com, Barchart), תמחור (Morningstar) וסנטימנט רק מאנשים ומדדים מוכרים.</li>
+            <li>היעד לכל מניה, קרן ומתכת: 8 מקורות ומעלה. ריכוזי אנליסטים (MarketBeat, TipRanks, Zacks, StockAnalysis ועוד), שינויי המלצות ויעדים, הדוח האחרון, דירוגים טכניים (TradingView, Investing.com, Barchart), תמחור (Morningstar) וסנטימנט רק מאנשים ומדדים מוכרים.</li>
+            {studied.some((r) => r.sourceCount < 8) && (
+              <li>במחקר הזה פחות מ-8 מקורות: {studied.filter((r) => r.sourceCount < 8).sort((a, b) => a.sourceCount - b.sourceCount).map((r) => `${r.symbol} (${r.sourceCount})`).join(", ")}. קרן כפולה מקבלת מחקר מקוצר, כי הסטטוס שלה נקבע לפי החפיפה ולא לפי הציון.</li>
+            )}
             <li>כל חלק מקבל ציון בין 2- ל-2+, והציון המשוקלל הוא: {WEIGHTS.map(([, name, w]) => `${name} ${w}%`).join(" · ")}.</li>
             <li>מ-0.6 ומעלה ״לקנות״, מ-0.4- ומטה ״למכור״, באמצע ״עדיף לחכות״. כשהאנליסטים שליליים, אף פעם לא ״לקנות״. מניה שיותר מ-15% מתחת לממוצע 200 הימים, עם הורדות המלצה, מקבלת ״למכור״.</li>
             <li>כל החזקה וכל ״לקנות״ או ״למכור״ נבדקים שוב בבדיקה עצמאית שנייה. כשיש מחלוקת, בדיקה שלישית מכריעה לפי העובדות.</li>
