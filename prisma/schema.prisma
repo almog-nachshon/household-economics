@@ -252,3 +252,21 @@ model Card {
   last4 String
   name  String @default("")
 }
+
+// The candidate engine's dated predictions (lib/engine-run.js), for its forward test against the active label.
+model EnginePrediction {
+  id          Int      @id @default(autoincrement())
+  symbol      String
+  asOf        DateTime // the last data date the prediction used
+  version     String
+  state       String   // graded | no-data | no-model
+  grade       String?
+  raw         String?
+  score       Float?
+  active      String?  // the active label at the time
+  horizonDays Int
+  why         String
+  createdAt   DateTime @default(now())
+
+  @@unique([symbol, asOf, version])
+}

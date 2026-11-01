@@ -27,6 +27,7 @@ import Alerts from "@/components/Alerts";
 import { signalsFor, finvizUrl, onFinviz } from "@/lib/signals";
 import { loadResearch, statusOf, STATUS, WEIGHTS } from "@/lib/research";
 import { technicalsFor, TECH } from "@/lib/technicals";
+import { engineFor } from "@/lib/engine-run";
 import { TechTag } from "@/components/TechPanel";
 import { duplicateOf, lookThrough, HEAVY, FUNDS } from "@/lib/overlap";
 
@@ -156,6 +157,7 @@ export default async function Invest({ searchParams }) {
   const ranked = valid.map((q) => ({ ...q, rankScore: hi > lo ? ((q.score - lo) / (hi - lo)) * 100 : 50 })).sort((x, y) => y.score - x.score);
   const signals = await signalsFor(market.bySymbol, [...Object.keys(market.bySymbol), ...folio.rows.map((h) => h.symbol)]);
   const techs = await technicalsFor([...Object.keys(market.bySymbol), ...folio.rows.map((h) => h.symbol)]);
+  const engine = await engineFor([...Object.keys(market.bySymbol), ...folio.rows.map((h) => h.symbol)]);
   // How much of what is held sits under each technical label, for the snapshot in the first block.
   const techHeld = Object.keys(TECH).map((k) => ({ key: k, value: folio.rows.filter((h) => techs[h.symbol]?.key === k).reduce((t, h) => t + h.value, 0) }));
   const techHeldTotal = techHeld.reduce((t, x) => t + x.value, 0);
@@ -238,7 +240,7 @@ export default async function Invest({ searchParams }) {
     return (
       <Details
         symbol={s} name={q?.name ?? h?.name ?? s} type={typeOf(q ?? h)} bucket={b ? { name: b.name, color: BUCKET_COLORS[b.key], ink: ink(b.key) } : null}
-        q={q} h={h} st={statuses[s]} tech={techs[s]} g={signals[s]} r={research[s]} lt={lt[s]} total={total} fmt={{ ils, unitPrice, withIls }} about={ABOUT[s]}
+        q={q} h={h} st={statuses[s]} tech={techs[s]} engine={engine[s]} g={signals[s]} r={research[s]} lt={lt[s]} total={total} fmt={{ ils, unitPrice, withIls }} about={ABOUT[s]}
         links={{ ibkr: conid ? ibkrQuoteUrl(conid) : null, ibkrDetails: conid ? ibkrDetailsUrl(conid) : null, finviz: onFinviz(s) ? finvizUrl(s) : null }}
       />
     );

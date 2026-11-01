@@ -22,7 +22,7 @@ const day = (d) => (d ? new Date(d).toLocaleDateString("he-IL", { timeZone: "UTC
 // what the company or fund is, and links to IBKR, TradingView, Finviz and Yahoo.
 // q: lib/portfolio.js loadMarket entry; h: the holding (lib/holdings.js) or null; st: status; g: signal (lib/signals.js);
 // r: research (lib/research.js loadResearch); lt: lib/overlap.js lookThrough entry; fmt: the page's money formatters.
-export default function Details({ symbol, name, type, bucket, q, h, st, tech, g, r, lt, total, fmt, links, about }) {
+export default function Details({ symbol, name, type, bucket, q, h, st, tech, engine, g, r, lt, total, fmt, links, about }) {
   const changed = r?.prevVerdict && r.prevVerdict !== r.verdict ? STATUS[r.prevVerdict] : null;
   const numbers = [
     ["מחיר", q?.price != null ? <><b dir="ltr">{CUR[q.currency] ?? ""}{q.price.toLocaleString("en-US", { maximumFractionDigits: 2 })}</b>{q.priceIls ? <span className="label"> · {fmt.ils(q.priceIls)}</span> : null}</> : "—"],
@@ -76,7 +76,7 @@ export default function Details({ symbol, name, type, bucket, q, h, st, tech, g,
         </div>
       </div>
 
-      <TechPanel t={tech} cur={CUR[q?.currency] ?? ""} />
+      <TechPanel t={tech} cur={CUR[q?.currency] ?? ""} engine={engine} />
 
       {h && (
         <div className="dt-pos">

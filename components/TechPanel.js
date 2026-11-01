@@ -1,5 +1,6 @@
 import Info from "@/components/Info";
 import { TECH } from "@/lib/technicals";
+import { GRADES, NO_DATA } from "@/lib/engine";
 
 const VOTE = { buy: "קנייה", sell: "מכירה", neutral: "ניטרלי" };
 const MEANING = {
@@ -8,12 +9,13 @@ const MEANING = {
   neutral: "המגמה הארוכה מעורבת: להחזיק ולא להוסיף לפי הסימן הזה.",
   sell: "מגמה ארוכה יורדת, עם התאוששות בטווח הבינוני: סיכון גבוה יותר לירידות.",
   "strong-sell": "מגמה ארוכה יורדת, וגם הטווח הבינוני שלילי: הסיכון הגבוה ביותר לירידות.",
+  "no-data": "אין 200 ימי מסחר: אי אפשר לקבוע מגמה ארוכה.",
 };
 
 // The one technical label as a pill: קנייה חזקה / קנייה / ניטרלי - אחזקה / מכירה / מכירה חזקה (lib/technicals.js).
 export function TechTag({ t, short = false }) {
   if (!t) return <span className="label">—</span>;
-  return <span className={`tech tech-${t.key}`} title={MEANING[t.key]}>{short && t.key === "neutral" ? "ניטרלי" : TECH[t.key]}</span>;
+  return <span className={`tech tech-${t.key}`} title={MEANING[t.key]}>{short && t.key === "neutral" ? "ניטרלי" : short && t.key === "no-data" ? "אין נתונים" : TECH[t.key]}</span>;
 }
 
 function Group({ title, g, fmt }) {
@@ -42,11 +44,38 @@ function Group({ title, g, fmt }) {
   );
 }
 
+// The candidate engine, in comparison mode: never what decides. e: lib/engine.js evaluate.
+function Candidate({ e }) {
+  const pc = (x) => `${x > 0 ? "+" : ""}${(x * 100).toFixed(1)}%`;
+  const day = (s) => s && new Date(`${s}T00:00:00Z`).toLocaleDateString("he-IL", { timeZone: "UTC" });
+  const graded = e.state === "graded";
+  return (
+    <div className="tp-cand">
+      <div className="tp-top">
+        <b>🧪 מנוע מועמד (מצב השוואה)</b>
+        {graded ? <span className={`tech tech-${e.grade}`}>{GRADES[e.grade]}</span> : <span className={`tech tech-${e.state === "no-data" ? "no-data" : "neutral"}`}>{e.state === "no-data" ? NO_DATA : "אין דירוג ממודל"}</span>}
+        <Info text="מועמד לבדיקה, לא הוכח כאמין: לא קונה ולא מחליף את התווית שלמעלה. בבדיקה הוא לא ניצח קנייה והחזקה ביחס לסיכון. דרגות מכירה לא התאמתו ולכן לא מוצגות. ציון אינו הסתברות. הדרגה היא על המניה, לא הוראת פעולה בתיק." />
+      </div>
+      {graded ? (
+        <>
+          <div className="label tp-extra">אופק: {Math.round(e.horizonDays / 21)} חודשים מול S&P 500 · נכון לסוף חודש {day(e.asOf)} · ציון המודל {pc(e.score)} (לא הסתברות) · גרסה {e.version}</div>
+          {e.prevGrade && e.prevGrade !== e.grade && <div className="label tp-extra">השתנה מ-{GRADES[e.prevGrade]}: הדרגה החדשה חזרה בשני סופי חודש.</div>}
+          <div className="label tp-extra">בעבר, בדרגה הזו, 80% מהתוצאות ב-3 חודשים היו בין {pc(e.range.q10)} ל-{pc(e.range.q90)}. זה נתון היסטורי, לא תחזית.</div>
+          <div className="label tp-extra">תומך: {e.pros.join(", ") || "—"} · סותר: {e.cons.join(", ") || "—"}</div>
+        </>
+      ) : (
+        <div className="label tp-extra">{e.why.join(" · ")}</div>
+      )}
+    </div>
+  );
+}
+
 // The technical label in the details panel: what it means, the five checks that decide it, the day's volatility and
 // pivot levels, and, folded, the 23 indicators' votes (detail only, they do not decide the label).
 // t: lib/technicals.js technicalsOf; cur: the price's currency sign.
-export default function TechPanel({ t, cur = "" }) {
-  if (!t) return null;
+export default function TechPanel({ t, cur = "", engine = null }) {
+  if (!t && !engine) return null;
+  if (!t) return <div className="tp"><Candidate e={engine} /></div>;
   const num = (x) => (x == null ? "—" : Math.abs(x) >= 1e6 ? `${(x / 1e6).toFixed(1)}M` : x.toLocaleString("en-US", { maximumFractionDigits: 2 }));
   const money = (x) => `${cur}${x.toLocaleString("en-US", { maximumFractionDigits: 2 })}`;
   return (
@@ -55,7 +84,7 @@ export default function TechPanel({ t, cur = "" }) {
         <b>📊 תווית טכנית</b> <TechTag t={t} />
         <Info text="נוסחה שנבחרה בבדיקה היסטורית על 1995-2026: המגמה הארוכה קובעת, והטווח הבינוני מחזק או מחליש. בבדיקה ״מכירה״ פירושה ירידות עמוקות יותר בחודשים הבאים, לא הפסד ודאי: גם אחריה התשואה הממוצעת הייתה חיובית. לא קובעת קנייה: מה שקונה הוא הסטטוס מהמחקר." />
       </div>
-      <p className="tp-mean">{t.checks ? MEANING[t.key] : "אין עדיין 200 ימי מסחר: אי אפשר לקבוע מגמה ארוכה."}</p>
+      <p className="tp-mean">{MEANING[t.key]}</p>
       {t.checks && (
         <ul className="tp-checks">
           {t.checks.map((c) => (
@@ -76,6 +105,7 @@ export default function TechPanel({ t, cur = "" }) {
           <Group title="אינדיקטורים" g={t.ind} fmt={num} />
         </div>
       </details>
+      {engine && <Candidate e={engine} />}
     </div>
   );
 }
