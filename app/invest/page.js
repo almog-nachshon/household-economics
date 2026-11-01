@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { getSettings } from "@/lib/data";
 import { ils } from "@/lib/goal";
-import { BUCKETS, loadMarket, completePicks, sizePicks, extraPicks, nextSteps, topUp, isMetal, bucketPct, DEFAULT_METALS_PCT, ABOUT } from "@/lib/portfolio";
+import { BUCKETS, loadMarket, planCash, nextSteps, isMetal, bucketPct, DEFAULT_METALS_PCT, ABOUT } from "@/lib/portfolio";
 import { advisorEnabled } from "@/lib/advisor";
 import AiButton from "@/components/AiButton";
 import SyncButton from "@/components/SyncButton";
@@ -11,13 +11,18 @@ import Info from "@/components/Info";
 import HoldingsMap from "@/components/HoldingsMap";
 import Logo from "@/components/Logo";
 import Sources from "@/components/Sources";
+import ExpandRow from "@/components/ExpandRow";
+import Details from "@/components/Details";
+import StatusTag from "@/components/StatusTag";
 import { LiveQuotes, LiveChange, LiveWeek, LivePrice, MarketStatus, IntradayChart, Ticker } from "@/components/Live";
 import { portfolio } from "@/lib/holdings";
-import { generatePlan, depositMonth, depositDate, holdings } from "@/lib/invest-run";
+import { generatePlan, depositMonth, depositDate } from "@/lib/invest-run";
 import { ibkrEnabled, syncIbkr, ibkrQuoteUrl, ibkrDetailsUrl } from "@/lib/ibkr";
 import { STOP, TARGET } from "@/lib/alerts";
 import Alerts from "@/components/Alerts";
-import { signalsFor, SIGNAL, finvizUrl, onFinviz, verdictOf } from "@/lib/signals";
+import { signalsFor, finvizUrl, onFinviz } from "@/lib/signals";
+import { loadResearch, statusOf, STATUS, WEIGHTS } from "@/lib/research";
+import { duplicateOf, lookThrough, HEAVY, FUNDS } from "@/lib/overlap";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 600;
@@ -27,13 +32,15 @@ const pct = (x) => (x == null ? "—" : `${(x * 100).toFixed(1)}%`);
 const Ret = ({ x }) => <span className={x > 0 ? "pos" : x < 0 ? "neg" : ""}>{pct(x)}</span>;
 const date = (d) => d.toLocaleDateString("he-IL");
 const bucketName = Object.fromEntries(BUCKETS.map((b) => [b.key, b.name]));
-// One color per bucket, used by the pie and the type tags.
+// One color per bucket, used by the maps and the type tags.
 // Checked with the dataviz palette validator (lightness, chroma, color-blind and normal-vision separation).
 const BUCKET_COLORS = { index: "#0fa3a3", sector: "#6d5bd0", defense: "#b5651d", risk: "#d6457a", photonics: "#8fb0ff", metals: "#c9a227" };
 // Text on a bucket color: dark on the light ones.
 const ink = (key) => (key === "photonics" || key === "metals" ? "#1f2a30" : "#fff");
 const splitText = (metalsPct) => BUCKETS.filter((b) => b.pct).map((b) => `${b.name} ${Math.round(bucketPct(b, metalsPct))}%`).join(", ");
 const CASH_COLOR = "#9aa7ad";
+// Israeli capital gains tax on a sale at a profit.
+const TAX = 0.25;
 // Risk level from the yearly volatility.
 const RISK = [[0.15, "נמוך", "risk-low"], [0.25, "בינוני", "risk-mid"], [0.4, "גבוה", "risk-high"], [Infinity, "גבוה מאוד", "risk-vhigh"]];
 const Risk = ({ vol }) => {
@@ -41,24 +48,15 @@ const Risk = ({ vol }) => {
   const [, name, cls] = RISK.find(([max]) => vol < max);
   return <span className={`risk ${cls}`}>סיכון {name}</span>;
 };
-const typeOf = (p) => (isMetal(p.symbol) ? "מתכת" : /ETF|קרן|UCITS|SPDR|iShares|Vanguard|Invesco|VanEck/.test(p.name) ? "קרן סל" : "מניה");
+const typeOf = (p) => (isMetal(p.symbol) ? "מתכת" : /ETF|קרן|UCITS|SPDR|iShares|Vanguard|Invesco|VanEck|Global X/.test(p.name) ? "קרן סל" : "מניה");
 const Div = ({ q }) => (q.divYield > 0 ? <span className="tag tag-div">דיבידנד ~{(q.divYield * 100).toFixed(1)}%</span> : null);
 const sharpe = (x) => (x == null ? "—" : x.toFixed(2));
 // A name that opens the exact instrument at IBKR (the conid verified by lib/ibkr.js), with its exchange and ISIN on hover.
 const IbLink = ({ conid, ib, children }) =>
   conid ? <a href={ibkrQuoteUrl(conid)} target="_blank" rel="noreferrer" title={ib ? `באינטראקטיב: ${ib.ibSymbol} · ${ib.exchange} · ${ib.currency}${ib.isin ? ` · ISIN ${ib.isin}` : ""}` : "פתיחה באינטראקטיב"}>{children}</a> : children;
-// The entry / exit signal (lib/signals.js) as a colored tag; the reasons on hover.
-const SignalTag = ({ s }) => (s ? <span className={`signal signal-${s.level}`} title={s.reasons.join(" · ")}>{SIGNAL[s.level][0]} {SIGNAL[s.level][1]}</span> : null);
-// The combined verdict (lib/signals.js verdictOf) as a colored tag; how it was reached in the ⓘ.
-const VerdictTag = ({ v }) =>
-  v ? (
-    <span className="verdict-cell">
-      <span className={`verdict verdict-${v.key}`}>{v.label}</span>
-      <Info text={`${v.label} (ניקוד ${v.total > 0 ? "+" : ""}${v.total}): ${v.parts.join(" · ")}`} />
-    </span>
-  ) : null;
 const signed = (x) => (x == null ? "—" : `${x > 0 ? "+" : ""}${(x * 100).toFixed(1)}%`);
-const CHANGES = { add: "להוסיף", hold: "להחזיק, בלי כסף חדש", reduce: "לצמצם (למכור חלק)", sell: "למכור" };
+// What to do with each holding, by its status.
+const ACTION = { buy: "אפשר להוסיף", wait: "להחזיק, בלי כסף חדש", sell: "למכור" };
 
 async function syncNow() {
   "use server";
@@ -104,7 +102,7 @@ async function undo(formData) {
   revalidatePath("/invest");
 }
 
-// Without a Claude reason, the numbers speak for themselves.
+// Without research or a Claude reason, the numbers speak for themselves.
 const numbersReason = (q) =>
   `נבחרה לפי הביצועים: ${pct(q.m12)} בשנה, ${pct(q.m6)} בחצי שנה, ${pct(q.m3)} ב-3 חודשים, בתנודתיות של ${pct(q.vol)}.`;
 
@@ -115,12 +113,12 @@ export default async function Invest({ searchParams }) {
   const settings = await getSettings();
   const month = depositMonth();
   const day = depositDate(month);
-  const [plan, done, held, market, folio] = await Promise.all([
+  const [plan, done, market, folio, research] = await Promise.all([
     db.aiPlan.findUnique({ where: { month } }),
     db.investPick.findMany({ where: { month } }),
-    holdings(),
     loadMarket(),
     portfolio(),
+    loadResearch(),
   ]);
   // A one-off larger (or smaller) amount for this deposit, from the amount box; otherwise the standing order.
   // The amount box works in shekels or dollars (the ₪ / $ toggle); the split is always computed in shekels.
@@ -132,7 +130,6 @@ export default async function Invest({ searchParams }) {
   // With IBKR the amount is always the account's cash not yet invested (no amount box); otherwise the box or the
   // standing order.
   const typed = !ibkrEnabled() && Number(searchParams?.amount) > 0 ? Number(searchParams.amount) : null;
-  // With IBKR synced, the default is the dollars waiting in the account; otherwise the standing order.
   const cashUsd = folio.broker ? folio.cashBy.find((c) => c.currency === "USD")?.amount ?? 0 : 0;
   const base = cashUsd >= 1 && fx ? cashUsd * fx : settings.monthlyInvest;
   const amount = typed ? typed * rate : base;
@@ -149,55 +146,64 @@ export default async function Invest({ searchParams }) {
   const [lo, hi] = [Math.min(...valid.map((q) => q.score)), Math.max(...valid.map((q) => q.score))];
   const ranked = valid.map((q) => ({ ...q, rankScore: hi > lo ? ((q.score - lo) / (hi - lo)) * 100 : 50 })).sort((x, y) => y.score - x.score);
   const signals = await signalsFor(market.bySymbol, [...Object.keys(market.bySymbol), ...folio.rows.map((h) => h.symbol)]);
-  // With IBKR holdings the cash tops up the buckets furthest below target, adding to what is already held there
-  // (lib/portfolio.js topUp); otherwise the fixed split of the plan's picks.
-  const heldRows = folio.rows.filter((h) => h.bucket);
-  const top = folio.broker && heldRows.length
-    ? topUp({ held: heldRows, bySymbol: market.bySymbol, signals, amount, metalsPct, chosen })
-    : { picks: completePicks(chosen, market.bySymbol, amount, metalsPct), waiting: [], shares: null };
-  const { shares, waiting } = top;
-  const { picks, skipped, leftover } = sizePicks(top.picks, amount);
-  // What is left goes to more units of holdings with a buy signal in the buckets that need it (never new names when
-  // something is held), so no cash sits idle.
-  const indexes = new Set([...picks, ...folio.rows].map((x) => market.bySymbol[x.symbol]?.index).filter(Boolean));
-  // Themes already more than 5 points over their target get no new money (the "what next" card says the same).
-  const accountTotal = folio.value || 1;
-  const overweight = new Set(
-    BUCKETS.filter((b) => (folio.rows.filter((h) => h.bucket === b.key).reduce((t, h) => t + h.value, 0) / accountTotal) * 100 > bucketPct(b, metalsPct) + 5).map((b) => b.key),
+
+  // One status per symbol, shown everywhere and the only thing that buys: the deep research with today's timing
+  // (lib/research.js), except that a fund repeating the core is a duplicate (never bought, sold when held) and a
+  // stock already HEAVY% of the account, counting what the funds hold of it, gets no new money (lib/overlap.js).
+  const total = folio.value || 1;
+  const lt = lookThrough(folio.rows, total);
+  const heldSet = new Set(folio.rows.map((h) => h.symbol));
+  const heavy = Object.values(lt)
+    .filter((x) => x.pct >= HEAVY && x.direct > 0)
+    .map((x) => ({ ...x, direct: (x.direct / total) * 100, via: (x.via / total) * 100 }));
+  const statuses = {};
+  for (const s of new Set([...Object.keys(market.bySymbol), ...heldSet])) {
+    const st = statusOf(research[s], signals[s], market.bySymbol[s]?.price);
+    const dup = duplicateOf(s);
+    const hv = heavy.find((x) => x.symbol === s);
+    statuses[s] = dup
+      ? { ...st, research: st?.research ?? false, key: heldSet.has(s) ? "sell" : "dup", dup, base: st?.key, timing: null }
+      : hv && st?.key === "buy"
+        ? { ...st, key: "wait", timing: [...(st.timing ?? []), `כבר ${Math.round(hv.pct)}% מהחשבון בפועל, כולל מה שיש ממנה בתוך הקרנות: לא מוסיפים`] }
+        : st;
+  }
+  const why = (s) => statuses[s]?.dup?.reason ?? statuses[s]?.timing?.join(" · ") ?? research[s]?.summary ?? signals[s]?.reasons?.[0] ?? "";
+  // How much more (ILS) each single stock may take before it is HEAVY% of the account, counting the funds' share of it.
+  const room = Object.fromEntries(
+    Object.keys(market.bySymbol).filter((s) => !FUNDS[s] && !isMetal(s)).map((s) => [s, Math.max(0, (HEAVY / 100) * total - (lt[s]?.value ?? 0))]),
   );
-  const open = ranked.filter((q) => !overweight.has(q.bucket));
-  const { extras, left: extraLeft } = leftover > 1
-    ? extraPicks(open, signals, leftover, new Set(picks.map((p) => p.symbol)), indexes, new Set(folio.rows.map((h) => h.symbol)))
-    : { extras: [], left: leftover };
-  const steps = folio.broker
-    ? nextSteps({ rows: folio.rows, cash: folio.cash, signals, metalsPct, money, waiting })
-    : [];
-  // The verdict for every ranked candidate, and, while any cash is left, up to four of the best-ranked candidates a unit
-  // of which fits it, as options for the user to decide on (whatever their signal).
-  const verdicts = Object.fromEntries(ranked.map((q) => [q.symbol, verdictOf(signals[q.symbol], q.rankScore)]));
-  const options = extraLeft > 1
-    ? open
-        // not metals while their share is 0 (no IBKR permission yet)
-        .filter((q) => q.priceIls && q.priceIls <= extraLeft && !picks.some((p) => p.symbol === q.symbol) && !extras.some((p) => p.symbol === q.symbol))
-        .filter((q) => !(q.bucket === "metals" && !metalsPct))
-        // only a 🟢 / ⚪ timing signal and a buy or hold verdict: nothing that says "consider exiting" or "wait"
-        .filter((q) => ["enter", "ok"].includes(signals[q.symbol]?.level) && ["strong-buy", "buy", "hold"].includes(verdicts[q.symbol]?.key))
-        .slice(0, 4)
-        .map((q) => ({ ...q, units: Math.floor(extraLeft / q.priceIls), signal: signals[q.symbol], verdict: verdicts[q.symbol], rank: ranked.indexOf(q) + 1 }))
-    : [];
-  // Everything to buy now (the split and the next in line), with its cost.
+
+  // 3. The account's cash: the themes below target first, adding to what is held there, then down the ranking.
+  const heldRows = folio.rows.filter((h) => h.bucket);
+  const broker = folio.broker && heldRows.length > 0;
+  const cashPlan = planCash({ held: broker ? heldRows : [], amount, bySymbol: market.bySymbol, statuses, metalsPct, ranked, chosen, room });
+  const { picks, skipped, leftover, extras, left: extraLeft, waiting, shares } = cashPlan;
   const buys = [...picks, ...extras].map((p) => ({ ...p, cost: p.cost ?? p.amount }));
   // The detailed cards: the split's picks, then the next in line in priority order.
   const cards = [...picks, ...extras.map((p, i) => ({ ...p, amount: p.cost, pct: (p.cost / amount) * 100, next: i + 1, topUp: heldRows.some((h) => h.symbol === p.symbol) }))];
-  // The donut: each bucket's holdings and the cash, as % of the whole account.
-  const total = folio.value || 1;
+
+  // 4. Changes: each holding whose status is "sell" (a duplicate of the core, or the research's call) is sold whole,
+  // and the money fills the themes below target the same way, on top of what the cash above already buys.
+  const sells = broker
+    ? heldRows.filter((h) => statuses[h.symbol]?.key === "sell").map((h) => ({ ...h, why: why(h.symbol), tax: Math.max(0, h.profit) * TAX }))
+    : [];
+  const proceeds = sells.reduce((t, h) => t + h.value, 0);
+  const afterCash = [...heldRows.filter((h) => !sells.some((x) => x.symbol === h.symbol)), ...buys.map((p) => ({ symbol: p.symbol, bucket: p.bucket, value: p.cost }))];
+  const roomAfter = Object.fromEntries(Object.entries(room).map(([s, r]) => [s, r - buys.filter((p) => p.symbol === s).reduce((t, p) => t + p.cost, 0)]));
+  const swap = sells.length ? planCash({ held: afterCash, amount: proceeds, bySymbol: market.bySymbol, statuses, metalsPct, ranked, chosen, room: roomAfter }) : null;
+  const swapBuys = swap ? [...swap.picks, ...swap.extras].map((p) => ({ ...p, cost: p.cost ?? p.amount })) : [];
+  const steps = folio.broker
+    ? nextSteps({ rows: folio.rows, statuses, signals, waiting, metalsPct, dupes: heldRows.filter((h) => statuses[h.symbol]?.dup), heavy })
+    : [];
+
+  // The maps: each theme's holdings and the cash, as % of the whole account.
   const groups = [
     ...BUCKETS.map((b) => {
       const rows = folio.rows.filter((h) => h.bucket === b.key);
       const value = rows.reduce((t, h) => t + h.value, 0);
       return {
         key: b.key, name: b.name, color: BUCKET_COLORS[b.key], ink: ink(b.key), value, pct: (value / total) * 100, target: bucketPct(b, metalsPct), valueText: withIls(value),
-        rows: rows.map((h) => ({ symbol: h.symbol, name: h.name, type: typeOf(h), change: market.bySymbol[h.symbol]?.d1 ?? null, profitPct: h.pct, profitText: withIls(h.profit), about: [ABOUT[h.symbol], signals[h.symbol] && SIGNAL[signals[h.symbol].level].join(" ") + ": " + signals[h.symbol].reasons[0]].filter(Boolean).join(" · "), value: h.value, pct: (h.value / total) * 100, valueText: withIls(h.value) })),
+        rows: rows.map((h) => ({ symbol: h.symbol, name: h.name, type: typeOf(h), change: market.bySymbol[h.symbol]?.d1 ?? null, profitPct: h.pct, profitText: withIls(h.profit), about: [ABOUT[h.symbol], statuses[h.symbol] && `${(statuses[h.symbol].key === "dup" ? ["⛔", "כפילות"] : STATUS[statuses[h.symbol].key]).join(" ")}: ${why(h.symbol)}`].filter(Boolean).join(" · "), value: h.value, pct: (h.value / total) * 100, valueText: withIls(h.value) })),
       };
     }),
     ...(folio.rows.some((h) => !h.bucket)
@@ -208,9 +214,24 @@ export default async function Invest({ searchParams }) {
       : []),
     { key: "cash", name: "מזומן לא מושקע", color: CASH_COLOR, value: Math.max(0, folio.cash), pct: (Math.max(0, folio.cash) / total) * 100, target: null, valueText: withIls(folio.cash), rows: [{ symbol: "מזומן לא מושקע", name: "", value: Math.max(0, folio.cash), pct: (Math.max(0, folio.cash) / total) * 100, valueText: withIls(folio.cash) }] },
   ];
-  const changes = plan
-    ? JSON.parse(plan.changes)
-    : held.map((h) => ({ symbol: h.symbol, action: picks.some((p) => p.symbol === h.symbol) ? "add" : "hold", reason: null }));
+
+  // The details under a clicked row (components/Details.js).
+  const detailsFor = (s, h) => {
+    const q = market.bySymbol[s];
+    const b = BUCKETS.find((x) => x.key === (q?.bucket ?? h?.bucket));
+    const conid = h?.conid ?? q?.ibkr?.conid;
+    return (
+      <Details
+        symbol={s} name={q?.name ?? h?.name ?? s} type={typeOf(q ?? h)} bucket={b ? { name: b.name, color: BUCKET_COLORS[b.key], ink: ink(b.key) } : null}
+        q={q} h={h} st={statuses[s]} g={signals[s]} r={research[s]} lt={lt[s]} total={total} fmt={{ ils, unitPrice, withIls }} about={ABOUT[s]}
+        links={{ ibkr: conid ? ibkrQuoteUrl(conid) : null, ibkrDetails: conid ? ibkrDetailsUrl(conid) : null, finviz: onFinviz(s) ? finvizUrl(s) : null }}
+      />
+    );
+  };
+  // The research behind "the picture now": when, how much, and the statuses it gave.
+  const studied = Object.values(research);
+  const researchDay = studied.length ? new Date(Math.max(...studied.map((r) => r.asOf.getTime()))) : null;
+  const count = (k) => ranked.filter((q) => statuses[q.symbol]?.key === k).length;
 
   return (
     <>
@@ -236,7 +257,7 @@ export default async function Invest({ searchParams }) {
               label={<><span className="btn-long">בדיקה מהירה של </span>Claude</>}
               updated={plan?.createdAt.toLocaleString("he-IL", { timeZone: "Asia/Jerusalem", dateStyle: "short", timeStyle: "short" })}
               info={plan
-                ? `${plan.final ? "בדיקה סופית" : "בדיקה יומית"} של Claude (${plan.model}). ${plan.final ? "" : `הבדיקה הסופית ב-${date(day)}, לפני ההפקדה. `}הכפתור מריץ בדיקה מהירה; מחקר מלא נעשה ב-Claude Code.`
+                ? `${plan.final ? "בדיקה סופית" : "בדיקה יומית"} של Claude (${plan.model}). הכפתור מריץ בדיקה מהירה; המחקר המעמיק (הסטטוסים) נעשה ב-Claude Code.`
                 : "Claude עוד לא בדק את ההפקדה הזו. עד אז החלוקה לפי הביצועים בלבד."}
             />
           </form>
@@ -251,404 +272,467 @@ export default async function Invest({ searchParams }) {
       {searchParams?.error && <p className="warn">הפעולה נכשלה: {searchParams.error}</p>}
       {market.rateError && <p className="warn">לא הצלחתי למשוך שערי מטבע ({market.rateError}).</p>}
 
-      <div className="card" id="folio" style={{ marginTop: 4 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
+      <LiveQuotes symbols={folio.rows.map((h) => h.symbol)}>
+        {/* 1. The portfolio now: the numbers, today's map and the holdings, each row opening its details */}
+        <div className="card" id="folio" style={{ marginTop: 4 }}>
           <h2 style={{ margin: 0 }}>
-            {folio.broker ? "המצב עכשיו: התיק שלי" : "התיק שלי"}{" "}
+            {folio.broker ? "המצב עכשיו: התיק שלי (אחזקות)" : "התיק שלי"}{" "}
             <Info text={folio.broker
               ? `מאינטראקטיב, במחירי הסגירה של ${folio.asOf.toLocaleDateString("he-IL", { timeZone: "UTC" })} (קניות מהיום במחיר הקנייה). התראה ב-${Math.round(STOP * 100)}% או ב-+${Math.round(TARGET * 100)}% ממחיר הקנייה. הרווח בדולרים, מומר לשקלים בשער היום.`
               : "לפי כל ההפקדות שסימנת ״קניתי״, במחירי היום"} />
           </h2>
-        </div>
-        {folio.rows.length === 0 ? (
-          <p className="label">
-            {folio.broker
-              ? `עוד אין החזקות בחשבון. מזומן בחשבון: ${money(folio.cash)}. אחרי הקנייה באינטראקטיב, התיק יתעדכן כאן לבד.`
-              : "עוד אין קניות. אחרי ״קניתי״ התיק, הרווח והתשואה יחושבו כאן ובדף הראשי."}
-          </p>
-        ) : (
-          <>
-            <div className="hero-row" style={{ marginTop: 8 }}>
-              {folio.broker && <div><div className="label">שווי החשבון</div><div className="value">{both(folio.value)}</div></div>}
-              <div><div className="label">הושקע</div><div className="value">{both(folio.cost)}</div></div>
-              <div><div className="label">שווי היום</div><div className="value">{both(folio.held)}</div></div>
-              <div><div className="label">רווח / הפסד</div><div className={`value ${folio.profit >= 0 ? "pos" : "neg"}`}>{both(folio.profit)}</div></div>
-              <div><div className="label">תשואה</div><div className={`value ${folio.pct >= 0 ? "pos" : "neg"}`}>{pct(folio.pct)}</div></div>
-              {folio.broker && <div><div className="label">מזומן בחשבון</div><div className="value">{both(folio.cash)}</div></div>}
-              {folio.week != null && <div><div className="label">רווח השבוע</div><div className={`value ${folio.week >= 0 ? "pos" : "neg"}`}>{both(folio.week)}</div></div>}
-            </div>
-            {folio.broker && (
-              <>
-                <LiveQuotes symbols={folio.rows.map((h) => h.symbol)}>
+          {folio.rows.length === 0 ? (
+            <p className="label">
+              {folio.broker
+                ? `עוד אין החזקות בחשבון. מזומן בחשבון: ${money(folio.cash)}. אחרי הקנייה באינטראקטיב, התיק יתעדכן כאן לבד.`
+                : "עוד אין קניות. אחרי ״קניתי״ התיק, הרווח והתשואה יחושבו כאן ובדף הראשי."}
+            </p>
+          ) : (
+            <>
+              <div className="hero-row" style={{ marginTop: 8 }}>
+                {folio.broker && <div><div className="label">שווי החשבון</div><div className="value">{both(folio.value)}</div></div>}
+                <div><div className="label">הושקע</div><div className="value">{both(folio.cost)}</div></div>
+                <div><div className="label">שווי היום</div><div className="value">{both(folio.held)}</div></div>
+                <div><div className="label">רווח / הפסד</div><div className={`value ${folio.profit >= 0 ? "pos" : "neg"}`}>{both(folio.profit)}</div></div>
+                <div><div className="label">תשואה</div><div className={`value ${folio.pct >= 0 ? "pos" : "neg"}`}>{pct(folio.pct)}</div></div>
+                {folio.broker && <div><div className="label">מזומן בחשבון</div><div className="value">{both(folio.cash)}</div></div>}
+                {folio.week != null && <div><div className="label">רווח השבוע</div><div className={`value ${folio.week >= 0 ? "pos" : "neg"}`}>{both(folio.week)}</div></div>}
+              </div>
+              {folio.broker && (
+                <>
                   <h3 className="hmap-title">📈 השינוי היום</h3>
                   <HoldingsMap groups={groups} />
-                  <h3 className="hmap-title">💰 הרווח / ההפסד שלי מאז הקנייה: <span className={folio.profit >= 0 ? "pos" : "neg"}>{withIls(folio.profit)} ({pct(folio.pct)})</span></h3>
-                  <HoldingsMap groups={groups} mode="profit" />
-                </LiveQuotes>
-                <div className="bucket-chips">
-                  {groups.filter((g) => g.value > 0).map((g) => (
-                    <span key={g.key} className="bucket-chip">
-                      <span className="swatch" style={{ background: g.color }} /> {g.name} <b>{g.pct.toFixed(1)}%</b>
-                      {g.target != null && <span className={`label ${Math.abs(g.pct - g.target) > 5 ? "neg" : ""}`}> (יעד {Math.round(g.target)}%)</span>}
-                      <span className="label"> · {g.valueText}</span>
-                    </span>
-                  ))}
-                </div>
-              </>
-            )}
-            <div style={{ overflowX: "auto", marginTop: 8 }}>
-              <table className="compact">
-                <thead><tr><th>סימול</th><th>שם</th><th>יחידות</th><th>הושקע</th><th>שווי</th><th>רווח</th><th>%</th><th>כניסה / יציאה</th></tr></thead>
-                <tbody>
-                  {folio.rows.map((h) => (
-                    <tr key={h.symbol}>
-                      <td><span className="sym"><Logo id={h.symbol} label={h.name} size={18} /><IbLink conid={h.conid ?? market.bySymbol[h.symbol]?.ibkr?.conid}><b>{h.symbol}</b></IbLink></span></td>
-                      <td className="line-name" title={h.name}>{h.name} <span className="xtag hpie-type">{typeOf(h)}</span> <Info text={ABOUT[h.symbol]} /></td>
-                      <td>{h.units ? Math.round(h.units * 1000) / 1000 : "—"}</td>
-                      <td>{both(h.cost)}</td>
-                      <td>{both(h.value)}</td>
-                      <td className={h.profit >= 0 ? "pos" : "neg"}>{both(h.profit)}</td>
-                      <td><Ret x={h.pct} /></td>
-                      <td><SignalTag s={signals[h.symbol]} /></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </>
-        )}
-      </div>
-
-      {steps.length > 0 && (
-        <div className="card next-steps" style={{ marginTop: 12 }}>
-          <h2>📌 המלצות להמשך <Info text="מחושב מחדש בכל רענון: לפי מה שבאמת יש בתיק מול החלוקה הרצויה, סימני הכניסה / יציאה ותאריכי הדוחות. לא ייעוץ השקעות." /></h2>
-          <ul>{steps.map((s) => <li key={s.text}><span>{s.icon}</span> {s.text}</li>)}</ul>
+                  <div className="bucket-chips">
+                    {groups.filter((g) => g.value > 0).map((g) => (
+                      <span key={g.key} className="bucket-chip">
+                        <span className="swatch" style={{ background: g.color }} /> {g.name} <b>{g.pct.toFixed(1)}%</b>
+                        {g.target != null && <span className={`label ${Math.abs(g.pct - g.target) > 5 ? "neg" : ""}`}> (יעד {Math.round(g.target)}%)</span>}
+                        <span className="label"> · {g.valueText}</span>
+                      </span>
+                    ))}
+                  </div>
+                </>
+              )}
+              <div className="table-scroll" style={{ marginTop: 8 }}>
+                <table className="compact holdings">
+                  <thead><tr><th>סימול</th><th>שם</th><th>יחידות</th><th>הושקע</th><th>שווי</th><th>רווח</th><th>%</th><th>היום</th><th>סטטוס <Info text="מהמחקר המעמיק: לקנות / עדיף לחכות / למכור, עם התזמון של היום. ⛔ כפילות = קרן שרובה מניות שכבר יש לך בליבה (VUAA ו-VWRA). לחיצה על שורה פותחת את כל הפרטים, גרף שבועי והמקורות." /></th></tr></thead>
+                  <tbody>
+                    {folio.rows.map((h) => (
+                      <ExpandRow
+                        key={h.symbol}
+                        colSpan={9}
+                        cells={<>
+                          <td><span className="sym"><span className="exp-ico" aria-hidden="true">▾</span><Logo id={h.symbol} label={h.name} size={18} /><IbLink conid={h.conid ?? market.bySymbol[h.symbol]?.ibkr?.conid}><b>{h.symbol}</b></IbLink></span></td>
+                          <td className="line-name" title={h.name}>{h.name} <span className="xtag hpie-type">{typeOf(h)}</span></td>
+                          <td>{h.units ? Math.round(h.units * 1000) / 1000 : "—"}</td>
+                          <td>{both(h.cost)}</td>
+                          <td>{both(h.value)}</td>
+                          <td className={h.profit >= 0 ? "pos" : "neg"}>{both(h.profit)}</td>
+                          <td><Ret x={h.pct} /></td>
+                          <td><LiveChange symbol={h.symbol} fallback={market.bySymbol[h.symbol]?.d1} /></td>
+                          <td><StatusTag st={statuses[h.symbol]} /></td>
+                        </>}
+                      >
+                        {detailsFor(h.symbol, h)}
+                      </ExpandRow>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p className="label tap-hint">👆 לחיצה על שורה: כל הפרטים, גרף שבועי והמחקר עם המקורות</p>
+            </>
+          )}
         </div>
-      )}
 
+        {/* 2. Profit or loss since buying, per holding */}
+        {folio.broker && folio.rows.length > 0 && (
+          <div className="card" id="pnl" style={{ marginTop: 12 }}>
+            <h2 style={{ margin: 0 }}>
+              💰 הרווח / ההפסד שלי מאז הקנייה: <span className={folio.profit >= 0 ? "pos" : "neg"}>{withIls(folio.profit)} ({pct(folio.pct)})</span>
+            </h2>
+            <HoldingsMap groups={groups} mode="profit" />
+          </div>
+        )}
+      </LiveQuotes>
+
+      {/* 3. Cash not yet invested, and what it buys */}
       {folio.broker ? (
-        <div className="cash-line">
+        <div className="cash-line" id="cash">
           <h2 style={{ margin: 0 }}>💵 כסף לא מושקע בחשבון: {money(amount)} <span className="label">({ils(amount)})</span></h2>
           <Info text={`נבדק מאינטראקטיב בכל רענון (כולל קניות של היום). כל החלוקה למטה היא רק לכסף הזה, כך שלא נשאר מזומן בלי השקעה. השקלים לפי שער ההמרה של אינטראקטיב (${fx?.toFixed(3)}).`} />
         </div>
       ) : (
         <form method="get" style={{ display: "flex", gap: 8, alignItems: "center", maxWidth: "none", marginBottom: 12, flexWrap: "wrap" }}>
-        <span>סכום להשקעה:</span>
-        <input type="number" name="amount" min="1" step="1" defaultValue={shown} style={{ width: 140 }} />
-        <input type="hidden" name="cur" value={usd ? "USD" : "ILS"} />
-        <span className="cur-toggle">
-          <a href={`/invest?amount=${Math.round(amount / (market.usdIls || 1))}&cur=USD`} className={usd ? "on" : ""}>$ דולר</a>
-          <a href={`/invest?amount=${Math.round(amount)}&cur=ILS`} className={usd ? "" : "on"}>₪ שקל</a>
-        </span>
-        <button type="submit">חשב חלוקה</button>
-        {market.usdIls && <span className="label">דולר = {market.usdIls.toFixed(3)} ₪ <Info text={market.usdFx?.official ? "שער יציג של בנק ישראל" : "שער עכשיו, חציון של כמה מקורות, מתעדכן כל דקה"} /></span>}
-        <Sources q={market.usdFx} currency="ILS" digits={3} />
-        {Math.round(amount) !== Math.round(base) && <a href="/invest">{cashUsd >= 1 ? `חזרה למזומן הפנוי בחשבון ($${Math.floor(cashUsd).toLocaleString("en-US")})` : `חזרה להוראת הקבע (${ils(settings.monthlyInvest)})`}</a>}
-        {!typed && cashUsd >= 1 && <Info text="הסכום = המזומן הפנוי בחשבון אינטראקטיב. אפשר להקליד סכום אחר." />}
-      </form>
+          <span>סכום להשקעה:</span>
+          <input type="number" name="amount" min="1" step="1" defaultValue={shown} style={{ width: 140 }} />
+          <input type="hidden" name="cur" value={usd ? "USD" : "ILS"} />
+          <span className="cur-toggle">
+            <a href={`/invest?amount=${Math.round(amount / (market.usdIls || 1))}&cur=USD`} className={usd ? "on" : ""}>$ דולר</a>
+            <a href={`/invest?amount=${Math.round(amount)}&cur=ILS`} className={usd ? "" : "on"}>₪ שקל</a>
+          </span>
+          <button type="submit">חשב חלוקה</button>
+          {market.usdIls && <span className="label">דולר = {market.usdIls.toFixed(3)} ₪ <Info text={market.usdFx?.official ? "שער יציג של בנק ישראל" : "שער עכשיו, חציון של כמה מקורות, מתעדכן כל דקה"} /></span>}
+          <Sources q={market.usdFx} currency="ILS" digits={3} />
+          {Math.round(amount) !== Math.round(base) && <a href="/invest">{cashUsd >= 1 ? `חזרה למזומן הפנוי בחשבון ($${Math.floor(cashUsd).toLocaleString("en-US")})` : `חזרה להוראת הקבע (${ils(settings.monthlyInvest)})`}</a>}
+          {!typed && cashUsd >= 1 && <Info text="הסכום = המזומן הפנוי בחשבון אינטראקטיב. אפשר להקליד סכום אחר." />}
+        </form>
       )}
 
       <LiveQuotes symbols={cards.map((p) => p.symbol)}>
-      <div className="card invest-hero">
-        <div className="invest-hero-head">
-          <div>
-            <div className="label">{folio.broker ? "לחלוקה עכשיו" : `הפקדה ב-${date(day)}`}</div>
-            <div className="value big">{money(amount)}</div>
-            {usd && <div className="label">≈ {ils(amount)}{folio.broker ? "" : ` לפי דולר = ${fx.toFixed(3)} ₪`}</div>}
-            <div className="label">
-              {picks.length ? `${picks.length} החזקות · ` : ""}{plan ? `לפי מחקר של Claude` : "לפי ציון ביצועים"}{" "}
-              <Info text={shares ? `החלוקה משלימה את מה שכבר בתיק: כסף לחלקים שרחוקים מהיעד (${splitText(metalsPct)}). בכל חלק מוסיפים קודם למניה שכבר מחזיקים בו, כדי לא לפצל להרבה מניות. רק מה שבירוק (🟢) עם המלצת אנליסטים.` : `חלוקה קבועה: ${splitText(metalsPct)}, ומתכות לפי המחקר.`} />
+        <div className="card invest-hero">
+          <div className="invest-hero-head">
+            <div>
+              <div className="label">{folio.broker ? "לחלוקה עכשיו" : `הפקדה ב-${date(day)}`}</div>
+              <div className="value big">{money(amount)}</div>
+              {usd && <div className="label">≈ {ils(amount)}{folio.broker ? "" : ` לפי דולר = ${fx.toFixed(3)} ₪`}</div>}
+              <div className="label">
+                {picks.length ? `${picks.length} החזקות · ` : ""}לפי המחקר המעמיק{" "}
+                <Info text={shares ? `החלוקה משלימה את מה שכבר בתיק: כסף לחלקים שרחוקים מהיעד (${splitText(metalsPct)}). בכל חלק מוסיפים קודם למניה שכבר מחזיקים בו, כדי לא לפצל להרבה מניות. רק מה שבמצב ״לקנות״, בלי כפילויות.` : `חלוקה קבועה: ${splitText(metalsPct)}, ומתכות לפי המחקר.`} />
+              </div>
+            </div>
+            <div className="bucket-bars">
+              {/* What is actually bought, per bucket, and what stays as cash: together 100% of the amount. */}
+              {[
+                ...BUCKETS.map((b) => ({ key: b.key, name: b.name, color: BUCKET_COLORS[b.key], value: buys.filter((p) => p.bucket === b.key).reduce((t, p) => t + p.cost, 0) })),
+                { key: "cash", name: "נשאר כמזומן בתיק", color: CASH_COLOR, value: Math.max(0, extraLeft) },
+              ].filter((x) => x.value > 0.5).map((x) => {
+                const share = (x.value / amount) * 100;
+                return (
+                  <div key={x.key} className="bucket-bar">
+                    <span>{x.name}</span>
+                    <div className="meter thin"><div style={{ width: `${share}%`, background: x.color }} /></div>
+                    <b>{Math.round(share * 10) / 10}%</b>
+                  </div>
+                );
+              })}
             </div>
           </div>
-          <div className="bucket-bars">
-            {/* What is actually bought, per bucket, and what stays as cash: together 100% of the amount. */}
-            {[
-              ...BUCKETS.map((b) => ({ key: b.key, name: b.name, color: BUCKET_COLORS[b.key], value: buys.filter((p) => p.bucket === b.key).reduce((t, p) => t + p.cost, 0) })),
-              { key: "cash", name: "נשאר כמזומן בתיק", color: CASH_COLOR, value: Math.max(0, extraLeft) },
-            ].filter((x) => x.value > 0.5).map((x) => {
-              const share = (x.value / amount) * 100;
-              return (
-                <div key={x.key} className="bucket-bar">
-                  <span>{x.name}</span>
-                  <div className="meter thin"><div style={{ width: `${share}%`, background: x.color }} /></div>
-                  <b>{Math.round(share * 10) / 10}%</b>
-                </div>
-              );
-            })}
+          <h2 style={{ marginTop: 16 }}>{folio.broker ? "מה לקנות עכשיו" : "סקירת הקצאת התיק"}</h2>
+          {folio.broker && picks.length === 0 && extras.length === 0 && <p className="label">אין כרגע קנייה בסכום הזה: אף מניה או קרן במצב ״לקנות״ (ובלי כפילות) שיחידה שלה נכנסת בסכום. הכסף יתחלק לבד ברגע שתהיה.</p>}
+          {picks.length > 0 && (
+            <div className="table-scroll">
+              <table className="alloc-table">
+                <thead>
+                  <tr><th>החזקה</th><th className="alloc-bar-col">חלק מההפקדה</th><th>סכום</th><th>מחיר עכשיו</th><th>היום</th><th>השבוע</th><th>שנה</th><th>סוג</th></tr>
+                </thead>
+                <tbody>
+                  {picks.map((p) => (
+                    <tr key={p.symbol}>
+                      <td><span className="sym"><Logo id={p.symbol} label={p.name} size={20} /><IbLink conid={p.ibkr?.conid} ib={p.ibkr}><b>{p.symbol}</b></IbLink>{p.topUp && <span className="topup-tag" title="תוספת להחזקה קיימת">➕</span>}{p.capped && <Info text={`רק עד ${HEAVY}% מהחשבון במניה אחת (כולל מה שיש ממנה בתוך הקרנות). מה שנשאר יורד לבאים בתור.`} />}</span></td>
+                      <td className="alloc-bar-col">
+                        <div className="alloc-bar">
+                          <div style={{ width: `${Math.min(100, p.pct * 4)}%`, background: BUCKET_COLORS[p.bucket] }} />
+                          <span>{Math.round(p.pct * 10) / 10}%</span>
+                        </div>
+                      </td>
+                      <td><b>{both(p.amount)}</b></td>
+                      <td><LivePrice symbol={p.symbol} ils={p.priceIls ? ils(p.priceIls) : null} /></td>
+                      <td><LiveChange symbol={p.symbol} fallback={p.d1} /></td>
+                      <td><LiveWeek symbol={p.symbol} /></td>
+                      <td><Ret x={p.m12} /></td>
+                      <td><span className="tag" style={{ marginInlineStart: 0 }}>{typeOf(p)}</span><Div q={p} /></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {skipped.map((p) => (
+            <p key={p.symbol} className="label">
+              {p.symbol} לא נקנה עכשיו: יחידה אחת עולה {unitPrice(p.priceIls)}, יותר מהחלק שלו ({money(p.target)}). הסכום נשאר כמזומן.
+            </p>
+          ))}
+          {extras.length > 0 && (
+            <div className="extra-box">
+              <h2 style={{ margin: 0 }}>
+                💡 עוד {money(leftover)} פנויים: הבאים בתור{" "}
+                <Info text="כדי שלא יישאר מזומן בלי השקעה: הכסף שנשאר אחרי החלוקה יורד בטבלת הדירוג, להחזקה קיימת או למניה חדשה, לפי הסדר. רק מה שבמצב ״לקנות״, בלי כפילויות ובלי תחומים שכבר מעל היעד." />
+              </h2>
+              <table className="compact">
+                <thead><tr><th>החזקה</th><th>תחום</th><th>סטטוס</th><th>לקנות</th><th>סכום</th><th>למה</th></tr></thead>
+                <tbody>
+                  {extras.map((p) => (
+                    <tr key={p.symbol}>
+                      <td><span className="sym"><Logo id={p.symbol} label={p.name} size={18} /><IbLink conid={p.ibkr?.conid} ib={p.ibkr}><b>{p.symbol}</b></IbLink></span></td>
+                      <td><span className="tag" style={{ background: BUCKET_COLORS[p.bucket], color: ink(p.bucket), marginInlineStart: 0 }}>{bucketName[p.bucket]}</span></td>
+                      <td><StatusTag st={statuses[p.symbol]} /></td>
+                      <td><b>{units(p)}</b> <span className="label">× {unitPrice(p.priceIls)}</span></td>
+                      <td><b>{both(p.cost)}</b></td>
+                      <td className="label wrap">{why(p.symbol)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {waiting.length > 0 && (
+            <p className="label">
+              ⏳ בתוכנית אבל לא במצב ״לקנות״: {waiting.map((w) => w.symbol).join(", ")}{" "}
+              <Info text={waiting.map((w) => `${w.symbol}: ${why(w.symbol)}`).join(" · ")} />
+            </p>
+          )}
+          {extraLeft > 1 && (
+            <p className="label">
+              נשאר כמזומן בחשבון: {money(extraLeft)}{" "}
+              <Info text={extras.length ? "פחות ממחיר יחידה אחת של מה שבמצב ״לקנות״. יתחלק לבד כשיגיע עוד כסף או כשעוד מניה תעבור ל״לקנות״." : "אין כרגע מניה או קרן במצב ״לקנות״ שיחידה שלה נכנסת בסכום הזה. יתחלק לבד ברגע שתהיה."} />
+            </p>
+          )}
+          <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
+            {folio.broker ? null : done.length ? (
+              <form action={undo} style={{ maxWidth: "none" }}>
+                <span>✅ סומן כנקנה: {done.map((p) => p.symbol).join(", ")} </span>
+                <input type="hidden" name="month" value={month.toISOString()} />
+                <button type="submit" className="secondary">ביטול הסימון</button>
+              </form>
+            ) : (
+              <form action={confirm}>
+                <input type="hidden" name="month" value={month.toISOString()} />
+                <input type="hidden" name="picks" value={JSON.stringify(picks.map(({ symbol, name, bucket, pct, amount, units, priceIls }) => ({ symbol, name, bucket, pct, amount, units, priceIls })))} />
+                <button type="submit">קניתי ✓</button>
+              </form>
+            )}
           </div>
         </div>
-        <h2 style={{ marginTop: 16 }}>{folio.broker ? "מה לקנות עכשיו" : "סקירת הקצאת התיק"}</h2>
-        {folio.broker && picks.length === 0 && extras.length === 0 && <p className="label">אין כרגע קנייה מומלצת בסכום הזה: אין מניה בירוק (🟢, עם המלצת אנליסטים) שיחידה שלה נכנסת בסכום. הכסף יתחלק לבד ברגע שתהיה.</p>}
-        {picks.length > 0 && (
-        <div className="table-scroll">
-          <table className="alloc-table">
-            <thead>
-              <tr><th>החזקה</th><th className="alloc-bar-col">חלק מההפקדה</th><th>סכום</th><th>מחיר עכשיו</th><th>היום</th><th>השבוע</th><th>שנה</th><th>סוג</th></tr>
-            </thead>
-            <tbody>
-              {picks.map((p) => (
-                <tr key={p.symbol}>
-                  <td><span className="sym"><Logo id={p.symbol} label={p.name} size={20} /><IbLink conid={p.ibkr?.conid} ib={p.ibkr}><b>{p.symbol}</b></IbLink>{p.topUp && <span className="topup-tag" title="תוספת להחזקה קיימת">➕</span>}</span></td>
-                  <td className="alloc-bar-col">
-                    <div className="alloc-bar">
-                      <div style={{ width: `${Math.min(100, p.pct * 4)}%`, background: BUCKET_COLORS[p.bucket] }} />
-                      <span>{Math.round(p.pct * 10) / 10}%</span>
-                    </div>
-                  </td>
-                  <td><b>{both(p.amount)}</b></td>
-                  <td><LivePrice symbol={p.symbol} ils={p.priceIls ? ils(p.priceIls) : null} /></td>
-                  <td><LiveChange symbol={p.symbol} fallback={p.d1} /></td>
-                  <td><LiveWeek symbol={p.symbol} /></td>
-                  <td><Ret x={p.m12} /></td>
-                  <td><span className="tag" style={{ marginInlineStart: 0 }}>{typeOf(p)}</span><Div q={p} /></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        )}
-        {skipped.map((p) => (
-          <p key={p.symbol} className="label">
-            {p.symbol} לא נקנה החודש: יחידה אחת עולה {unitPrice(p.priceIls)}, יותר מהחלק שלו בהפקדה ({money(p.target)}). הסכום נשאר כמזומן.
-          </p>
-        ))}
-        {extras.length > 0 && (
-          <div className="extra-box">
-            <h2 style={{ margin: 0 }}>
-              💡 עוד {money(leftover)} פנויים: הבאים בתור{" "}
-              <Info text="כדי שלא יישאר מזומן בלי השקעה: הכסף שנשאר אחרי החלוקה יורד בטבלת הדירוג, להחזקה קיימת או למניה חדשה, לפי הסדר. רק מה שבירוק (🟢) ושהאנליסטים ממליצים עליו (ממוצע 2.5 ומטה, כמו Recom ב-Finviz)." />
+
+        {cards.length > 0 && (
+          <>
+            <h2 style={{ marginTop: 20 }}>
+              {cards.length} הבחירות: ניתוח מפורט{" "}
+              {extras.length > 0 && <Info text="קודם ההשלמה לתחומים החסרים, ואחריה ״הבאים בתור״ לפי סדר העדיפות בדירוג (הכסף שנשאר אחרי החלוקה)." />}
             </h2>
-            <table className="compact">
-              <thead><tr><th>החזקה</th><th>תחום</th><th>סימן</th><th>לקנות</th><th>סכום</th><th>למה</th></tr></thead>
+            <div className="pick-grid">
+              {cards.map((p) => {
+                const g = signals[p.symbol];
+                return (
+                  <div key={p.symbol} className="xcard" style={{ borderTopColor: BUCKET_COLORS[p.bucket] }}>
+                    <div className="xcard-head">
+                      <Logo id={p.symbol} label={p.name} size={36} />
+                      <div className="xcard-id">
+                        {p.next && <span className="next-badge">💡 הבא בתור #{p.next}</span>}
+                        {p.topUp && <span className="next-badge topup">➕ תוספת להחזקה קיימת</span>}
+                        <div className="xcard-sym"><IbLink conid={p.ibkr?.conid} ib={p.ibkr}>{p.symbol}</IbLink></div>
+                        <div className="xcard-name" dir="auto" title={p.name}><IbLink conid={p.ibkr?.conid} ib={p.ibkr}>{p.name}</IbLink></div>
+                        {p.ibkr && (
+                          <a className="ib-verified" href={ibkrDetailsUrl(p.ibkr.conid)} target="_blank" rel="noreferrer" title="פרטי החוזה הרשמיים של אינטראקטיב">
+                            ✓ אומת באינטראקטיב · ID {p.ibkr.conid}{p.ibkr.isin ? ` · ISIN ${p.ibkr.isin}` : ` · ${p.ibkr.ibSymbol}`}
+                          </a>
+                        )}
+                      </div>
+                      <div className="xcard-money">
+                        <div className="xcard-pct" style={{ color: BUCKET_COLORS[p.bucket] }}>{Math.round(p.pct * 10) / 10}%</div>
+                        <div className="xcard-amount">{money(p.amount)}</div>
+                      </div>
+                    </div>
+                    <div className="xcard-price-row">
+                      <div>
+                        <span className="xcard-k">מחיר ליחידה</span>
+                        <b className="usd-price">{p.priceIls ? unitPrice(p.priceIls) : "—"}</b>
+                        {usd && p.priceIls ? <span className="xcard-ils">{ils(p.priceIls)}</span> : null}
+                      </div>
+                      <div className="xcard-today"><span className="xcard-k">היום</span><LiveChange symbol={p.symbol} fallback={p.d1} /></div>
+                    </div>
+                    <Sources q={p} currency={p.currency} />
+                    <div className="xcard-buyrow">
+                      <span className="xcard-k">לקנות</span>
+                      <b>{units(p)}</b>
+                      <span className="xcard-buy-total">סה״כ <b>{money(p.cost)}</b>{usd ? <span> · {ils(p.cost)}</span> : null}</span>
+                    </div>
+                    <div className="xcard-tags">
+                      <StatusTag st={statuses[p.symbol]} />
+                      <Risk vol={p.vol} />
+                      <span className="xtag">{typeOf(p)}</span>
+                      <span className="xtag xtag-sector" style={{ color: BUCKET_COLORS[p.bucket], borderColor: BUCKET_COLORS[p.bucket] }}>{p.sector || bucketName[p.bucket]}</span>
+                      {p.divYield > 0 && <span className="xtag xtag-div">💰 דיבידנד ~{(p.divYield * 100).toFixed(1)}%</span>}
+                    </div>
+                    <div className="xcard-about">{p.about || ABOUT[p.symbol]}</div>
+                    <div className="xcard-why">
+                      <span>💡 למה לקנות</span>
+                      <p>{research[p.symbol]?.summary || p.reason || numbersReason(p)}</p>
+                    </div>
+                    {p.outlook && (
+                      <div className="xcard-risk">
+                        <span>⚠️ מה לשים לב</span>
+                        <p>{p.outlook}</p>
+                      </div>
+                    )}
+                    {g && (
+                      <div className="xcard-signal">
+                        <div className="xcard-signal-head"><span>⏱️ נתונים טכניים</span></div>
+                        <div className="xcard-signal-metrics">
+                          <span>RSI<Info text="מדד מומנטום 0-100: מעל 70 = עלתה מהר מדי (״מחוממת״), מתחת ל-30 = ירדה מהר מדי" /> <b>{g.rsi != null ? Math.round(g.rsi) : "—"}</b></span>
+                          <span>מול ממוצע 50 יום <b>{signed(g.sma50)}</b></span>
+                          <span>מול ממוצע 200 יום<Info text="מעל הממוצע = מגמת עלייה ארוכה" /> <b>{signed(g.sma200)}</b></span>
+                          <span>מהשיא השנתי <b>{signed(g.fromHigh)}</b></span>
+                          {g.analysts && <span>אנליסטים <b>{g.analysts.buy} קנייה · {g.analysts.hold} החזקה · {g.analysts.sell} מכירה</b></span>}
+                          {g.earnings && <span>דוח רבעוני הבא <b>{g.earnings.toLocaleDateString("he-IL", { timeZone: "UTC" })}</b></span>}
+                        </div>
+                        {onFinviz(p.symbol) && <a href={finvizUrl(p.symbol)} target="_blank" rel="noreferrer" className="label">לגרף ולנתונים המלאים ב-Finviz ←</a>}
+                      </div>
+                    )}
+                    <IntradayChart symbol={p.symbol} />
+                    <div className="xcard-metrics">
+                      <div><span>תשואה שנתית<Info text="השינוי במחיר (כולל דיבידנדים) ב-12 החודשים האחרונים" /></span><Ret x={p.m12} /></div>
+                      <div><span>ממוצע חודשי<Info text="התשואה הממוצעת לחודש בשנה האחרונה" /></span><Ret x={p.mAvg} /></div>
+                      <div><span>שארפ<Info text="תשואה ביחס לסיכון, מעל ריבית חסרת סיכון של 4%. מעל 1 = טוב, מעל 2 = מצוין" /></span><b className="pos">{sharpe(p.sharpe)}</b></div>
+                      <div><span>תנודתיות<Info text="כמה המחיר קופץ במהלך שנה. מעל 40% = תנודתי מאוד" /></span><b>{pct(p.vol)}</b></div>
+                      <div><span>ירידה מקס׳<Info text="הנפילה הגדולה ביותר מהשיא בשנה האחרונה" /></span><Ret x={p.maxDrawdown} /></div>
+                      <div><span>מגמה 30 יום<Info text="השינוי במחיר בחודש האחרון" /></span><Ret x={p.m1} /></div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
+      </LiveQuotes>
+
+      {/* 4. Recommendations and changes from here */}
+      {folio.broker && heldRows.length > 0 && (
+        <div className="card next-steps" id="next" style={{ marginTop: 16 }}>
+          <h2>📌 המלצות ושינויים להמשך <Info text="מחושב מחדש בכל רענון: מה שבאמת יש בתיק מול החלוקה הרצויה, הסטטוס מהמחקר המעמיק עם התזמון של היום, והכפילויות בין הקרנות. לא ייעוץ השקעות." /></h2>
+          {sells.length > 0 && (
+            <div className="rebalance">
+              <h3>🔄 שינויים בתיק: למכור ← לקנות</h3>
+              <div className="rb-grid">
+                <div>
+                  <div className="rb-title rb-sell">1. למכור (כל ההחזקה)</div>
+                  <table className="compact">
+                    <tbody>
+                      {sells.map((h) => (
+                        <tr key={h.symbol}>
+                          <td><span className="sym"><Logo id={h.symbol} label={h.name} size={18} /><b>{h.symbol}</b></span></td>
+                          <td>{Math.round(h.units * 1000) / 1000} יח׳</td>
+                          <td><b>{both(h.value)}</b></td>
+                          <td className={h.profit >= 0 ? "pos" : "neg"}>{signed(h.pct)}</td>
+                          <td className="label wrap">{h.why}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  <div className="rb-total">משתחרר: <b>{withIls(proceeds)}</b> · מס משוער: <b>{withIls(sells.reduce((t, h) => t + h.tax, 0))}</b> <Info text="25% מס רווחי הון רק על רווח; מכירה בהפסד בלי מס, וההפסד מקזז רווחים אחרים בשנה. עמלה באינטראקטיב: בערך דולר לעסקה." /></div>
+                </div>
+                <div>
+                  <div className="rb-title rb-buy">2. לקנות בכסף שהתפנה</div>
+                  {swapBuys.length ? (
+                    <table className="compact">
+                      <tbody>
+                        {swapBuys.map((p) => (
+                          <tr key={p.symbol}>
+                            <td><span className="sym"><Logo id={p.symbol} label={p.name} size={18} /><IbLink conid={p.ibkr?.conid} ib={p.ibkr}><b>{p.symbol}</b></IbLink></span></td>
+                            <td><span className="tag" style={{ background: BUCKET_COLORS[p.bucket], color: ink(p.bucket), marginInlineStart: 0 }}>{bucketName[p.bucket]}</span></td>
+                            <td><b>{units(p)}</b> <span className="label">× {unitPrice(p.priceIls)}</span></td>
+                            <td><b>{both(p.cost)}</b></td>
+                            <td><StatusTag st={statuses[p.symbol]} /></td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  ) : (
+                    <p className="label">כרגע אף מניה או קרן בתחומים החסרים לא במצב ״לקנות״.</p>
+                  )}
+                  {swap && swap.left > 1 && (
+                    <div className="rb-total">נשאר כמזומן: <b>{withIls(swap.left)}</b> <Info text="עד שעוד מניה או קרן בתחום שחסר תעבור ל״לקנות״. אז הכסף יתחלק לבד בדף הזה." /></div>
+                  )}
+                </div>
+              </div>
+              <p className="label">קודם מוכרים (כשהמסחר פתוח), ואחרי שהכסף נכנס קונים. הקנייה של המזומן שכבר בחשבון מופיעה למעלה ב״כסף לא מושקע״ וכבר נלקחה בחשבון כאן, כך שאין ספירה כפולה.</p>
+            </div>
+          )}
+          <h3>מה עושים עם כל החזקה</h3>
+          <div className="table-scroll">
+            <table className="compact actions">
               <tbody>
-                {extras.map((p) => (
-                  <tr key={p.symbol}>
-                    <td><span className="sym"><Logo id={p.symbol} label={p.name} size={18} /><IbLink conid={p.ibkr?.conid} ib={p.ibkr}><b>{p.symbol}</b></IbLink></span></td>
-                    <td><span className="tag" style={{ background: BUCKET_COLORS[p.bucket], color: ink(p.bucket), marginInlineStart: 0 }}>{bucketName[p.bucket]}</span></td>
-                    <td><SignalTag s={p.signal} /></td>
-                    <td><b>{units(p)}</b> <span className="label">× {unitPrice(p.priceIls)}</span></td>
-                    <td><b>{both(p.cost)}</b></td>
-                    <td className="label">{p.signal.reasons[0]}</td>
-                  </tr>
-                ))}
+                {heldRows.map((h) => {
+                  const st = statuses[h.symbol];
+                  return (
+                    <tr key={h.symbol}>
+                      <td><span className="sym"><Logo id={h.symbol} label={h.name} size={18} /><b>{h.symbol}</b></span></td>
+                      <td><StatusTag st={st} /></td>
+                      <td><b>{st?.dup ? "למכור: כפילות" : ACTION[st?.key] ?? "להחזיק"}</b></td>
+                      <td className="label wrap">{why(h.symbol)}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
-        )}
-        {waiting.length > 0 && (
-          <p className="label">
-            ⏳ מחכים לסימן: {waiting.map((w) => `${w.symbol} (${signals[w.symbol]?.level === "exit" ? "🔴" : "🟡"})`).join(", ")}{" "}
-            <Info text={waiting.map((w) => `${w.symbol}: ${signals[w.symbol]?.reasons?.[0] ?? ""}`).join(" · ")} />
-          </p>
-        )}
-        {options.length > 0 && (
-          <div className="options-box">
-            <h2 style={{ margin: 0 }}>
-              🎯 אופציות ל-{money(extraLeft)} שנשארו: הגבוהות בדירוג{" "}
-              <Info text="עד 4 מניות או קרנות מהמדורגות הכי גבוה שיחידה שלהן נכנסת בסכום שנשאר: רק עם סימן 🟢 / ⚪ והמלצה קנייה או החזקה, ובלי תחומים שכבר מעל היעד. זו בחירה שלך, לא חלק מהרשימה הירוקה: שים לב להמלצה ולסימן של כל אחת. כל אופציה מחושבת על כל הסכום, אז בוחרים אחת." />
-            </h2>
-            <div className="options-list">
-              {options.map((q, i) => (
-                <div key={q.symbol} className="option">
-                  <div className="option-head">
-                    <span className="label">אופציה {i + 1} · מקום {q.rank} בדירוג</span>
-                    <span className="sym"><Logo id={q.symbol} label={q.name} size={22} /><IbLink conid={q.ibkr?.conid} ib={q.ibkr}><b>{q.symbol}</b></IbLink></span>
-                    <span className="label">{q.name} · {bucketName[q.bucket]}</span>
-                  </div>
-                  <div className="option-buy"><b>{units(q)}</b> × {unitPrice(q.priceIls)} = <b>{money(q.units * q.priceIls)}</b></div>
-                  <div className="option-tags"><VerdictTag v={q.verdict} /> <SignalTag s={q.signal} /></div>
-                  <div className="label">{q.signal?.reasons[0]}</div>
-                  {!q.signal || q.signal.level !== "enter" ? <div className="label warn">לא בירוק: לפי הסימנים עדיף לחכות. אם קונים, זו החלטה מודעת.</div> : null}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-        {extraLeft > 1 && (
-          <p className="label">
-            נשאר כמזומן בחשבון: {money(extraLeft)}{" "}
-            <Info text={extras.length ? "פחות ממחיר יחידה אחת של מה שבירוק. יתחלק לבד כשיגיע עוד כסף או כשמניה זולה יותר תהפוך לירוקה." : "אין כרגע מניה בירוק (🟢, עם המלצת אנליסטים) שיחידה שלה נכנסת בסכום הזה. יתחלק לבד ברגע שתהיה."} />
-          </p>
-        )}
-        <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
-          {folio.broker ? null : done.length ? (
-            <form action={undo} style={{ maxWidth: "none" }}>
-              <span>✅ סומן כנקנה: {done.map((p) => p.symbol).join(", ")} </span>
-              <input type="hidden" name="month" value={month.toISOString()} />
-              <button type="submit" className="secondary">ביטול הסימון</button>
-            </form>
-          ) : (
-            <form action={confirm}>
-              <input type="hidden" name="month" value={month.toISOString()} />
-              <input type="hidden" name="picks" value={JSON.stringify(picks.map(({ symbol, name, bucket, pct, amount, units, priceIls }) => ({ symbol, name, bucket, pct, amount, units, priceIls })))} />
-              <button type="submit">קניתי ✓</button>
-            </form>
-          )}
-        </div>
-      </div>
-
-      <h2 style={{ marginTop: 20 }}>
-        {cards.length} הבחירות: ניתוח מפורט{" "}
-        {extras.length > 0 && <Info text="קודם ההמלצות של התוכנית, ואחריהן ״הבאים בתור״ לפי סדר העדיפות בדירוג (הכסף שנשאר אחרי החלוקה)." />}
-      </h2>
-      <div className="pick-grid">
-        {cards.map((p) => (
-          <div key={p.symbol} className="xcard" style={{ borderTopColor: BUCKET_COLORS[p.bucket] }}>
-            <div className="xcard-head">
-              <Logo id={p.symbol} label={p.name} size={36} />
-              <div className="xcard-id">
-                {p.next && <span className="next-badge">💡 הבא בתור #{p.next}</span>}
-                {p.topUp && <span className="next-badge topup">➕ תוספת להחזקה קיימת</span>}
-                <div className="xcard-sym"><IbLink conid={p.ibkr?.conid} ib={p.ibkr}>{p.symbol}</IbLink></div>
-                <div className="xcard-name" dir="auto" title={p.name}><IbLink conid={p.ibkr?.conid} ib={p.ibkr}>{p.name}</IbLink></div>
-                {p.ibkr && (
-                  <a className="ib-verified" href={ibkrDetailsUrl(p.ibkr.conid)} target="_blank" rel="noreferrer" title="פרטי החוזה הרשמיים של אינטראקטיב">
-                    ✓ אומת באינטראקטיב · ID {p.ibkr.conid}{p.ibkr.isin ? ` · ISIN ${p.ibkr.isin}` : ` · ${p.ibkr.ibSymbol}`}
-                  </a>
-                )}
-              </div>
-              <div className="xcard-money">
-                <div className="xcard-pct" style={{ color: BUCKET_COLORS[p.bucket] }}>{Math.round(p.pct * 10) / 10}%</div>
-                <div className="xcard-amount">{money(p.amount)}</div>
-              </div>
-            </div>
-            <div className="xcard-price-row">
-              <div>
-                <span className="xcard-k">מחיר ליחידה</span>
-                <b className="usd-price">{p.priceIls ? unitPrice(p.priceIls) : "—"}</b>
-                {usd && p.priceIls ? <span className="xcard-ils">{ils(p.priceIls)}</span> : null}
-              </div>
-              <div className="xcard-today"><span className="xcard-k">היום</span><LiveChange symbol={p.symbol} fallback={p.d1} /></div>
-            </div>
-            <Sources q={p} currency={p.currency} />
-            <div className="xcard-buyrow">
-              <span className="xcard-k">לקנות</span>
-              <b>{units(p)}</b>
-              <span className="xcard-buy-total">סה״כ <b>{money(p.cost)}</b>{usd ? <span> · {ils(p.cost)}</span> : null}</span>
-            </div>
-            <div className="xcard-tags">
-              <Risk vol={p.vol} />
-              <span className="xtag">{typeOf(p)}</span>
-              <span className="xtag xtag-sector" style={{ color: BUCKET_COLORS[p.bucket], borderColor: BUCKET_COLORS[p.bucket] }}>{p.sector || bucketName[p.bucket]}</span>
-              {p.divYield > 0 && <span className="xtag xtag-div">💰 דיבידנד ~{(p.divYield * 100).toFixed(1)}%</span>}
-              {p.conviction ? <span className="xtag xtag-stars" title="רמת ביטחון במחקר">{"★".repeat(Math.round(p.conviction))}{"☆".repeat(5 - Math.round(p.conviction))}</span> : null}
-            </div>
-            <div className="xcard-about">{p.about || ABOUT[p.symbol]}</div>
-            <div className="xcard-why">
-              <span>💡 למה לקנות</span>
-              <p>{p.reason || numbersReason(p)}</p>
-            </div>
-            {p.outlook && (
-              <div className="xcard-risk">
-                <span>⚠️ מה לשים לב</span>
-                <p>{p.outlook}</p>
-              </div>
-            )}
-            {signals[p.symbol] && (() => {
-              const g = signals[p.symbol];
-              return (
-                <div className={`xcard-signal signal-box-${g.level}`}>
-                  <div className="xcard-signal-head">
-                    <span>⏱️ כניסה / יציאה</span>
-                    <SignalTag s={g} />
-                  </div>
-                  <ul>{g.reasons.map((r) => <li key={r}>{r}</li>)}</ul>
-                  <div className="xcard-signal-metrics">
-                    <span>RSI<Info text="מדד מומנטום 0-100: מעל 70 = עלתה מהר מדי (״מחוממת״), מתחת ל-30 = ירדה מהר מדי" /> <b>{g.rsi != null ? Math.round(g.rsi) : "—"}</b></span>
-                    <span>מול ממוצע 50 יום <b>{signed(g.sma50)}</b></span>
-                    <span>מול ממוצע 200 יום<Info text="מעל הממוצע = מגמת עלייה ארוכה; ירידה של 5% מתחתיו = סימן יציאה" /> <b>{signed(g.sma200)}</b></span>
-                    <span>מהשיא השנתי <b>{signed(g.fromHigh)}</b></span>
-                    {g.analysts && <span>אנליסטים <b>{g.analysts.buy} קנייה · {g.analysts.hold} החזקה · {g.analysts.sell} מכירה</b></span>}
-                    {g.earnings && <span>דוח רבעוני הבא <b>{g.earnings.toLocaleDateString("he-IL", { timeZone: "UTC" })}</b></span>}
-                  </div>
-                  {onFinviz(p.symbol) && <a href={finvizUrl(p.symbol)} target="_blank" rel="noreferrer" className="label">לגרף ולנתונים המלאים ב-Finviz ←</a>}
-                </div>
-              );
-            })()}
-            <IntradayChart symbol={p.symbol} />
-            <div className="xcard-metrics">
-              <div><span>תשואה שנתית<Info text="השינוי במחיר (כולל דיבידנדים) ב-12 החודשים האחרונים" /></span><Ret x={p.m12} /></div>
-              <div><span>ממוצע חודשי<Info text="התשואה הממוצעת לחודש בשנה האחרונה" /></span><Ret x={p.mAvg} /></div>
-              <div><span>שארפ<Info text="תשואה ביחס לסיכון, מעל ריבית חסרת סיכון של 4%. מעל 1 = טוב, מעל 2 = מצוין" /></span><b className="pos">{sharpe(p.sharpe)}</b></div>
-              <div><span>תנודתיות<Info text="כמה המחיר קופץ במהלך שנה. מעל 40% = תנודתי מאוד" /></span><b>{pct(p.vol)}</b></div>
-              <div><span>ירידה מקס׳<Info text="הנפילה הגדולה ביותר מהשיא בשנה האחרונה" /></span><Ret x={p.maxDrawdown} /></div>
-              <div><span>מגמה 30 יום<Info text="השינוי במחיר בחודש האחרון" /></span><Ret x={p.m1} /></div>
-            </div>
-            {(p.eps || p.analysts) && (
-              <div className="xcard-box">
-                {p.eps && <div className="xcard-eps"><span>EPS צפוי<Info text="רווח צפוי למניה ומכפיל הרווח, לפי תחזיות האנליסטים" /></span><b>{p.eps}</b></div>}
-                {p.analysts && <div className="xcard-analysts">{p.analysts}</div>}
-              </div>
-            )}
-            <details className="xcard-details">
-              <summary>עוד על החברה ←</summary>
-              <p>{p.about || ABOUT[p.symbol]}</p>
-            </details>
-          </div>
-        ))}
-      </div>
-      </LiveQuotes>
-
-      <div className="card" style={{ marginTop: 12 }}>
-        <h2>המלצות ושינויים מהחודש הקודם <Info text="מכירה ברווח = 25% מס רווחי הון בישראל, ולכן ההמלצה למכור רק כשיש סיבה ממשית." /></h2>
-        {changes.length === 0 ? (
-          <p className="label">עוד אין החזקות. אחרי שתסמן ״קניתי״, כאן יופיעו המלצות להוסיף, להחזיק, לצמצם או למכור.</p>
-        ) : (
-          <ul>
-            {changes.map((c) => (
-              <li key={c.symbol} className={c.action === "sell" || c.action === "reduce" ? "warn" : ""}>
-                <b>{c.symbol}</b>: {CHANGES[c.action]}{c.reason ? `. ${c.reason}` : ""}
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-
-      {plan && (
-        <div className="card" style={{ marginTop: 12 }}>
-          <h2>התמונה כרגע</h2>
-          <p>{plan.summary}</p>
-          <h2>סיכונים</h2>
-          <ul>{JSON.parse(plan.risks).map((r) => <li key={r}>{r}</li>)}</ul>
-          <details>
-            <summary style={{ cursor: "pointer" }}>המחקר המלא של Claude</summary>
-            <div style={{ whiteSpace: "pre-wrap", marginTop: 8 }}>{plan.research}</div>
-          </details>
+          {steps.length > 0 && <ul>{steps.map((s) => <li key={s.text}><span>{s.icon}</span> {s.text}</li>)}</ul>}
         </div>
       )}
 
-      <div className="card" style={{ marginTop: 20 }}>
-        <h2>דירוג כל המניות והקרנות <Info text="המלצה = שילוב של סימן הכניסה / יציאה, המלצות האנליסטים (Finnhub, אותם מקורות כמו Finviz) וביצועי השנה, להמלצה אחת; ריחוף על ה-i שלה מראה את החישוב. ציון 0-100: תשואת 3, 6 ו-12 חודשים פחות חצי מהתנודתיות. מודגש = נבחר. לחיצה על סימול פותחת אותו באינטראקטיב, לחיצה על שם מציגה פרטים. המחירים מ-Yahoo Finance (מתעדכנים כל 12 שעות) ומקורות חיים נוספים. זו המלצה לפי נתוני עבר וחדשות, לא ייעוץ השקעות." /></h2>
+      {/* 5. The picture now: the market and what the deep research found */}
+      <div className="card" id="picture" style={{ marginTop: 12 }}>
+        <h2>🧭 התמונה כרגע</h2>
+        {researchDay ? (
+          <p className="label">
+            מחקר מעמיק מ-{researchDay.toLocaleDateString("he-IL", { timeZone: "Asia/Jerusalem" })}: {studied.length} מניות, קרנות ומתכות, {studied.reduce((t, r) => t + r.sourceCount, 0)} מקורות.
+          </p>
+        ) : (
+          <p className="label">עוד אין מחקר מעמיק. עד שיהיה, הסטטוסים לפי הנתונים הטכניים והאנליסטים בלבד (מסומנים ב-*).</p>
+        )}
+        <div className="st-counts">
+          <span className="st st-buy">🟢 לקנות: {count("buy")}</span>
+          <span className="st st-wait">🟡 עדיף לחכות: {count("wait")}</span>
+          <span className="st st-sell">🔴 למכור: {count("sell")}</span>
+          <span className="st st-dup">⛔ כפילות: {count("dup") + sells.filter((h) => statuses[h.symbol]?.dup).length}</span>
+        </div>
+        {plan && (
+          <>
+            <div className="picture-text">{plan.summary}</div>
+            <h3>סיכונים</h3>
+            <ul>{JSON.parse(plan.risks).map((r) => <li key={r}>{r}</li>)}</ul>
+            <details>
+              <summary style={{ cursor: "pointer" }}>המחקר המלא</summary>
+              <div className="picture-text" style={{ marginTop: 8 }}>{plan.research}</div>
+            </details>
+          </>
+        )}
+        <details style={{ marginTop: 8 }}>
+          <summary style={{ cursor: "pointer" }}>איך נקבע הסטטוס</summary>
+          <ul className="method">
+            <li>לכל מניה, קרן ומתכת: 8 מקורות ומעלה. ריכוזי אנליסטים (MarketBeat, TipRanks, Zacks, StockAnalysis ועוד), שינויי המלצות ויעדים, הדוח האחרון, דירוגים טכניים (TradingView, Investing.com, Barchart), תמחור (Morningstar) וסנטימנט רק מאנשים ומדדים מוכרים.</li>
+            <li>כל חלק מקבל ציון בין 2- ל-2+, והציון המשוקלל הוא: {WEIGHTS.map(([, name, w]) => `${name} ${w}%`).join(" · ")}.</li>
+            <li>מ-0.6 ומעלה ״לקנות״, מ-0.4- ומטה ״למכור״, באמצע ״עדיף לחכות״. כשהאנליסטים שליליים, אף פעם לא ״לקנות״. מניה שיותר מ-15% מתחת לממוצע 200 הימים, עם הורדות המלצה, מקבלת ״למכור״.</li>
+            <li>כל החזקה וכל ״לקנות״ או ״למכור״ נבדקים שוב בבדיקה עצמאית שנייה. כשיש מחלוקת, בדיקה שלישית מכריעה לפי העובדות.</li>
+            <li>כל יום האתר מוסיף תזמון (⏱): ״לקנות״ הופך ל״עדיף לחכות״ בשבוע שלפני דוח רבעוני, כשהמניה ״מחוממת״ (RSI 70+), אחרי ירידה של 10% מאז המחקר, או כשהמחקר בן יותר מחודש.</li>
+            <li>⛔ כפילות: קרן שיותר מחצי ממנה הן מניות מה-S&P 500, שכבר יש בליבה (VUAA ו-VWRA). היא לא נקנית, ואם מחזיקים בה מוצע למכור אותה. מניה שכבר {HEAVY}% מהחשבון בפועל (כולל מה שיש ממנה בתוך הקרנות) לא מקבלת כסף חדש.</li>
+          </ul>
+        </details>
+      </div>
+
+      {/* 6. Every stock and fund, ranked; each row opens its details */}
+      <div className="card" id="rank" style={{ marginTop: 16 }}>
+        <h2>דירוג כל המניות והקרנות <Info text="סטטוס = המחקר המעמיק עם התזמון של היום (לחיצה על שורה: הפרטים, גרף והמקורות). ציון 0-100: תשואת 3, 6 ו-12 חודשים פחות חצי מהתנודתיות. מודגש = נקנה עכשיו. לחיצה על סימול פותחת אותו באינטראקטיב. לא ייעוץ השקעות." /></h2>
         <div className="table-scroll">
           <table className="compact wide rank">
-            <thead><tr><th>#</th><th>סימול</th><th>המלצה</th><th>כניסה / יציאה</th><th>שם</th><th>תחום</th><th>ציון</th><th>שנה</th><th>שארפ</th><th>סיכון</th><th>דיבידנד</th><th>מחיר</th></tr></thead>
+            <thead><tr><th>#</th><th>סימול</th><th>סטטוס</th><th>שם</th><th>תחום</th><th>ציון</th><th>שנה</th><th>שארפ</th><th>סיכון</th><th>דיבידנד</th><th>מחיר</th></tr></thead>
             <tbody>
               {ranked.map((q, i) => (
-                <tr key={q.symbol} className={picks.some((p) => p.symbol === q.symbol) ? "chosen" : ""}>
-                  <td className="label">{i + 1}</td>
-                  <td><span className="sym"><Logo id={q.symbol} label={q.name} size={18} /><IbLink conid={q.ibkr?.conid} ib={q.ibkr}><b>{q.symbol}</b></IbLink></span></td>
-                  <td><VerdictTag v={verdicts[q.symbol]} /></td>
-                  <td><SignalTag s={signals[q.symbol]} /></td>
-                  <td className="line-name">
-                    <details>
-                      <summary title={q.name}>{q.name}</summary>
-                      <div className="pick-more">{ABOUT[q.symbol]}</div>
-                    </details>
-                  </td>
-                  <td><span className="tag" style={{ background: BUCKET_COLORS[q.bucket], color: ink(q.bucket), marginInlineStart: 0 }}>{bucketName[q.bucket]}</span></td>
-                  <td><b className="score">{Math.round(q.rankScore)}</b></td>
-                  <td><Ret x={q.m12} /></td>
-                  <td>{sharpe(q.sharpe)}</td>
-                  <td><Risk vol={q.vol} /></td>
-                  <td className="label">{q.divYield > 0 ? `${(q.divYield * 100).toFixed(1)}%` : "—"}</td>
-                  <td>{q.priceIls ? <b className="usd-price">{unitPrice(q.priceIls)}</b> : "—"}{usd && q.priceIls ? <span className="label ils-small"> · {ils(q.priceIls)}</span> : null}</td>
-                </tr>
+                <ExpandRow
+                  key={q.symbol}
+                  colSpan={11}
+                  className={buys.some((p) => p.symbol === q.symbol) ? "chosen" : ""}
+                  cells={<>
+                    <td className="label">{i + 1}</td>
+                    <td><span className="sym"><span className="exp-ico" aria-hidden="true">▾</span><Logo id={q.symbol} label={q.name} size={18} /><IbLink conid={q.ibkr?.conid} ib={q.ibkr}><b>{q.symbol}</b></IbLink>{heldSet.has(q.symbol) && <span className="xtag held-tag">בתיק</span>}</span></td>
+                    <td><StatusTag st={statuses[q.symbol]} /></td>
+                    <td className="line-name" title={q.name}>{q.name}</td>
+                    <td><span className="tag" style={{ background: BUCKET_COLORS[q.bucket], color: ink(q.bucket), marginInlineStart: 0 }}>{bucketName[q.bucket]}</span></td>
+                    <td><b className="score">{Math.round(q.rankScore)}</b></td>
+                    <td><Ret x={q.m12} /></td>
+                    <td>{sharpe(q.sharpe)}</td>
+                    <td><Risk vol={q.vol} /></td>
+                    <td className="label">{q.divYield > 0 ? `${(q.divYield * 100).toFixed(1)}%` : "—"}</td>
+                    <td>{q.priceIls ? <b className="usd-price">{unitPrice(q.priceIls)}</b> : "—"}{usd && q.priceIls ? <span className="label ils-small"> · {ils(q.priceIls)}</span> : null}</td>
+                  </>}
+                >
+                  {detailsFor(q.symbol, folio.rows.find((h) => h.symbol === q.symbol))}
+                </ExpandRow>
               ))}
             </tbody>
           </table>
         </div>
       </div>
-
     </>
   );
 }

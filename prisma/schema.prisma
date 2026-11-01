@@ -210,6 +210,28 @@ model IbkrContract {
   checkedAt DateTime
 }
 
+// Deep research per stock, fund or metal, done in Claude Code from many sources (analyst aggregators, rating and
+// target changes, earnings, technical ratings, valuation, reliable sentiment), each part scored and fused by fixed
+// weights into one verdict, then checked by a second independent pass (scripts/save-research.js). The invest page
+// acts on it, with today's timing on top (lib/research.js statusOf).
+model Research {
+  symbol      String    @id
+  verdict     String    // buy | wait | sell
+  score       Float     // the fused score, -2..+2
+  confidence  Int       // 1-5
+  summary     String    // the bottom line, Hebrew
+  reasons     String    // JSON: [string], Hebrew
+  components  String    // JSON: {analysts|revisions|technicals|valuation|sentiment: {score, note_he}}
+  consensus   String    // JSON: {rating, analystCount, avgTarget, upsidePct}
+  timing      String    @default("") // the report date / overheating at research time, Hebrew (applied live, not here)
+  earnings    DateTime? // the next quarterly report
+  price       Float?    // the price the research saw, so a big drop since then asks for a new one
+  sources     String    // JSON: [{name, url, kind, tier, rating, date, note_he}]
+  checked     String    @default("") // how it was verified, Hebrew
+  prevVerdict String    @default("") // the verdict before this research, for the change
+  asOf        DateTime
+}
+
 // An alert shown on the home and invest pages until dismissed (lib/alerts.js).
 model Alert {
   id        Int      @id @default(autoincrement())

@@ -7,6 +7,8 @@ const DOMAINS = {
   "CSPX.L": "ishares.com", ITA: "ishares.com", QQQM: "invesco.com", SMH: "vaneck.com",
   XLK: "ssga.com", XLV: "ssga.com", XLF: "ssga.com", XLE: "ssga.com", XLI: "ssga.com", XAR: "ssga.com",
   LMT: "lockheedmartin.com", RTX: "rtx.com", NOC: "northropgrumman.com", GD: "gd.com", ESLT: "elbitsystems.com",
+  BWXT: "bwxt.com", NLR: "vaneck.com", URA: "globalxetfs.com", SOFI: "sofi.com", CCJ: "cameco.com", CEG: "constellationenergy.com",
+  OKLO: "oklo.com", SMR: "nuscalepower.com", COHR: "coherent.com", AAOI: "ao-inc.com", AXTI: "axt.com", GLW: "corning.com",
   NVDA: "nvidia.com", AMD: "amd.com", PLTR: "palantir.com", TSLA: "tesla.com", RKLB: "rocketlabusa.com", IONQ: "ionq.com",
   MSFT: "microsoft.com", GOOGL: "google.com", AMZN: "amazon.com", META: "meta.com", AVGO: "broadcom.com", TSM: "tsmc.com", AAPL: "apple.com",
   mor: "more.co.il", phoenix: "fnx.co.il", leumi: "leumi.co.il", max: "max.co.il",

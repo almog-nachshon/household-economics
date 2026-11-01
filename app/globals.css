@@ -543,3 +543,104 @@ table.compact td, table.rank td { font-variant-numeric: tabular-nums; }
   .ticker { height: 32px; }
   .ticker-item { font-size: 12px; }
 }
+
+/* ===== Status from the deep research, rows that open their details, the details panel ===== */
+.st { display: inline-flex; align-items: center; gap: 3px; padding: 2px 9px; border-radius: 999px; font-size: 11.5px; font-weight: 700; white-space: nowrap; }
+.st-buy { background: #e3f4e8; color: #0b7a43; }
+.st-wait { background: #fbf1d6; color: #8a6100; }
+.st-sell { background: #fde4e2; color: #b3261e; }
+.st-dup { background: #eceff1; color: #55636a; }
+.st-big { font-size: 14px; padding: 5px 14px; }
+.st-counts { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 10px; }
+.expand-row { cursor: pointer; }
+.expand-row:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.exp-ico { display: inline-block; color: var(--muted); font-size: 10px; transition: transform .15s; }
+.expand-row.open { background: var(--accent-soft); }
+.expand-row.open .exp-ico { transform: rotate(180deg); color: var(--accent); }
+.detail-row > td { padding: 0; background: #f7fafb; white-space: normal; }
+tbody tr.detail-row:hover { background: #f7fafb; }
+/* the panel stays in view while the table scrolls sideways on a phone */
+.dt { position: sticky; inset-inline-start: 0; max-width: min(100%, calc(100vw - 48px)); padding: 12px 14px 14px; display: grid; gap: 10px; font-size: 13px; white-space: normal; }
+.dt-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.dt-title { display: flex; gap: 10px; align-items: center; }
+.dt-sym { font-size: 18px; }
+.dt-tags { display: flex; gap: 6px; margin-top: 2px; flex-wrap: wrap; }
+.dt-status { border-inline-start: 4px solid var(--line); background: #fff; border-radius: 8px; padding: 8px 12px; }
+.dt-status p { margin: 0 0 4px; line-height: 1.55; }
+.dt-status-buy { border-color: #0f9d58; }
+.dt-status-wait { border-color: #d4a017; }
+.dt-status-sell { border-color: #d93025; }
+.dt-status-dup { border-color: #9aa7ad; }
+.dt-why { color: #6b5200; }
+.dt-body { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 12px; align-items: start; }
+.dt-kv { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; }
+.dt-kv > div { display: flex; justify-content: space-between; gap: 8px; border-bottom: 1px dashed var(--line); padding: 4px 0; }
+.dt-kv > div > span:first-child { color: var(--muted); }
+.dt-pos { background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; display: grid; gap: 6px; }
+.dt-pos .dt-kv { border: 0; padding: 0; grid-template-columns: repeat(3, 1fr); }
+.dt-lt { margin: 0; background: #fff8e6; border-radius: 8px; padding: 6px 10px; }
+.dt-about { margin: 0; color: var(--muted); }
+.dt-links { display: flex; gap: 14px; flex-wrap: wrap; }
+.dt-links a { color: var(--accent); font-weight: 600; text-decoration: none; }
+@media (max-width: 700px) {
+  .dt-body { grid-template-columns: 1fr; }
+  .dt-kv { grid-template-columns: 1fr; }
+  .dt-pos .dt-kv { grid-template-columns: 1fr 1fr; }
+}
+
+/* price chart: week / month / year */
+.pc { background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; min-width: 0; }
+.pc-tabs { display: inline-flex; gap: 2px; background: #f1f5f6; border-radius: 8px; padding: 2px; }
+.pc-tabs button { background: transparent; color: var(--muted); padding: 3px 12px; font-size: 12px; border-radius: 6px; box-shadow: none; }
+.pc-tabs button.on { background: #fff; color: var(--text); box-shadow: 0 1px 2px rgba(0, 0, 0, .08); }
+.pc-tabs button:hover { filter: none; box-shadow: none; color: var(--text); }
+.pc-head { margin: 6px 0 2px; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; font-variant-numeric: tabular-nums; }
+.pc-head b { font-size: 16px; }
+.pc-svg { width: 100%; height: auto; display: block; touch-action: pan-y; cursor: crosshair; }
+.pc-empty { color: var(--muted); text-align: center; padding: 50px 0; }
+
+/* the research panel */
+.rp { background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; display: grid; gap: 8px; }
+.rp-empty { color: var(--muted); }
+.rp-head { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.rp-reasons { margin: 0; padding-inline-start: 18px; display: grid; gap: 2px; line-height: 1.5; }
+.rp-parts { display: grid; gap: 6px; }
+.rp-part { display: grid; grid-template-columns: 150px 120px 44px minmax(0, 1fr); gap: 8px; align-items: center; }
+.rp-bar { position: relative; height: 8px; background: #eef2f4; border-radius: 4px; overflow: hidden; direction: ltr; }
+.rp-bar::after { content: ""; position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: #9aa5ad; }
+.rp-fill-pos, .rp-fill-neg { position: absolute; top: 0; bottom: 0; }
+.rp-fill-pos { background: #0f9d58; }
+.rp-fill-neg { background: #d93025; }
+.rp-note { color: var(--muted); font-size: 12px; line-height: 1.4; }
+.rp-score { border-top: 1px solid var(--line); padding-top: 6px; }
+.rp-timing { background: #fff8e6; border-radius: 6px; padding: 4px 8px; }
+.rp-sources summary { cursor: pointer; color: var(--accent); font-weight: 600; }
+.rp-sources ul { list-style: none; padding: 0; margin: 6px 0 0; display: grid; gap: 6px; }
+.rp-sources li { line-height: 1.45; }
+.rp-src-note { color: var(--muted); font-size: 12px; }
+.tier { display: inline-block; font-size: 10px; font-weight: 700; padding: 0 6px; border-radius: 999px; margin-inline-end: 4px; }
+.tier-1 { background: #e3f4e8; color: #0b7a43; }
+.tier-2 { background: #e7f0fb; color: #1d4f91; }
+.tier-3 { background: #f1ecf9; color: #6d4a9e; }
+@media (max-width: 700px) {
+  .rp-part { grid-template-columns: minmax(0, 1fr) 80px 40px; }
+  .rp-note { grid-column: 1 / -1; }
+}
+
+/* changes (sell, then buy) and what to do with each holding */
+.rebalance { background: #f8fbfb; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; margin: 8px 0 12px; }
+.rebalance h3, .next-steps h3 { margin: 4px 0 8px; font-size: 14px; }
+.rb-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
+.rb-grid table td { vertical-align: middle; }
+.rb-title { font-weight: 700; margin-bottom: 4px; }
+.rb-sell { color: var(--down); }
+.rb-buy { color: var(--up); }
+.rb-total { margin-top: 6px; }
+td.wrap { white-space: normal; min-width: 220px; }
+.held-tag { margin-inline-start: 4px; background: var(--accent-soft); color: var(--accent); }
+.tap-hint { margin: 6px 0 0; }
+.picture-text { white-space: pre-wrap; line-height: 1.6; }
+.method { margin: 6px 0 0; padding-inline-start: 18px; display: grid; gap: 4px; line-height: 1.55; }
+@media (max-width: 700px) {
+  .rb-grid { grid-template-columns: 1fr; }
+}
