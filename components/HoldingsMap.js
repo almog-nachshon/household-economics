@@ -73,6 +73,8 @@ function squarify(nodes, { x, y, w, h }) {
 
 export default function HoldingsMap({ groups, mode = "today" }) {
   const metric = (r) => (mode === "profit" ? r.profitPct : r.change);
+  // A holding's real share of its theme (the drawn sizes have a floor, so not from them).
+  const shareOf = (t, g) => Math.round((t.pct / g.pct) * 100);
   const live = useLiveQuotes();
   // Details of one tile: follow the mouse on a computer; a tap pins them (a phone has no hover), and a second tap on the
   // same tile, the ✕, or a tap outside the map closes them.
@@ -121,6 +123,11 @@ export default function HoldingsMap({ groups, mode = "today" }) {
               {tiles.map((t) => {
                 const fs = Math.max(9, Math.min(28, t.w / Math.max(3, t.symbol.length * 0.75), t.h / 2.6));
                 const cash = g.key === "cash";
+                // The part of the theme's % in the corner (they add up to it): in full when it clears the symbol (above or
+                // beside it), else just the number.
+                const above = t.h / 2 - fs * 1.1 >= 18;
+                const beside = t.w / 2 - fs * 0.36 * t.symbol.length;
+                const corner = t.w < 34 || t.h < 34 ? null : t.w >= 92 && (above || beside >= 86) ? "long" : above || beside >= 32 ? "short" : null;
                 return (
                   <g
                     key={t.symbol}
@@ -128,6 +135,11 @@ export default function HoldingsMap({ groups, mode = "today" }) {
                     onClick={(e) => setTip(tip?.pinned && tip.t.symbol === t.symbol ? null : place(e, t, g, true))}
                   >
                     <rect x={t.x + 1} y={t.y + 1} width={Math.max(0, t.w - 2)} height={Math.max(0, t.h - 2)} rx={3} fill={cash ? "#c9d2d6" : tileColor(metric(t))} />
+                    {!cash && corner && (
+                      <text x={t.x + t.w - 6} y={t.y + 15} fill="#fff" fontSize={11} fontWeight={600} textAnchor="start" direction="rtl">
+                        {corner === "long" ? `${t.pct.toFixed(1)}% מתוך ${Math.round(g.pct)}%` : `${t.pct.toFixed(1)}%`}
+                      </text>
+                    )}
                     {/* too narrow for the name across: write it upward along the tile */}
                     {t.w <= 30 && t.w > 12 && t.h > 40 && (
                       <text x={t.x + t.w / 2} y={t.y + t.h / 2} transform={`rotate(-90 ${t.x + t.w / 2} ${t.y + t.h / 2})`} textAnchor="middle" dominantBaseline="central" fill={cash ? "#3d4a50" : "#fff"} fontWeight={700} fontSize={Math.max(9, Math.min(14, t.w * 0.55))}>
@@ -154,7 +166,7 @@ export default function HoldingsMap({ groups, mode = "today" }) {
           <b>{tip.t.symbol}</b> <span className="label">{tip.t.name}</span>
           {tip.t.type && <div className="label">{tip.t.type} · תחום: {tip.g.name}</div>}
           {tip.t.about && <div className="hmap-about">{tip.t.about}</div>}
-          <div>{tip.t.valueText} · {tip.t.pct.toFixed(1)}% מהחשבון</div>
+          <div>{tip.t.valueText} · {tip.t.pct.toFixed(1)}% מהחשבון{tip.g.key !== "cash" && `, מתוך ${Math.round(tip.g.pct)}% של ${tip.g.name} (${shareOf(tip.t, tip.g)}% מהתחום)`}</div>
           {tip.g.key !== "cash" && (
             <>
               <div>היום: <b className={tip.t.change >= 0 ? "pos" : "neg"}>{signed(tip.t.change)}</b></div>
@@ -168,7 +180,7 @@ export default function HoldingsMap({ groups, mode = "today" }) {
         <span className="hmap-ramp" />
         <span>עלייה חזקה</span>
         <span className="label">(עד ‎-1.5% / ‎+2% צבע חלש)</span>
-        <span className="label">גודל = חלק מהחשבון · צבע = {mode === "profit" ? "הרווח / ההפסד שלי מאז הקנייה" : "השינוי היום"}</span>
+        <span className="label">גודל = חלק מהחשבון · צבע = {mode === "profit" ? "הרווח / ההפסד שלי מאז הקנייה" : "השינוי היום"} · בפינה = כמה מתוך האחוז של התחום</span>
       </div>
     </div>
   );
