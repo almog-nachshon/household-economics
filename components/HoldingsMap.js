@@ -10,7 +10,7 @@ import { useLiveQuotes } from "@/components/Live";
 // details. groups: [{key, name, color, rows: [{symbol, name, type, value, change, pct, profitPct, profitText,
 // valueText}]}]; cash is a plain gray group.
 // The map's drawing size: wide on a computer, nearly square on a phone so the tiles keep readable text.
-const WIDE = { W: 900, H: 440 };
+const WIDE = { W: 1200, H: 440 };
 const NARROW = { W: 420, H: 460 };
 const HEAD = 20;
 const GAP = 2;

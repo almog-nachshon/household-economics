@@ -3,6 +3,7 @@ import Info from "@/components/Info";
 import StatusTag from "@/components/StatusTag";
 import PriceChart from "@/components/PriceChart";
 import ResearchPanel from "@/components/ResearchPanel";
+import TechPanel from "@/components/TechPanel";
 import { LiveChange, LiveWeek } from "@/components/Live";
 import { STATUS, WEIGHTS } from "@/lib/research";
 
@@ -10,15 +11,18 @@ const CUR = { USD: "$", GBP: "£", EUR: "€", ILS: "₪" };
 const pct = (x, d = 1) => (x == null ? "—" : `${(x * 100).toFixed(d)}%`);
 const signed = (x) => (x == null ? "—" : `${x > 0 ? "+" : ""}${(x * 100).toFixed(1)}%`);
 const Ret = ({ x }) => <span className={x > 0 ? "pos" : x < 0 ? "neg" : ""}>{signed(x)}</span>;
+// The symbol's chart on TradingView: London funds and the metals go by their TradingView names.
+const TV_NAMES = { "GC=F": "TVC:GOLD", "SI=F": "TVC:SILVER", "HG=F": "COMEX:HG1!" };
+const tvUrl = (s) => `https://www.tradingview.com/chart/?symbol=${encodeURIComponent(TV_NAMES[s] ?? (s.endsWith(".L") ? `LSE:${s.slice(0, -2)}` : s))}`;
 const day = (d) => (d ? new Date(d).toLocaleDateString("he-IL", { timeZone: "UTC" }) : "—");
 
 // Everything about one stock, fund or metal, opened from its row in the holdings or ranking table: the status and why
-// (the research's bottom line, today's timing, a duplicate), a week / month / year price chart, the key numbers, the
+// (the research's bottom line, today's timing, a duplicate), a TradingView-style price chart, the key numbers, the
 // position when held (with its real weight counting what the funds hold of it), the full research with its sources,
-// what the company or fund is, and links to IBKR, Finviz and Yahoo.
+// what the company or fund is, and links to IBKR, TradingView, Finviz and Yahoo.
 // q: lib/portfolio.js loadMarket entry; h: the holding (lib/holdings.js) or null; st: status; g: signal (lib/signals.js);
 // r: research (lib/research.js loadResearch); lt: lib/overlap.js lookThrough entry; fmt: the page's money formatters.
-export default function Details({ symbol, name, type, bucket, q, h, st, g, r, lt, total, fmt, links, about }) {
+export default function Details({ symbol, name, type, bucket, q, h, st, tech, g, r, lt, total, fmt, links, about }) {
   const changed = r?.prevVerdict && r.prevVerdict !== r.verdict ? STATUS[r.prevVerdict] : null;
   const numbers = [
     ["מחיר", q?.price != null ? <><b dir="ltr">{CUR[q.currency] ?? ""}{q.price.toLocaleString("en-US", { maximumFractionDigits: 2 })}</b>{q.priceIls ? <span className="label"> · {fmt.ils(q.priceIls)}</span> : null}</> : "—"],
@@ -72,6 +76,8 @@ export default function Details({ symbol, name, type, bucket, q, h, st, g, r, lt
         </div>
       </div>
 
+      <TechPanel t={tech} cur={CUR[q?.currency] ?? ""} />
+
       {h && (
         <div className="dt-pos">
           <b>💼 ההחזקה שלי</b>
@@ -100,6 +106,7 @@ export default function Details({ symbol, name, type, bucket, q, h, st, g, r, lt
       <div className="dt-links">
         {links.ibkr && <a href={links.ibkr} target="_blank" rel="noreferrer">באינטראקטיב ↗</a>}
         {links.ibkrDetails && <a href={links.ibkrDetails} target="_blank" rel="noreferrer">פרטי החוזה ↗</a>}
+        <a href={tvUrl(symbol)} target="_blank" rel="noreferrer">TradingView ↗</a>
         {links.finviz && <a href={links.finviz} target="_blank" rel="noreferrer">Finviz ↗</a>}
         <a href={`https://finance.yahoo.com/quote/${encodeURIComponent(symbol)}`} target="_blank" rel="noreferrer">Yahoo Finance ↗</a>
       </div>

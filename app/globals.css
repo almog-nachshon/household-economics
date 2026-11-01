@@ -653,3 +653,93 @@ td.wrap { white-space: normal; min-width: 220px; }
   .tbars .tb-bar { min-width: 60px; }
   .tb-money { display: none; }
 }
+
+/* ===== TradingView-like layout ===== */
+main { max-width: 1400px; }
+.site-footer { max-width: 1400px; }
+@media (min-width: 701px) {
+  .hero-row { display: flex; flex-wrap: wrap; }
+  .hero-row > div { flex: 1 1 150px; min-width: 0; }
+}
+main .grid { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+.page-head > * { min-width: 0; max-width: 100%; }
+.market { white-space: normal; }
+
+/* tabs that stay under the nav */
+.section-tabs { position: sticky; top: 46px; z-index: 40; display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; background: #fff; border: 1px solid var(--line); border-radius: 0 0 8px 8px; padding: 0 6px; margin: 8px 0 10px; }
+.section-tabs::-webkit-scrollbar { display: none; }
+.section-tabs a { padding: 8px 12px; font-size: 13px; font-weight: 600; color: var(--muted); text-decoration: none; white-space: nowrap; border-bottom: 2px solid transparent; }
+.section-tabs a:hover { color: var(--text); }
+.section-tabs a.on { color: var(--accent-dark); border-bottom-color: var(--accent); }
+#folio, #pnl, #cash, #next, #picture, #rank { scroll-margin-top: 104px; }
+
+/* this week's reports */
+.week-ahead { background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; margin-top: 8px; font-size: 13px; }
+.week-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; }
+.week-day { white-space: nowrap; }
+.week-more { margin-inline-start: auto; background: transparent; color: var(--accent-dark); padding: 2px 6px; font-size: 12px; box-shadow: none; }
+.week-more:hover { filter: none; box-shadow: none; text-decoration: underline; }
+.week-cal { margin-top: 6px; min-height: 420px; }
+
+/* holdings and ranking tables */
+table.compact td.line-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+table.rank td.line-name { max-width: 240px; }
+table.holdings td.line-name { max-width: 340px; }
+table.rank tbody td { vertical-align: middle; }
+.scr-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 8px 0; }
+.scr-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.scr-chips button { background: #f1f5f6; color: var(--muted); padding: 4px 10px; font-size: 12px; font-weight: 600; border-radius: 999px; box-shadow: none; }
+.scr-chips button span { opacity: .7; font-weight: 500; }
+.scr-chips button:hover { filter: none; box-shadow: none; color: var(--text); }
+.scr-chips button.on { background: var(--accent); color: #fff; }
+.scr-bar select, .scr-bar input { width: auto; margin: 0; padding: 4px 10px; font-size: 13px; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+.scr-bar input { flex: 1 1 140px; max-width: 240px; }
+.scr-sort button { background: transparent; color: inherit; font: inherit; padding: 0; box-shadow: none; white-space: nowrap; }
+.scr-sort button:hover { filter: none; box-shadow: none; color: var(--accent-dark); }
+@media (min-width: 701px) {
+  .scr-scroll { max-height: calc(100vh - 150px); overflow-y: auto; }
+  .scr-scroll thead th { z-index: 2; background: #f8fbfb; }
+}
+@media (max-width: 700px) {
+  table.compact td.sym-col { position: sticky; inset-inline-start: 0; z-index: 1; background: #fff; box-shadow: -1px 0 0 var(--line); }
+  .week-day { white-space: normal; }
+  .rb-grid { grid-template-columns: minmax(0, 1fr); }
+  .rb-grid > div { overflow-x: auto; }
+  .rb-grid td.wrap { min-width: 0; white-space: normal; }
+  .scr-bar input { max-width: none; }
+}
+
+/* the chart */
+.pc-bar { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px; }
+.pc-chart { height: 300px; margin-top: 4px; }
+.pc-ohlc { gap: 10px; font-size: 12px; justify-content: flex-start; }
+.pc-ohlc b { font-size: 12px; }
+.pc-ma { margin-inline-start: auto; font-size: 11px; color: var(--muted); }
+.pc-ma i { display: inline-block; width: 12px; height: 2px; vertical-align: middle; margin-inline-start: 6px; }
+
+/* the technical summary */
+.tech { display: inline-block; padding: 1px 9px; border-radius: 999px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+.tech-strong-buy { background: #089981; color: #fff; }
+.tech-buy { background: #d9f2ec; color: #05705e; }
+.tech-neutral { background: #eceff1; color: #4d5b62; }
+.tech-sell { background: #fde4e6; color: #b3202f; }
+.tech-strong-sell { background: #d92c3b; color: #fff; }
+.tech-held { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; margin-top: 10px; font-size: 13px; }
+.tp { background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+.tp-top { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.tp-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; margin-top: 8px; }
+.tp-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.tp-bar { display: flex; gap: 2px; height: 8px; margin-top: 6px; }
+.tp-bar i { display: block; border-radius: 2px; }
+.tp-buy { background: #089981; }
+.tp-neutral { background: #b4bfc4; }
+.tp-sell { background: #f23645; }
+.tp-count { font-size: 12px; margin-top: 3px; }
+.tp-rows summary { cursor: pointer; font-size: 12px; color: var(--accent-dark); margin-top: 2px; }
+.tp-name { font-weight: 600; text-align: right; }
+.tp-extra { margin-top: 8px; font-size: 12px; }
+@media (max-width: 700px) {
+  .tp-grid { grid-template-columns: minmax(0, 1fr); }
+}
+.tp-mean { margin: 6px 0 4px; }
+.tp-checks { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 2px 16px; font-size: 13px; }
