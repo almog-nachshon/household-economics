@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { useTheme } from "@/components/Theme";
 
 const RANGES = [["5d", "שבוע"], ["1mo", "חודש"], ["3mo", "3 חודשים"], ["1y", "שנה"], ["5y", "5 שנים"]];
 const SINCE = { "5d": "בשבוע האחרון", "1mo": "בחודש האחרון", "3mo": "ב-3 חודשים", "1y": "בשנה האחרונה", "5y": "ב-5 שנים" };
@@ -10,6 +11,10 @@ const DOWN = "#f23645";
 const MA50 = "#2962ff";
 const MA200 = "#ff6d00";
 const IL = { timeZone: "Asia/Jerusalem" };
+const SKIN = {
+  light: { bg: "#ffffff", text: "#66757d", grid: "#f0f3f4", border: "#e3ecee" },
+  dark: { bg: "#1e222d", text: "#9598a1", grid: "#2a2e39", border: "#2a2e39" },
+};
 
 const stamp = (t, withTime) =>
   new Date(t * 1000).toLocaleString("he-IL", withTime ? { ...IL, day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit" } : { ...IL, day: "numeric", month: "numeric", year: "2-digit" });
@@ -24,6 +29,7 @@ export default function PriceChart({ symbol }) {
   const [data, setData] = useState({});
   const [hover, setHover] = useState(null);
   const box = useRef(null);
+  const theme = useTheme();
   useEffect(() => {
     if (data[range]) return;
     let gone = false;
@@ -48,12 +54,12 @@ export default function PriceChart({ symbol }) {
       if (gone || !box.current) return;
       chart = createChart(box.current, {
         autoSize: true,
-        layout: { background: { color: "#ffffff" }, textColor: "#66757d", fontSize: 11, fontFamily: "Inter, system-ui, sans-serif" },
-        grid: { vertLines: { color: "#f0f3f4" }, horzLines: { color: "#f0f3f4" } },
+        layout: { background: { color: SKIN[theme].bg }, textColor: SKIN[theme].text, fontSize: 11, fontFamily: "Inter, system-ui, sans-serif" },
+        grid: { vertLines: { color: SKIN[theme].grid }, horzLines: { color: SKIN[theme].grid } },
         crosshair: { mode: CrosshairMode.Normal },
-        rightPriceScale: { borderColor: "#e3ecee", scaleMargins: { top: 0.06, bottom: 0.22 } },
+        rightPriceScale: { borderColor: SKIN[theme].border, scaleMargins: { top: 0.06, bottom: 0.22 } },
         timeScale: {
-          borderColor: "#e3ecee",
+          borderColor: SKIN[theme].border,
           timeVisible: intraday,
           secondsVisible: false,
           tickMarkFormatter: (t, type) => new Date(t * 1000).toLocaleString("he-IL", type >= 3 ? { ...IL, hour: "2-digit", minute: "2-digit" } : type === 0 ? { ...IL, year: "numeric" } : type === 1 ? { ...IL, month: "short" } : { ...IL, day: "numeric", month: "numeric" }),
@@ -81,7 +87,7 @@ export default function PriceChart({ symbol }) {
       if (chart) chart.remove();
       setHover(null);
     };
-  }, [bars, kind, intraday, d]);
+  }, [bars, kind, intraday, d, theme]);
 
   const tabs = (
     <div className="pc-bar">

@@ -156,8 +156,8 @@ export function IntradayChart({ symbol }) {
       <svg viewBox={`0 0 ${W} ${H + 14}`} preserveAspectRatio="none" role="img" aria-label="גרף יומי">
         {hours.map((t) => (
           <g key={t}>
-            <line x1={x(t)} x2={x(t)} y1="0" y2={H} stroke="#e3ecee" strokeWidth="1" />
-            <text x={x(t)} y={H + 11} fontSize="8" fill="#66757d" textAnchor="middle">{hh(t)}</text>
+            <line x1={x(t)} x2={x(t)} y1="0" y2={H} stroke="var(--track)" strokeWidth="1" />
+            <text x={x(t)} y={H + 11} fontSize="8" fill="var(--muted)" textAnchor="middle">{hh(t)}</text>
           </g>
         ))}
         {q.prev && <line x1="0" x2={W} y1={y(q.prev)} y2={y(q.prev)} stroke="#9aa5ad" strokeDasharray="3 3" strokeWidth="1" />}

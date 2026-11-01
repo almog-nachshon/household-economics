@@ -1,23 +1,25 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { useTheme } from "@/components/Theme";
 
 // A strip of the quarterly reports due in the coming week (holdings in bold), and under it, on request, TradingView's
 // economic calendar. Its script loads only when opened. days: [{label, symbols: [{symbol, held}]}].
 export default function WeekAhead({ days }) {
   const [open, setOpen] = useState(false);
   const box = useRef(null);
+  const theme = useTheme();
   useEffect(() => {
     if (!open || !box.current) return;
     const el = box.current;
     const s = document.createElement("script");
     s.src = "https://s3.tradingview.com/external-embedding/embed-widget-events.js";
     s.async = true;
-    s.innerHTML = JSON.stringify({ colorTheme: "light", isTransparent: true, locale: "en", countryFilter: "us,il", importanceFilter: "0,1", width: "100%", height: 420 });
+    s.innerHTML = JSON.stringify({ colorTheme: theme, isTransparent: theme === "light", locale: "en", countryFilter: "us,il", importanceFilter: "0,1", width: "100%", height: 420 });
     el.appendChild(s);
     return () => {
       el.innerHTML = "";
     };
-  }, [open]);
+  }, [open, theme]);
   return (
     <div className="week-ahead">
       <div className="week-row">

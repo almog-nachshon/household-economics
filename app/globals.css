@@ -746,3 +746,67 @@ table.rank tbody td { vertical-align: middle; }
 
 .tech-no-data { background: #fff; color: var(--muted); border: 1px dashed var(--line); }
 .tp-cand { margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--line); }
+
+/* ===== The light / dark switch; dark uses TradingView's palette ===== */
+:root { --cash-head: #eef2f3; --cash-tile: #c9d2d6; --cash-ink: #3d4a50; }
+.theme-switch { display: inline-flex; align-items: center; gap: 4px; margin-inline-start: 8px; padding: 2px 6px; background: transparent; box-shadow: none; font-size: 12px; line-height: 1; border-radius: 999px; }
+.theme-switch:hover { filter: none; box-shadow: none; background: rgba(255, 255, 255, .14); }
+.theme-track { position: relative; display: inline-block; width: 28px; height: 16px; border-radius: 999px; background: rgba(255, 255, 255, .35); }
+.theme-knob { position: absolute; top: 2px; inset-inline-start: 2px; width: 12px; height: 12px; border-radius: 50%; background: #fff; transition: inset-inline-start .15s; }
+.theme-switch[aria-checked="true"] .theme-knob { inset-inline-start: 14px; }
+.theme-switch:focus-visible { outline: 2px solid #fff; outline-offset: 1px; }
+
+html[data-theme="dark"] {
+  --bg: #131722; --card: #1e222d; --text: #d1d4dc; --muted: #9598a1; --accent: #2962ff; --accent-dark: #5b9cf6; --accent-soft: #142e61;
+  --warn: #f7525f; --track: #2a2e39; --line: #2a2e39; --pos: #22ab94; --neg: #f7525f; --shadow: none;
+  --cash-head: #2a2e39; --cash-tile: #363a45; --cash-ink: #d1d4dc;
+  color-scheme: dark;
+}
+html[data-theme="dark"] body { background: var(--bg); color: var(--text); }
+html[data-theme="dark"] nav { background: var(--card); border-bottom: 1px solid var(--line); box-shadow: none; }
+html[data-theme="dark"] nav a, html[data-theme="dark"] nav .brand { color: var(--text); }
+html[data-theme="dark"] .theme-track { background: var(--accent); }
+html[data-theme="dark"] a { color: var(--accent-dark); }
+html[data-theme="dark"] nav a:hover { background: var(--track); }
+html[data-theme="dark"] h1, html[data-theme="dark"] h2, html[data-theme="dark"] h3 { color: var(--text); }
+html[data-theme="dark"] .card { background: var(--card); border-color: var(--line); box-shadow: none; }
+
+/* Surfaces */
+html[data-theme="dark"] .claude-btn, html[data-theme="dark"] .pie-tip, html[data-theme="dark"] .option, html[data-theme="dark"] button.secondary, html[data-theme="dark"] .site-footer,
+html[data-theme="dark"] .ticker, html[data-theme="dark"] .hero-row > div, html[data-theme="dark"] .dt-status, html[data-theme="dark"] .dt-kv, html[data-theme="dark"] .dt-pos, html[data-theme="dark"] .pc,
+html[data-theme="dark"] .rp, html[data-theme="dark"] .section-tabs, html[data-theme="dark"] .week-ahead, html[data-theme="dark"] .scr-bar select, html[data-theme="dark"] .scr-bar input, html[data-theme="dark"] .tp,
+html[data-theme="dark"] .pc-tabs button.on, html[data-theme="dark"] table.compact td.sym-col, html[data-theme="dark"] .hmap svg, html[data-theme="dark"] .tech-no-data, html[data-theme="dark"] .alerts-panel,
+html[data-theme="dark"] .hmap-tip, html[data-theme="dark"] input, html[data-theme="dark"] select, html[data-theme="dark"] textarea { background: var(--card); color: var(--text); border-color: var(--line); }
+html[data-theme="dark"] th, html[data-theme="dark"] .intraday, html[data-theme="dark"] .rebalance, html[data-theme="dark"] .detail-row > td, html[data-theme="dark"] tbody tr.detail-row:hover, html[data-theme="dark"] .scr-scroll thead th { background: #181c27; }
+html[data-theme="dark"] tbody tr:hover, html[data-theme="dark"] .pc-tabs, html[data-theme="dark"] .scr-chips button, html[data-theme="dark"] .rp-bar, html[data-theme="dark"] .hmap-close:hover { background: var(--track); }
+html[data-theme="dark"] .claude-btn:hover { background: var(--track); }
+html[data-theme="dark"] .scr-chips button.on { background: var(--accent); color: #fff; }
+html[data-theme="dark"] .section-tabs a.on { color: var(--accent-dark); border-bottom-color: var(--accent); }
+html[data-theme="dark"] .pc-tabs button.on { box-shadow: none; }
+
+/* Meaning: green, red, amber */
+html[data-theme="dark"] .tag-stay, html[data-theme="dark"] .status.on, html[data-theme="dark"] .risk-low, html[data-theme="dark"] .market-open, html[data-theme="dark"] .chg-up, html[data-theme="dark"] .xcard-why,
+html[data-theme="dark"] .signal-enter, html[data-theme="dark"] .bought-box, html[data-theme="dark"] .next-badge.topup, html[data-theme="dark"] .st-buy, html[data-theme="dark"] .tier-1, html[data-theme="dark"] .tech-buy { background: rgba(8, 153, 129, .2); color: #22ab94; border-color: rgba(8, 153, 129, .4); }
+html[data-theme="dark"] .tag-switch, html[data-theme="dark"] .risk-vhigh, html[data-theme="dark"] .market-closed, html[data-theme="dark"] .chg-down, html[data-theme="dark"] .signal-exit, html[data-theme="dark"] .st-sell,
+html[data-theme="dark"] .tech-sell, html[data-theme="dark"] .alerts-menu.urgent .alerts-btn { background: rgba(242, 54, 69, .2); color: #f7525f; border-color: rgba(242, 54, 69, .4); }
+html[data-theme="dark"] .risk-mid, html[data-theme="dark"] .tag-div, html[data-theme="dark"] .xtag-div, html[data-theme="dark"] .market-pre, html[data-theme="dark"] .market-after, html[data-theme="dark"] .xcard-risk,
+html[data-theme="dark"] .signal-wait, html[data-theme="dark"] .extra-box, html[data-theme="dark"] .dt-lt, html[data-theme="dark"] .rp-timing, html[data-theme="dark"] .st-wait, html[data-theme="dark"] .alerts-menu.has .alerts-btn { background: rgba(255, 152, 0, .16); color: #ffb74d; border-color: rgba(255, 152, 0, .35); }
+html[data-theme="dark"] .risk-high { background: rgba(255, 109, 0, .18); color: #ff9e57; }
+html[data-theme="dark"] .st-dup, html[data-theme="dark"] .tech-neutral { background: var(--track); color: #b2b5be; }
+html[data-theme="dark"] .tier-2, html[data-theme="dark"] .options-box { background: rgba(41, 98, 255, .18); color: #82b1ff; border-color: rgba(41, 98, 255, .4); }
+html[data-theme="dark"] .tier-3 { background: rgba(156, 39, 176, .2); color: #ce93d8; }
+html[data-theme="dark"] { --accent-soft: #1c2b4a; }
+html[data-theme="dark"] .sym a, html[data-theme="dark"] .site-footer a { color: var(--text); }
+html[data-theme="dark"] .section-tabs a { color: var(--muted); }
+html[data-theme="dark"] .section-tabs a:hover { color: var(--text); }
+html[data-theme="dark"] .section-tabs a.on { color: var(--accent-dark); }
+html[data-theme="dark"] .xtag { background: transparent; color: var(--muted); border-color: var(--track); }
+html[data-theme="dark"] .recharts-default-tooltip { background: var(--card) !important; border-color: var(--line) !important; color: var(--text); }
+html[data-theme="dark"] .sym img, html[data-theme="dark"] .dt-title img { background: #fff; border-radius: 4px; padding: 1px; }
+@media (min-width: 701px) {
+  html[data-theme="dark"] table.compact td.sym-col { background: transparent; }
+}
+@media (max-width: 700px) {
+  nav > a:not(.brand) { order: 2; }
+  .theme-switch { order: 1; flex: none; margin-inline-start: 0; }
+}

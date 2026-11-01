@@ -1,11 +1,13 @@
 import "./globals.css";
+import ThemeSwitch from "@/components/Theme";
 
 export const metadata = { title: "תכנית פיננסית לבית ב-2030" };
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="he" dir="rtl">
+    <html lang="he" dir="rtl" suppressHydrationWarning>
       <head>
+        <script dangerouslySetInnerHTML={{ __html: `try{var t=localStorage.getItem("theme");if(t==="dark")document.documentElement.dataset.theme="dark"}catch(e){}` }} />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -18,6 +20,7 @@ export default function RootLayout({ children }) {
           <a href="/funds">קרנות ופנסיה</a>
           <a href="/settings">הגדרות</a>
           <a href="/login" className="nav-end">יציאה</a>
+          <ThemeSwitch />
         </nav>
         <main>{children}</main>
         <footer className="site-footer">

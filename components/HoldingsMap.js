@@ -116,8 +116,8 @@ export default function HoldingsMap({ groups, mode = "today" }) {
           const tiles = squarify(g.rows.map((r) => ({ ...r, value: Math.max(r.value, g.real * 0.14) })), inner);
           return (
             <g key={g.key}>
-              <rect x={g.x + 1} y={g.y + 1} width={g.w - 2} height={g.h - 2} rx={4} fill={g.key === "cash" ? "#eef2f3" : g.color} />
-              <text x={g.x + g.w - 6} y={g.y + 14} fill={g.key === "cash" ? "#3d4a50" : g.ink ?? "#fff"} fontSize={12} fontWeight={700} textAnchor="start" direction="rtl">
+              <rect x={g.x + 1} y={g.y + 1} width={g.w - 2} height={g.h - 2} rx={4} fill={g.key === "cash" ? "var(--cash-head)" : g.color} />
+              <text x={g.x + g.w - 6} y={g.y + 14} fill={g.key === "cash" ? "var(--cash-ink)" : g.ink ?? "#fff"} fontSize={12} fontWeight={700} textAnchor="start" direction="rtl">
                 {g.w > 70 ? `${g.name} ${Math.round(g.pct)}%` : `${Math.round(g.pct)}%`}
               </text>
               {tiles.map((t) => {
@@ -134,7 +134,7 @@ export default function HoldingsMap({ groups, mode = "today" }) {
                     onMouseMove={(e) => e.pointerType !== "touch" && !tip?.pinned && setTip(place(e, t, g, false))}
                     onClick={(e) => setTip(tip?.pinned && tip.t.symbol === t.symbol ? null : place(e, t, g, true))}
                   >
-                    <rect x={t.x + 1} y={t.y + 1} width={Math.max(0, t.w - 2)} height={Math.max(0, t.h - 2)} rx={3} fill={cash ? "#c9d2d6" : tileColor(metric(t))} />
+                    <rect x={t.x + 1} y={t.y + 1} width={Math.max(0, t.w - 2)} height={Math.max(0, t.h - 2)} rx={3} fill={cash ? "var(--cash-tile)" : tileColor(metric(t))} />
                     {!cash && corner && (
                       <text x={t.x + t.w - 6} y={t.y + 15} fill="#fff" fontSize={11} fontWeight={600} textAnchor="start" direction="rtl">
                         {corner === "long" ? `${t.pct.toFixed(1)}% מתוך ${Math.round(g.pct)}%` : `${t.pct.toFixed(1)}%`}
@@ -142,12 +142,12 @@ export default function HoldingsMap({ groups, mode = "today" }) {
                     )}
                     {/* too narrow for the name across: write it upward along the tile */}
                     {t.w <= 30 && t.w > 12 && t.h > 40 && (
-                      <text x={t.x + t.w / 2} y={t.y + t.h / 2} transform={`rotate(-90 ${t.x + t.w / 2} ${t.y + t.h / 2})`} textAnchor="middle" dominantBaseline="central" fill={cash ? "#3d4a50" : "#fff"} fontWeight={700} fontSize={Math.max(9, Math.min(14, t.w * 0.55))}>
+                      <text x={t.x + t.w / 2} y={t.y + t.h / 2} transform={`rotate(-90 ${t.x + t.w / 2} ${t.y + t.h / 2})`} textAnchor="middle" dominantBaseline="central" fill={cash ? "var(--cash-ink)" : "#fff"} fontWeight={700} fontSize={Math.max(9, Math.min(14, t.w * 0.55))}>
                         {t.symbol}
                       </text>
                     )}
                     {t.w > 30 && t.h > 18 && (
-                      <text x={t.x + t.w / 2} y={t.y + t.h / 2} textAnchor="middle" fill={cash ? "#3d4a50" : "#fff"} fontWeight={700}>
+                      <text x={t.x + t.w / 2} y={t.y + t.h / 2} textAnchor="middle" fill={cash ? "var(--cash-ink)" : "#fff"} fontWeight={700}>
                         <tspan x={t.x + t.w / 2} dy={t.h > fs * 2.4 ? -fs * 0.35 : fs * 0.35} fontSize={fs}>{t.symbol}</tspan>
                         {t.h > fs * 2.4 && <tspan x={t.x + t.w / 2} dy={fs * 1.05} fontSize={fs * 0.62} fontWeight={600}>{cash ? `${Math.round(t.pct)}%` : signed(metric(t), mode === "profit" ? 1 : 2)}</tspan>}
                         {!cash && mode === "profit" && t.h > fs * 3.6 && t.profitText && <tspan x={t.x + t.w / 2} dy={fs * 0.8} fontSize={fs * 0.5} fontWeight={500}>{t.profitText}</tspan>}
