@@ -41,7 +41,7 @@ const date = (d) => d.toLocaleDateString("he-IL");
 const bucketName = Object.fromEntries(BUCKETS.map((b) => [b.key, b.name]));
 // One color per bucket, used by the maps and the type tags.
 // Checked with the dataviz palette validator (lightness, chroma, color-blind and normal-vision separation).
-const BUCKET_COLORS = { index: "#0fa3a3", sector: "#6d5bd0", defense: "#b5651d", risk: "#d6457a", photonics: "#8fb0ff", metals: "#c9a227" };
+const BUCKET_COLORS = { index: "#0fa3a3", sector: "#6d5bd0", defense: "#b5651d", ai: "#2563eb", risk: "#d6457a", space: "#475569", nuclear: "#4d7c0f", photonics: "#8fb0ff", metals: "#c9a227" };
 // Text on a bucket color: dark on the light ones.
 const ink = (key) => (key === "photonics" || key === "metals" ? "#1f2a30" : "#fff");
 const splitText = (metalsPct) => BUCKETS.filter((b) => b.pct).map((b) => `${b.name} ${Math.round(bucketPct(b, metalsPct))}%`).join(", ");

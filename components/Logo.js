@@ -3,6 +3,8 @@ import { useState } from "react";
 
 // Who is behind each symbol / provider, for its logo (the site's icon via Google's favicon service).
 const DOMAINS = {
+  MU: "micron.com", ANET: "arista.com", VRT: "vertiv.com", ASTS: "ast-science.com", PL: "planet.com", LUNR: "intuitivemachines.com",
+  UFO: "procureetfs.com", LEU: "centrusenergy.com", VST: "vistracorp.com",
   VOO: "vanguard.com", VTI: "vanguard.com", "VUAA.L": "vanguard.com", "VWRA.L": "vanguard.com",
   "CSPX.L": "ishares.com", ITA: "ishares.com", QQQM: "invesco.com", SMH: "vaneck.com",
   XLK: "ssga.com", XLV: "ssga.com", XLF: "ssga.com", XLE: "ssga.com", XLI: "ssga.com", XAR: "ssga.com",

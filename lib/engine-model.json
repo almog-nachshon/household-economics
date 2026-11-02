@@ -118,7 +118,13 @@
   "TSLA": "XLY",
   "CEG": "XLU",
   "COHR": "XLK",
-  "GLW": "XLK"
+  "GLW": "XLK",
+  "AVGO": "XLK",
+  "MU": "XLK",
+  "ANET": "XLK",
+  "VRT": "XLI",
+  "GOOGL": "XLC",
+  "VST": "XLU"
  },
  "gradeStats": {
   "strong-sell": {
