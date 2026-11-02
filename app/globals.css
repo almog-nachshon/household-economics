@@ -810,3 +810,13 @@ html[data-theme="dark"] .sym img, html[data-theme="dark"] .dt-title img { backgr
   nav > a:not(.brand) { order: 2; }
   .theme-switch { order: 1; flex: none; margin-inline-start: 0; }
 }
+
+/* the updates panel: above the sticky tabs */
+.alerts-panel { z-index: 60; }
+button.alerts-btn { border: 0; font: inherit; cursor: pointer; }
+.alerts-head { display: flex; justify-content: space-between; gap: 8px; position: sticky; top: -10px; z-index: 1; margin: -10px -10px 0; padding: 8px 10px; background: inherit; border-bottom: 1px solid var(--line); }
+.alerts-head button { background: transparent; color: var(--accent-dark, var(--accent)); padding: 2px 6px; font-size: 13px; font-weight: 600; box-shadow: none; }
+.alerts-head button:hover { filter: none; box-shadow: none; text-decoration: underline; }
+.alerts-close { color: var(--muted) !important; }
+.alert.alert { flex-wrap: nowrap; }
+.alert button.secondary { flex: none; min-width: 28px; min-height: 28px; }
