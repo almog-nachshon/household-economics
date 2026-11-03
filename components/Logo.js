@@ -3,6 +3,7 @@ import { useState } from "react";
 
 // Who is behind each symbol / provider, for its logo (the site's icon via Google's favicon service).
 const DOMAINS = {
+  HWM: "howmet.com", GEV: "gevernova.com", CIEN: "ciena.com", FN: "fabrinet.com",
   CRDO: "credosemi.com", POWL: "powellind.com", STX: "seagate.com", SNDK: "sandisk.com",
   MU: "micron.com", ANET: "arista.com", VRT: "vertiv.com", ASTS: "ast-science.com", PL: "planet.com", LUNR: "intuitivemachines.com",
   UFO: "procureetfs.com", LEU: "centrusenergy.com", VST: "vistracorp.com",

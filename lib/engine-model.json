@@ -128,7 +128,11 @@
   "CRDO": "XLK",
   "POWL": "XLI",
   "STX": "XLK",
-  "SNDK": "XLK"
+  "SNDK": "XLK",
+  "HWM": "XLI",
+  "GEV": "XLI",
+  "CIEN": "XLK",
+  "FN": "XLK"
  },
  "gradeStats": {
   "strong-sell": {
