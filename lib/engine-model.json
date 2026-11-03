@@ -124,7 +124,11 @@
   "ANET": "XLK",
   "VRT": "XLI",
   "GOOGL": "XLC",
-  "VST": "XLU"
+  "VST": "XLU",
+  "CRDO": "XLK",
+  "POWL": "XLI",
+  "STX": "XLK",
+  "SNDK": "XLK"
  },
  "gradeStats": {
   "strong-sell": {
