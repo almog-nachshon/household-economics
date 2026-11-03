@@ -7,6 +7,9 @@ import { SplitPie } from "@/components/Charts";
 import { monthLabel } from "@/lib/plan";
 import { ils } from "@/lib/goal";
 import BaseBudget from "@/components/BaseBudget";
+import MoneyFlow from "@/components/MoneyFlow";
+import Info from "@/components/Info";
+import { moneyFlow } from "@/lib/maps";
 import Balances from "@/components/Balances";
 
 export const dynamic = "force-dynamic";
@@ -112,6 +115,13 @@ export default async function Expenses({ searchParams }) {
           </form>
         </div>
       </div>
+
+      {income > 0 && (
+        <div className="card" style={{ marginTop: 12 }}>
+          <h2>🌊 לאן הכסף הולך החודש <Info text="כל הכנסה קבועה, ולאן היא הולכת: הוצאות קבועות לפי תחום, ההשקעה החודשית, ומה שנשאר. חיוב האשראי נספר רק על מה שלא פורט בנפרד, כדי שלא ייספר פעמיים. ההוצאות המשתנות של החודש יוצאות ממה שנשאר." /></h2>
+          <MoneyFlow flow={moneyFlow({ incomes, income, domains: DOMAINS, items, monthlyInvest: settings.monthlyInvest })} />
+        </div>
+      )}
 
       {items.length > 0 && (
         <div className="blocks pies">

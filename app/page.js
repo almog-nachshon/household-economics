@@ -6,6 +6,9 @@ import { homeGoal, monthsBetween, ils } from "@/lib/goal";
 import { portfolio, projectPortfolio } from "@/lib/holdings";
 import Alerts from "@/components/Alerts";
 import { depositMonth, depositDate } from "@/lib/invest-run";
+import { goalRange, GOAL_RETURNS } from "@/lib/maps";
+import { GoalRange } from "@/components/Charts";
+import Info from "@/components/Info";
 
 export const dynamic = "force-dynamic";
 
@@ -69,6 +72,11 @@ export default async function Home() {
           {g.monthsLeft} חודשים ליעד · צריך לחסוך <b className={onTrack ? "pos" : "neg"}>{ils(g.requiredPace)}</b> בחודש, נשאר לחיסכון{" "}
           <b className={onTrack ? "pos" : "neg"}>{ils(monthlySaving)}</b> (אחרי הוצאות קבועות והשקעה)
         </div>
+      </div>
+
+      <div className="card" style={{ marginTop: 12 }}>
+        <h2>🏠 הטווח עד {date(settings.targetDate)} <Info text="הרצועה היא הטווח בין תשואה של 0% ל-10% בשנה בתיק ההשקעות, והקו הוא 5%, ההנחה שהאתר כבר משתמש בה. חיסכון, הפקדות וקרנות נשארים כמו היום. אלה הנחות לבחירה ולא תחזית: שוק יורד יכול להביא גם תוצאה מתחת לרצועה." /></h2>
+        <GoalRange data={goalRange({ settings, homeSavings: last?.homeSavings ?? 0, kerens, monthlySaving, portfolioNow: folio.value, today })} required={g.required} returns={GOAL_RETURNS} />
       </div>
 
       <div className="blocks">

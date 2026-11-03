@@ -30,6 +30,8 @@ import { technicalsFor, TECH } from "@/lib/technicals";
 import { engineFor } from "@/lib/engine-run";
 import { TechTag } from "@/components/TechPanel";
 import { duplicateOf, lookThrough, HEAVY, FUNDS } from "@/lib/overlap";
+import { exposureRings, exposureRanking } from "@/lib/maps";
+import { ExposureMap } from "@/components/Charts";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 600;
@@ -377,6 +379,8 @@ export default async function Invest({ searchParams }) {
                 </table>
               </div>
               <p className="label tap-hint">👆 לחיצה על שורה: כל הפרטים, גרף שבועי והמחקר עם המקורות</p>
+              <h3 className="hmap-title">🔍 מה באמת יש לי בתוך התיק <Info text="מבפנים החוצה: תחום, החזקה, ומה שבתוך כל קרן. בטבלה: כמה כל חברה היא באמת מהחשבון, גם ישירות וגם דרך הקרנות. כך רואים כשכמה סימולים הם בעצם אותה חשיפה." /></h3>
+              <ExposureMap rings={exposureRings(groups, FUNDS, withIls)} ranking={exposureRanking(lt, money, HEAVY)} totalText={money(total)} heavy={HEAVY} asOf={folio.rows.map((h) => FUNDS[h.symbol]?.asOf).filter(Boolean).sort()[0]} />
             </>
           )}
         </div>
