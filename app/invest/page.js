@@ -485,21 +485,23 @@ export default async function Invest({ searchParams }) {
                 💡 עוד {money(leftover)} פנויים: הבאים בתור{" "}
                 <Info text="כדי שלא יישאר מזומן בלי השקעה: הכסף שנשאר אחרי החלוקה יורד בטבלת הדירוג, להחזקה קיימת או למניה חדשה, לפי הסדר. רק מה שבמצב ״לקנות״, בלי כפילויות ובלי תחומים שכבר מעל היעד." />
               </h2>
-              <table className="compact">
-                <thead><tr><th>החזקה</th><th>תחום</th><th>סטטוס</th><th>לקנות</th><th>סכום</th><th>למה</th></tr></thead>
-                <tbody>
-                  {extras.map((p) => (
-                    <tr key={p.symbol}>
-                      <td><span className="sym"><Logo id={p.symbol} label={p.name} size={18} /><IbLink conid={p.ibkr?.conid} ib={p.ibkr}><b>{p.symbol}</b></IbLink></span></td>
-                      <td><span className="tag" style={{ background: BUCKET_COLORS[p.bucket], color: ink(p.bucket), marginInlineStart: 0 }}>{bucketName[p.bucket]}</span></td>
-                      <td><StatusTag st={statuses[p.symbol]} /></td>
-                      <td><b>{units(p)}</b> <span className="label">× {unitPrice(p.priceIls)}</span></td>
-                      <td><b>{both(p.cost)}</b></td>
-                      <td className="label wrap">{why(p.symbol)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <div className="table-scroll">
+                <table className="compact">
+                  <thead><tr><th>החזקה</th><th>תחום</th><th>סטטוס</th><th>לקנות</th><th>סכום</th><th>למה</th></tr></thead>
+                  <tbody>
+                    {extras.map((p) => (
+                      <tr key={p.symbol}>
+                        <td><span className="sym"><Logo id={p.symbol} label={p.name} size={18} /><IbLink conid={p.ibkr?.conid} ib={p.ibkr}><b>{p.symbol}</b></IbLink></span></td>
+                        <td><span className="tag" style={{ background: BUCKET_COLORS[p.bucket], color: ink(p.bucket), marginInlineStart: 0 }}>{bucketName[p.bucket]}</span></td>
+                        <td><StatusTag st={statuses[p.symbol]} /></td>
+                        <td><b>{units(p)}</b> <span className="label">× {unitPrice(p.priceIls)}</span></td>
+                        <td><b>{both(p.cost)}</b></td>
+                        <td className="label wrap">{why(p.symbol)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
           {waiting.length > 0 && (

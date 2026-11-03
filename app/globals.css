@@ -706,6 +706,7 @@ table.rank tbody td { vertical-align: middle; }
   .rb-grid { grid-template-columns: minmax(0, 1fr); }
   .rb-grid > div { overflow-x: auto; }
   .rb-grid td.wrap { min-width: 0; white-space: normal; }
+  .extra-box td.wrap { min-width: 360px; }
   .scr-bar input { max-width: none; }
 }
 
