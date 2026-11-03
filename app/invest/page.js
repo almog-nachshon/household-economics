@@ -688,11 +688,18 @@ export default async function Invest({ searchParams }) {
               <tbody>
                 {heldRows.map((h) => {
                   const st = statuses[h.symbol];
+                  // A "buy" that the split will not add to says why, so this table and the buy list agree.
+                  const theme = groups.find((g) => g.key === h.bucket);
+                  const unit = h.priceIls ?? 0;
+                  const hold = st?.key !== "buy" ? null
+                    : theme && theme.pct > theme.target ? "להחזיק: התחום מעל היעד"
+                    : ((lt[h.symbol]?.value ?? h.value) + unit) / total * 100 >= HEAVY ? `להחזיק: יחידה נוספת תעבור ${HEAVY}% מהחשבון`
+                    : null;
                   return (
                     <tr key={h.symbol}>
                       <td><span className="sym"><Logo id={h.symbol} label={h.name} size={18} /><b>{h.symbol}</b></span></td>
                       <td><StatusTag st={st} /></td>
-                      <td><b>{st?.dup ? "למכור: כפילות" : ACTION[st?.key] ?? "להחזיק"}</b></td>
+                      <td><b>{st?.dup ? "למכור: כפילות" : hold ?? ACTION[st?.key] ?? "להחזיק"}</b></td>
                       <td className="label wrap">{whyShort(h.symbol)}</td>
                     </tr>
                   );
