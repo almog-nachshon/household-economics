@@ -8,7 +8,10 @@ import android.os.SystemClock;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.graphics.Color;
 import android.view.View;
+import android.view.WindowInsets;
+import android.widget.FrameLayout;
 import android.webkit.CookieManager;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
@@ -49,7 +52,16 @@ public class MainActivity extends Activity {
         });
         web.setOverScrollMode(View.OVER_SCROLL_NEVER);
         web.setVisibility(View.INVISIBLE);
-        setContentView(web);
+        // Android 15 draws apps under the status and navigation bars: keep the site between them, on the site's teal.
+        FrameLayout root = new FrameLayout(this);
+        root.setBackgroundColor(Color.parseColor("#0E7C7B"));
+        root.addView(web);
+        root.setOnApplyWindowInsetsListener((v, insets) -> {
+            android.graphics.Insets bars = insets.getInsets(WindowInsets.Type.systemBars() | WindowInsets.Type.ime());
+            v.setPadding(bars.left, bars.top, bars.right, bars.bottom);
+            return WindowInsets.CONSUMED;
+        });
+        setContentView(root);
         if (saved != null) web.restoreState(saved);
         else web.loadUrl("https://" + HOST + "/");
     }
@@ -78,7 +90,12 @@ public class MainActivity extends Activity {
         web.setVisibility(View.INVISIBLE);
         if (asking) return;
         if (getSystemService(BiometricManager.class).canAuthenticate(AUTH) != BiometricManager.BIOMETRIC_SUCCESS) {
-            unlock(); // no fingerprint or screen lock set on the phone: the site's own password still guards it
+            // No fingerprint or screen lock on the phone: nothing can stand in for the password, so the saved
+            // (90-day) login is dropped and the site asks for the password every time.
+            CookieManager.getInstance().removeAllCookies(null);
+            CookieManager.getInstance().flush();
+            web.loadUrl("https://" + HOST + "/login");
+            unlock();
             return;
         }
         asking = true;
