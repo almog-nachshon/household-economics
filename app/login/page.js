@@ -1,7 +1,7 @@
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { checkPassword, checkTotp, totpEnabled } from "@/lib/auth";
-import { COOKIE, createSession } from "@/lib/session";
+import { APP_UA, COOKIE, createSession } from "@/lib/session";
 
 async function login(formData) {
   "use server";
@@ -10,7 +10,7 @@ async function login(formData) {
     await new Promise((r) => setTimeout(r, 1500)); // slow down guessing
     redirect("/login?error=1");
   }
-  const { value, maxAge } = await createSession();
+  const { value, maxAge } = await createSession((headers().get("user-agent") || "").includes(APP_UA));
   cookies().set(COOKIE, value, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "strict", maxAge, path: "/" });
   redirect("/");
 }
