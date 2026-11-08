@@ -10,6 +10,7 @@ import { advisorEnabled } from "@/lib/advisor";
 import AiButton from "@/components/AiButton";
 import Logo, { ClaudeMark } from "@/components/Logo";
 import { generateFundReview } from "@/lib/fund-advisor";
+import styles from "./funds.module.css";
 
 export const dynamic = "force-dynamic";
 
@@ -126,26 +127,41 @@ export default async function Funds({ searchParams }) {
   const homeValue = forHome.reduce((t, f) => t + project(f, target).value, 0);
 
   return (
-    <>
+    <div className={styles.page}>
+      <header className={styles.hero}>
+        <div className={styles.heading}>
+          <div>
+            <span className={styles.eyebrow}>החיסכון לטווח ארוך</span>
+            <h1>קרנות השתלמות ופנסיה</h1>
+            <p>יתרות, הפקדות ותחזיות במקום אחד</p>
+          </div>
+          <div className={styles.links}>
+            {kerens.length > 0 && <a href="#keren">השתלמות</a>}
+            {pensions.length > 0 && <a href="#pension">פנסיה</a>}
+          </div>
+        </div>
+        <div className={styles.metrics}>
+          <Stat label="יתרות בקרנות השתלמות" value={ils(total(kerens))} />
+          <Stat label="יתרות בפנסיה" value={ils(total(pensions))} />
+          <Stat label="סך הפקדות לחודש" value={ils(funds.reduce((t, f) => t + monthlyDeposit(f), 0))} />
+          <Stat label={`צפי זמין לבית ב-${date(target)}`} value={ils(homeValue)} hint={forHome.map((f) => f.name).join(", ") || "סמן ״לבית״ בקרן שנזילה עד היעד"} />
+        </div>
+      </header>
       <div className="page-head">
-        <h1>קרנות השתלמות ופנסיה</h1>
         {advisorEnabled() && (
           <form action={reviewNow} style={{ maxWidth: "none" }}>
             <AiButton label="בדיקת מסלולים עם Claude" updated={review?.createdAt.toLocaleString("he-IL", { timeZone: "Asia/Jerusalem" })} />
           </form>
         )}
       </div>
-      <div className="grid">
-        <Stat label="קרנות השתלמות היום" value={ils(total(kerens))} />
-        <Stat label="פנסיה היום" value={ils(total(pensions))} />
-        <Stat label="הפקדות לחודש (הכל)" value={ils(funds.reduce((t, f) => t + monthlyDeposit(f), 0))} />
-        <Stat label={`זמין לבית ב-${date(target)}`} value={ils(homeValue)} hint={forHome.map((f) => f.name).join(", ") || "סמן ״לבית״ בקרן שנזילה עד היעד"} />
-      </div>
 
       {[["keren", kerens], ["pension", pensions]].map(([kind, list]) => list.length > 0 && (
-        <section key={kind}>
-          <h2 style={{ marginTop: 20 }}>{KINDS[kind]} ({list.length}): {ils(total(list))}</h2>
-          <div className="blocks">
+        <section key={kind} id={kind} className={styles.section} data-kind={kind}>
+          <div className={styles.sectionHeading}>
+            <h2>{kind === "keren" ? "קרנות השתלמות" : "פנסיה"}</h2>
+            <span>{list.length} חשבונות · {ils(total(list))}</span>
+          </div>
+          <div className={styles.cards}>
             {list.map((f) => {
               const dep = monthlyDeposit(f);
               const atRetire = f.providerRetire || (retire ? project(f, retire).value : 0);
@@ -162,8 +178,10 @@ export default async function Funds({ searchParams }) {
                     </div>
                     <span className={`status ${dep ? "on" : ""}`}>{dep ? "פעילה" : "ללא הפקדות"}</span>
                   </div>
-                  <div className="fund-balance">{ils(f.balance)}</div>
-                  <div className="label" style={{ textAlign: "center" }}>נכון ל-{date(f.balanceDate)}</div>
+                  <div className={styles.balance}>
+                    <span className="label">יתרה נכון ל-{date(f.balanceDate)}</span>
+                    <strong>{ils(f.balance)}</strong>
+                  </div>
                   <div className="fund-grid">
                     <div><span className="label">מסלול</span><b>{f.track || "—"}</b></div>
                     <div><span className="label">הצטרפות</span><b>{f.joinDate ? date(f.joinDate) : "—"}</b>{f.seniorityDate && <span className="label">ותק מ-{date(f.seniorityDate)}</span>}</div>
@@ -334,6 +352,6 @@ export default async function Funds({ searchParams }) {
           <li>התשואה היא הנחה, לא הבטחה. כדאי לעדכן את היתרה פעם בחודש או ברבעון לפי האתר של הקופה.</li>
         </ul>
       </div>
-    </>
+    </div>
   );
 }

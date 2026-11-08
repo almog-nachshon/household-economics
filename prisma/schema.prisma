@@ -232,6 +232,20 @@ model Research {
   asOf        DateTime
 }
 
+// ChatGPT's research on the same symbol, by the same five parts and weights, pasted in from ChatGPT
+// (docs/chatgpt-prompt.md, scripts/save-gpt-research.js). lib/research.js combines it 50/50 with Research.
+model ResearchGpt {
+  symbol     String   @id
+  verdict    String   // buy | wait | sell, by ChatGPT's own score
+  score      Float
+  confidence Int
+  summary    String   // Hebrew
+  reasons    String   // JSON: [string]
+  components String   // JSON: {analysts|revisions|...: {score, note_he}}
+  sources    String   // JSON: [{name, url, kind, date, note_he}]
+  asOf       DateTime
+}
+
 // An alert shown on the home and invest pages until dismissed (lib/alerts.js).
 model Alert {
   id        Int      @id @default(autoincrement())

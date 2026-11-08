@@ -1,0 +1,108 @@
+.page {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.hero {
+  padding: clamp(18px, 4vw, 36px);
+  border: 1px solid var(--track);
+  border-radius: 24px;
+  background: radial-gradient(ellipse at top right, var(--accent-soft), var(--card) 80%);
+}
+
+.heading, .sectionHeading, .links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.heading, .sectionHeading {
+  justify-content: space-between;
+}
+
+.heading h1 {
+  margin: 6px 0;
+  font-size: clamp(1.75rem, 4vw, 2.8rem);
+  color: var(--text);
+}
+
+.heading p, .sectionHeading span {
+  margin: 0;
+  color: var(--muted);
+}
+
+.eyebrow, .links a {
+  font-size: .875rem;
+  font-weight: 700;
+}
+
+.links a {
+  padding: 8px 16px;
+  border: 1px solid var(--track);
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--text);
+  text-decoration: none;
+}
+
+.links a:hover, .links a:focus-visible {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.metrics, .cards {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 215px), 1fr));
+}
+
+.metrics {
+  margin-top: 24px;
+}
+
+.cards {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 365px), 1fr));
+}
+
+.metrics > :global(.card), .cards > :global(.card) {
+  border: 1px solid var(--track);
+  border-radius: 18px;
+  min-width: 0;
+}
+
+.section {
+  scroll-margin-top: 80px;
+}
+
+.sectionHeading {
+  margin-bottom: 12px;
+}
+
+.sectionHeading h2 {
+  margin: 0;
+}
+
+.balance {
+  display: grid;
+  gap: 4px;
+  margin-top: 14px;
+  padding: 14px;
+  border-radius: 14px;
+  background: var(--accent-soft);
+}
+
+[data-kind="pension"] .balance {
+  background: color-mix(in srgb, #7466d8 12%, var(--card));
+}
+
+.balance strong {
+  font-size: clamp(1.6rem, 4vw, 2.2rem);
+  font-variant-numeric: tabular-nums;
+}
+
+.cards :global(.fund-grid) {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  overflow-wrap: anywhere;
+}

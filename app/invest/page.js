@@ -9,7 +9,6 @@ import AiButton from "@/components/AiButton";
 import SyncButton from "@/components/SyncButton";
 import Info from "@/components/Info";
 import HoldingsMap from "@/components/HoldingsMap";
-import TargetBars from "@/components/TargetBars";
 import Logo from "@/components/Logo";
 import Sources from "@/components/Sources";
 import ExpandRow from "@/components/ExpandRow";
@@ -26,6 +25,7 @@ import { STOP, TARGET } from "@/lib/alerts";
 import Alerts from "@/components/Alerts";
 import { signalsFor, finvizUrl, onFinviz } from "@/lib/signals";
 import { loadResearch, statusOf, STATUS, WEIGHTS } from "@/lib/research";
+import ThemeCompare from "@/components/ThemeCompare";
 import { technicalsFor, TECH } from "@/lib/technicals";
 import { engineFor } from "@/lib/engine-run";
 import { TechTag } from "@/components/TechPanel";
@@ -82,7 +82,7 @@ async function runNow() {
   try {
     await generatePlan(new Date(), "lite");
   } catch (e) {
-    redirect(`/invest?error=${encodeURIComponent(e.message)}`);
+    redirect(`/invest?error=${encodeURIComponent(/credit balance/i.test(e.message) ? "לבדיקה המהירה של Claude נגמר הקרדיט ב-API. המחקר המלא ב-Claude Code לא תלוי בו." : e.message)}`);
   }
   redirect("/invest");
 }
@@ -306,6 +306,24 @@ export default async function Invest({ searchParams }) {
       {searchParams?.error && <p className="warn">הפעולה נכשלה: {searchParams.error}</p>}
       {market.rateError && <p className="warn">לא הצלחתי למשוך שערי מטבע ({market.rateError}).</p>}
 
+      {folio.broker && folio.rows.length > 0 && (
+        <ThemeCompare groups={groups} statuses={statuses} why={Object.fromEntries(folio.rows.map((h) => [h.symbol, whyShort(h.symbol)]))} money={money} total={total}
+          summary={<>
+              <div className="hero-row" style={{ marginTop: 4 }}>
+                {folio.broker && <div><div className="label">שווי החשבון</div><div className="value">{both(folio.value)}</div></div>}
+                <div><div className="label">הושקע</div><div className="value">{both(folio.cost)}</div></div>
+                <div><div className="label">שווי היום</div><div className="value">{both(folio.held)}</div></div>
+                <div><div className="label">רווח / הפסד</div><div className={`value ${folio.profit >= 0 ? "pos" : "neg"}`}>{both(folio.profit)}</div></div>
+                <div><div className="label">תשואה</div><div className={`value ${folio.pct >= 0 ? "pos" : "neg"}`}>{pct(folio.pct)}</div></div>
+                {folio.broker && <div><div className="label">מזומן בחשבון</div><div className="value">{both(folio.cash)}</div></div>}
+                {folio.week != null && <div><div className="label">רווח השבוע</div><div className={`value ${folio.week >= 0 ? "pos" : "neg"}`}>{both(folio.week)}</div></div>}
+              </div>
+            <p className="label" style={{ margin: "6px 0 0" }}>
+              {["buy", "wait", "sell"].map((k) => [k, folio.rows.filter((h) => statuses[h.symbol]?.key === k || (k === "sell" && statuses[h.symbol]?.key === "dup")).length]).filter(([, n]) => n).map(([k, n]) => `${STATUS[k].join(" ")}: ${n}`).join(" · ")}
+              {" · "}לפי דוח אינטראקטיב מ-{folio.asOf.toLocaleDateString("he-IL", { timeZone: "UTC" })}
+            </p>
+          </>} />
+      )}
       <WeekAhead days={weekDays} />
       {folio.broker && folio.rows.length > 0 && <SectionTabs tabs={TABS} />}
 
@@ -326,15 +344,6 @@ export default async function Invest({ searchParams }) {
             </p>
           ) : (
             <>
-              <div className="hero-row" style={{ marginTop: 8 }}>
-                {folio.broker && <div><div className="label">שווי החשבון</div><div className="value">{both(folio.value)}</div></div>}
-                <div><div className="label">הושקע</div><div className="value">{both(folio.cost)}</div></div>
-                <div><div className="label">שווי היום</div><div className="value">{both(folio.held)}</div></div>
-                <div><div className="label">רווח / הפסד</div><div className={`value ${folio.profit >= 0 ? "pos" : "neg"}`}>{both(folio.profit)}</div></div>
-                <div><div className="label">תשואה</div><div className={`value ${folio.pct >= 0 ? "pos" : "neg"}`}>{pct(folio.pct)}</div></div>
-                {folio.broker && <div><div className="label">מזומן בחשבון</div><div className="value">{both(folio.cash)}</div></div>}
-                {folio.week != null && <div><div className="label">רווח השבוע</div><div className={`value ${folio.week >= 0 ? "pos" : "neg"}`}>{both(folio.week)}</div></div>}
-              </div>
               {techHeldTotal > 0 && (
                 <div className="tech-held">
                   <b>📊 סיכום טכני של התיק (יומי)</b> <Info text="כמה משווי ההחזקות נמצא תחת כל תווית. התווית מתארת את המגמה הארוכה, והיא לא תחזית: בבדיקה הנקייה היא לא ניבאה תשואה. תמונת מצב בלבד: מה שקונה הוא הסטטוס מהמחקר. הפירוט בלחיצה על שורה." />
@@ -345,8 +354,6 @@ export default async function Invest({ searchParams }) {
               )}
               {folio.broker && (
                 <>
-                  <h3 className="hmap-title">🎯 כמה יש בכל תחום מול היעד <Info text="היעד הוא החלוקה הקבועה שקבענו. הפס הוא מה שיש עכשיו, הקו השחור הוא היעד, והכול באחוזים מכל החשבון כולל מזומן. פער של יותר מ-5 נקודות מסומן באדום." /></h3>
-                  <TargetBars groups={groups} total={total} money={money} />
                   <h3 className="hmap-title">📈 השינוי היום</h3>
                   <HoldingsMap groups={groups} />
                 </>

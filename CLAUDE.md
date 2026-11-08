@@ -22,6 +22,10 @@
 - כפילות (`lib/overlap.js`): הליבה היא VUAA ו-VWRA. קרן אחרת שיותר מ-50% ממנה מניות S&P 500 מסומנת ⛔ כפילות: לא נקנית, ומוחזקת מוצעת למכירה. מניה בודדת לא עוברת 20% מהחשבון כולל מה שיש ממנה בתוך הקרנות (`lookThrough`, `HEAVY`): לא מקבלת כסף חדש, והקנייה נעצרת שם. נתוני הקרנות (`FUNDS`) מהמחקר, עם תאריך ומקור
 - כניסה: `middleware.js` + `lib/session.js` (cookie חתום) + `lib/auth.js` (scrypt; TOTP רק אם `TOTP_SECRET` מוגדר — כרגע כבוי, כניסה בסיסמה בלבד). משתנים ב-`.env`, יוצרים עם `npm run auth:setup`
 
+- ״המצב שלי״ בראש דף ההשקעות (`components/ThemeCompare.js`): המספרים, ספירת הסטטוסים, וטבלת תחומים בצבע עם יש עכשיו מול יעד Claude (`BUCKETS`), יעד ChatGPT (`GPT_TARGETS` ב-`lib/research-mix.js`) ויעד משוקלל 50/50; לחיצה פותחת את ההחזקות בתחום. הקנייה (`planCash`) עדיין לפי יעדי Claude בלבד
+- מחקר ChatGPT (`ResearchGpt`): המשתמש מדביק ב-ChatGPT את ההוראה מ-`docs/chatgpt-prompt.md` ואת ה-JSON כאן, ושומרים עם `scripts/save-gpt-research.js`. `combine` ב-`lib/research-mix.js` עושה ממוצע 50/50 עם Claude (קנייה מול מכירה = לחכות), עם בדיקות ב-`lib/research.test.mjs`
+- אפליקציית אנדרואיד (`android/`): WebView שפותח את האתר, נבנית עם Gradle של Android Studio (`assembleDebug`), הקובץ ב-`android/bayit2030.apk` (מחוץ ל-git). להוציא את `android` מה-tar בעדכון השרת
+
 ## עיצוב
 מתג בהיר/כהה בסרגל העליון (`components/Theme.js`, נשמר בדפדפן). הכהה בפלטה של TradingView, בסוף `app/globals.css`. צבע חדש בעיצוב צריך גם גרסה כהה
 
@@ -29,7 +33,7 @@
 - אסור להכניס נתונים פיננסיים אמיתיים לריפו. רק נתוני דמה ב-`prisma/seed.mjs`. קבצי `.db` ו-`.env` נשארים מחוץ ל-git.
 - הריפו פרטי.
 - פריסה: שרת Hetzner של VoltShare, תיקייה `/opt/finance`, שירות `finance-app` בלי `ports:` על רשת `voltshare_default`. Caddy של VoltShare מפנה את `finance.2.31.65.97.sslip.io` ל-`finance-app:3000`. הבלוק נמצא בשרת ב-`/opt/caddy-sites/finance.caddy` (מחוץ לריפו של VoltShare, שה-Caddyfile שלו רק עושה `import` לתיקייה), כך ש-deploy של VoltShare לא דורס אותו. אחרי עריכה: `docker exec voltshare-web-1 caddy reload --config /etc/caddy/Caddyfile`.
-- עדכון השרת: tar של הריפו (בלי node_modules, .next, .git, .env, *.db) ל-`/opt/finance`, ואז `docker compose up -d --build`.
+- עדכון השרת: tar של הריפו (בלי node_modules, .next, .git, .env, *.db, android) ל-`/opt/finance`, ואז `docker compose up -d --build`.
 - לעולם לא לקרוא לשירות `api`, `web` או `db` (מתנגש עם VoltShare).
 
 - היתרות (קרן חירום, חיסכון לבית, תיק השקעות) נשמרות כ-`Snapshot` של החודש מבלוק ״יתרות החודש״ (`components/Balances.js`)

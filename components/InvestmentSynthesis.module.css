@@ -1,0 +1,74 @@
+.panel {
+  margin-block: 16px;
+  background: linear-gradient(165deg, var(--accent-soft), var(--card) 55%);
+}
+
+.kicker {
+  color: var(--muted);
+  font-weight: 700;
+  font-size: .875rem;
+}
+
+.allocation {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr));
+  gap: 12px;
+}
+
+.allocation > div {
+  padding: 14px;
+  border: 1px solid var(--track);
+  border-radius: 14px;
+  background: var(--card);
+}
+
+.allocation > div {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+}
+
+.allocation strong {
+  font-size: 1.6rem;
+}
+
+.allocation span {
+  color: var(--muted);
+}
+
+.tableScroll {
+  overflow-x: auto;
+  border: 1px solid var(--track);
+  border-radius: 14px;
+}
+
+.comparison {
+  min-width: 720px;
+  background: var(--card);
+}
+
+.comparison th, .comparison td {
+  padding: 12px 14px;
+  vertical-align: top;
+  text-align: start;
+  white-space: normal;
+}
+
+.comparison thead th, .comparison td:last-child {
+  background: var(--accent-soft);
+}
+
+.comparison tbody th {
+  min-width: 85px;
+  font-weight: 700;
+}
+
+.comparison td:nth-child(2) {
+  width: 22%;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}

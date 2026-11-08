@@ -504,7 +504,13 @@ nav a { font-size: 14px; }
 
 /* page head */
 .page-head h1 { font-size: 24px; margin: 6px 0; }
-.page-actions .ai-button button { min-height: 34px; padding: 6px 14px; font-size: 13px; font-weight: 600; }
+.page-actions .ai-button button { min-height: 34px; padding: 6px 14px; font-size: 13px; font-weight: 600; justify-content: center; }
+/* Interactive Brokers on the right, Claude on the left; the note and progress bar stay under their own button. */
+@media (min-width: 701px) {
+  .page-actions { flex-wrap: nowrap; justify-content: space-between; align-items: flex-start; }
+  .page-actions .ai-button { display: flex; flex-direction: column; align-items: stretch; gap: 4px; width: 260px; }
+  .page-actions .ai-button .label { font-size: 12px; text-align: center; }
+}
 
 /* ticker tape */
 .ticker { overflow: hidden; background: #fff; border: 1px solid var(--line); border-radius: var(--radius); margin: 0 0 12px; height: 36px; display: flex; align-items: center; mask-image: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent); }

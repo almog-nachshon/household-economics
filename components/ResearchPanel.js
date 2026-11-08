@@ -58,9 +58,24 @@ export default function ResearchPanel({ symbol, weights, labels }) {
         })}
       </div>
       <div className="rp-score">
-        ציון משוקלל <b dir="ltr">{r.score > 0 ? "+" : ""}{r.score}</b> → {labels[r.verdict]?.[0]} <b>{labels[r.verdict]?.[1]}</b>
+        {r.mixed?.gpt ? "ציון Claude " : "ציון משוקלל "}<b dir="ltr">{r.score > 0 ? "+" : ""}{r.score}</b> → {labels[r.verdict]?.[0]} <b>{labels[r.verdict]?.[1]}</b>
         <span className="label"> (״לקנות״ מ-0.6 ומעלה, ״למכור״ מ-0.4- ומטה, באמצע ״לחכות״)</span>
       </div>
+      {r.mixed?.gpt ? (
+        <div className="rp-score">
+          <b>Claude</b> <span dir="ltr">{r.mixed.claude.score}</span> {labels[r.mixed.claude.verdict]?.[0]}
+          {" · "}<b>ChatGPT</b> <span dir="ltr">{r.gpt.score}</span> {labels[r.gpt.verdict]?.[0]}
+          {" "}({new Date(r.gpt.asOf).toLocaleDateString("he-IL", { timeZone: "Asia/Jerusalem" })}, {r.gpt.sources.length} מקורות)
+          {" → "}ממוצע <b dir="ltr">{r.mixed.score}</b> {labels[r.mixed.verdict]?.[0]} <b>{labels[r.mixed.verdict]?.[1]}</b>
+          {r.mixed.split && <span className="label"> (אחד אומר לקנות והשני למכור, ולכן לחכות)</span>}
+          <details>
+            <summary>המחקר של ChatGPT</summary>
+            <p>{r.gpt.summary}</p>
+            <ul>{r.gpt.reasons.map((x, i) => <li key={i}>{x}</li>)}</ul>
+            <ul>{r.gpt.sources.map((s, i) => <li key={i}><a href={s.url} target="_blank" rel="noreferrer">{s.name}</a>{s.date ? ` · ${s.date}` : ""}{s.note_he ? ` · ${s.note_he}` : ""}</li>)}</ul>
+          </details>
+        </div>
+      ) : <div className="label">עוד אין מחקר של ChatGPT על {symbol}: הסטטוס לפי Claude בלבד.</div>}
       {r.timing && <div className="rp-timing">⏱ {r.timing}</div>}
       <details className="rp-sources">
         <summary>כל {r.sources.length} המקורות</summary>
