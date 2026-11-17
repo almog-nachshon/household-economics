@@ -1,5 +1,6 @@
 import "./globals.css";
 import ThemeSwitch from "@/components/Theme";
+import BrokerAutoSync from "@/components/BrokerAutoSync";
 
 export const metadata = { title: "תכנית פיננסית לבית ב-2030" };
 
@@ -22,7 +23,7 @@ export default function RootLayout({ children }) {
           <a href="/login" className="nav-end">יציאה</a>
           <ThemeSwitch />
         </nav>
-        <main>{children}</main>
+        <main><BrokerAutoSync />{children}</main>
         <footer className="site-footer">
           <a href="/" className="brand">תכנית פיננסית לבית ב-2030</a>
           <span>
