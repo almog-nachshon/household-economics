@@ -24,8 +24,18 @@ export default function ResearchPanel({ symbol, weights, labels }) {
   const asOf = new Date(r.asOf).toLocaleDateString("he-IL", { timeZone: "Asia/Jerusalem" });
   const c = r.consensus ?? {};
   const sources = [...r.sources].sort((a, b) => a.tier - b.tier);
+  // In plain words: which parts pushed the score up and which pulled it down.
+  const parts = weights.map(([k, name]) => [name, r.components?.[k]?.score]).filter(([, x]) => x != null);
+  const pro = parts.filter(([, x]) => x >= 0.5).map(([n]) => n);
+  const con = parts.filter(([, x]) => x <= -0.5).map(([n]) => n);
   return (
     <div className="rp">
+      {(pro.length > 0 || con.length > 0) && (
+        <div className="rp-plain">
+          {pro.length > 0 && <span><b className="pos">בעד:</b> {pro.join(", ")}</span>}
+          {con.length > 0 && <span><b className="neg">נגד:</b> {con.join(", ")}</span>}
+        </div>
+      )}
       <div className="rp-head">
         <b>🔎 המחקר המעמיק</b>
         <span className="label">

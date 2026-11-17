@@ -63,12 +63,125 @@
   font-weight: 700;
 }
 
-.comparison td:nth-child(2) {
-  width: 22%;
-}
-
 .brand {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+}
+
+.researchPage {
+  display: grid;
+  gap: 24px;
+  min-width: 0;
+}
+
+.researchPage > section {
+  min-width: 0;
+  scroll-margin-top: 24px;
+}
+
+.researchHero {
+  padding: clamp(16px, 4vw, 36px);
+  border: 1px solid var(--track);
+  border-radius: 22px;
+  background: linear-gradient(145deg, var(--accent-soft), var(--card));
+}
+
+.researchHero h1 {
+  margin: 6px 0 18px;
+  color: var(--text);
+  font-size: clamp(1.7rem, 4vw, 2.6rem);
+}
+
+.researchHero .kicker {
+  margin: 16px 0 0;
+}
+
+.back {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.overview {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr));
+  gap: 12px;
+}
+
+.overview > div {
+  padding: 14px 16px;
+  border: 1px solid var(--track);
+  border-radius: 14px;
+  background: var(--card);
+}
+
+.overview h2 {
+  margin: 0 0 6px;
+  font-size: 1rem;
+}
+
+.overview p {
+  margin: 0;
+}
+
+.group th {
+  background: var(--bg);
+  border-block-start: 2px solid var(--track);
+}
+
+.current, .target {
+  font-variant-numeric: tabular-nums;
+}
+
+.decisions :is(.current, .target) {
+  white-space: nowrap;
+}
+
+.action {
+  display: inline-block;
+  padding: 4px 10px;
+  border: 1px solid var(--track);
+  border-radius: 999px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.action[data-action="לקנות"] {
+  color: var(--pos);
+  background: var(--accent-soft);
+}
+
+.action[data-action="להמתין"] {
+  color: var(--muted);
+}
+
+.reason details {
+  margin-top: 7px;
+}
+
+.reason details > p {
+  margin: 8px 0 0;
+  padding: 8px 10px;
+  border-inline-start: 2px solid var(--track);
+}
+
+.reason summary, .legend summary {
+  width: fit-content;
+  cursor: pointer;
+  color: var(--muted);
+  font-size: .875rem;
+}
+
+.legend {
+  margin-top: 12px;
+}
+
+@media (max-width: 680px) {
+  .comparison {
+    min-width: 560px;
+  }
+
+  .comparison th, .comparison td {
+    padding: 10px;
+  }
 }

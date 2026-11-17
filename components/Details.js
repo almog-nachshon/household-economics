@@ -1,11 +1,10 @@
 import Logo from "@/components/Logo";
 import Info from "@/components/Info";
-import StatusTag from "@/components/StatusTag";
 import PriceChart from "@/components/PriceChart";
 import ResearchPanel from "@/components/ResearchPanel";
 import TechPanel from "@/components/TechPanel";
 import { LiveChange, LiveWeek } from "@/components/Live";
-import { STATUS, WEIGHTS } from "@/lib/research";
+import { STATUS, WEIGHTS, actionOf } from "@/lib/research";
 
 const CUR = { USD: "$", GBP: "£", EUR: "€", ILS: "₪" };
 const pct = (x, d = 1) => (x == null ? "—" : `${(x * 100).toFixed(d)}%`);
@@ -23,6 +22,7 @@ const day = (d) => (d ? new Date(d).toLocaleDateString("he-IL", { timeZone: "UTC
 // q: lib/portfolio.js loadMarket entry; h: the holding (lib/holdings.js) or null; st: status; g: signal (lib/signals.js);
 // r: research (lib/research.js loadResearch); lt: lib/overlap.js lookThrough entry; fmt: the page's money formatters.
 export default function Details({ symbol, name, type, bucket, q, h, st, tech, engine, g, r, lt, total, fmt, links, about }) {
+  const act = actionOf(st, !!h);
   const changed = r?.prevVerdict && r.prevVerdict !== r.verdict ? STATUS[r.prevVerdict] : null;
   const numbers = [
     ["מחיר", q?.price != null ? <><b dir="ltr">{CUR[q.currency] ?? ""}{q.price.toLocaleString("en-US", { maximumFractionDigits: 2 })}</b>{q.priceIls ? <span className="label"> · {fmt.ils(q.priceIls)}</span> : null}</> : "—"],
@@ -53,19 +53,27 @@ export default function Details({ symbol, name, type, bucket, q, h, st, tech, en
             </div>
           </div>
         </div>
-        <StatusTag st={st} big />
       </div>
 
-      <div className={`dt-status dt-status-${st?.key ?? "none"}`}>
-        {r?.summary ? <p>{r.summary}</p> : null}
-        {st?.timing && <p className="dt-why">⏱ היום: {st.timing.join(" · ")}. המחקר עצמו: {STATUS[r?.verdict]?.join(" ")}.</p>}
-        {st?.dup && <p className="dt-why">⛔ {st.dup.reason}{st.base ? ` (המחקר על הקרן עצמה: ${STATUS[st.base]?.join(" ")})` : ""}</p>}
-        {st && !st.research && !st.dup && <p className="dt-why">אין עדיין מחקר מעמיק על {symbol}: הסטטוס לפי הנתונים הטכניים והאנליסטים בלבד.</p>}
-        {changed && <p className="label">השתנה במחקר האחרון: היה {changed.join(" ")}.</p>}
+      <div className={`dt-status dt-status-${st?.dup ? "dup" : st?.key ?? "none"}`}>
+        <div className={`dt-answer dt-answer-${act.tone}`}>{STATUS[act.tone][0]} {act.text}</div>
+        {h && (
+          <p className="dt-held">
+            יש לך {Math.round(h.units * 1000) / 1000} יחידות בשווי <b>{fmt.withIls(h.value)}</b>,{" "}
+            <span className={h.profit >= 0 ? "pos" : "neg"}>{h.profit >= 0 ? "ברווח" : "בהפסד"} של {fmt.withIls(Math.abs(h.profit))} ({signed(h.pct)})</span>
+          </p>
+        )}
+        {r?.summary ? <p><b>למה: </b>{r.summary}</p> : null}
+        {st?.timing && <p className="dt-why">⏱ למה לא היום: {st.timing.join(" · ")}</p>}
+        {st?.dup && <p className="dt-why">⛔ {st.dup.reason}</p>}
+        {st && !st.research && !st.dup && <p className="dt-why">אין עדיין מחקר מעמיק על {symbol}: לפי הנתונים הטכניים והאנליסטים בלבד.</p>}
+        {changed && <p className="label">במחקר הקודם: {changed.join(" ")}.</p>}
       </div>
 
-      <div className="dt-body">
-        <PriceChart symbol={symbol} />
+      <PriceChart symbol={symbol} />
+
+      <details className="dt-more">
+        <summary>📊 המספרים והניתוח הטכני</summary>
         <div className="dt-kv">
           {numbers.map(([k, v, tip]) => (
             <div key={k}>
@@ -74,33 +82,32 @@ export default function Details({ symbol, name, type, bucket, q, h, st, tech, en
             </div>
           ))}
         </div>
-      </div>
-
-      <TechPanel t={tech} cur={CUR[q?.currency] ?? ""} engine={engine} />
-
-      {h && (
-        <div className="dt-pos">
-          <b>💼 ההחזקה שלי</b>
-          <div className="dt-kv dt-kv-pos">
-            <div><span>יחידות</span><span>{Math.round(h.units * 1000) / 1000}</span></div>
-            <div><span>מחיר קנייה ממוצע</span><span>{h.units ? fmt.unitPrice(h.cost / h.units) : "—"}</span></div>
-            <div><span>הושקע</span><span>{fmt.withIls(h.cost)}</span></div>
-            <div><span>שווי</span><span>{fmt.withIls(h.value)}</span></div>
-            <div><span>רווח / הפסד</span><span className={h.profit >= 0 ? "pos" : "neg"}>{fmt.withIls(h.profit)} ({signed(h.pct)})</span></div>
-            <div><span>חלק מהחשבון</span><span>{total ? pct(h.value / total) : "—"}</span></div>
+        <TechPanel t={tech} cur={CUR[q?.currency] ?? ""} engine={engine} />
+        {h && (
+          <div className="dt-pos">
+            <b>💼 ההחזקה שלי</b>
+            <div className="dt-kv dt-kv-pos">
+              <div><span>מחיר קנייה ממוצע</span><span>{h.units ? fmt.unitPrice(h.cost / h.units) : "—"}</span></div>
+              <div><span>הושקע</span><span>{fmt.withIls(h.cost)}</span></div>
+              <div><span>חלק מהחשבון</span><span>{total ? pct(h.value / total) : "—"}</span></div>
+            </div>
           </div>
-        </div>
-      )}
-      {lt?.via > 0 && (
-        <p className="dt-lt">
-          🧩 החשיפה האמיתית ל-{symbol}: <b>{lt.pct.toFixed(1)}% מהחשבון</b>
-          {lt.direct > 0 ? ` (${((lt.direct / total) * 100).toFixed(1)}% ישירות` : " (0% ישירות"}
-          {lt.parts.map((p) => ` + ${((p.value / total) * 100).toFixed(1)}% דרך ${p.fund}`).join("")})
-          <Info text="כמה מהחשבון באמת יושב במניה הזו: ההחזקה הישירה ועוד החלק שלה בתוך כל קרן שמחזיקים, לפי המשקל שלה בקרן." />
-        </p>
-      )}
+        )}
+        {lt?.via > 0 && (
+          <p className="dt-lt">
+            🧩 החשיפה האמיתית ל-{symbol}: <b>{lt.pct.toFixed(1)}% מהחשבון</b>
+            {lt.direct > 0 ? ` (${((lt.direct / total) * 100).toFixed(1)}% ישירות` : " (0% ישירות"}
+            {lt.parts.map((p) => ` + ${((p.value / total) * 100).toFixed(1)}% דרך ${p.fund}`).join("")})
+          </p>
+        )}
+      </details>
 
-      {r ? <ResearchPanel symbol={symbol} weights={WEIGHTS} labels={STATUS} /> : null}
+      {r ? (
+        <details className="dt-more">
+          <summary>🔎 המחקר המלא: איך הגענו לזה, והמקורות</summary>
+          <ResearchPanel symbol={symbol} weights={WEIGHTS} labels={STATUS} />
+        </details>
+      ) : null}
 
       {about && <p className="dt-about">{about}</p>}
       <div className="dt-links">

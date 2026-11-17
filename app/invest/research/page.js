@@ -1,25 +1,31 @@
 import { InvestmentAllocation, InvestmentComparison } from "@/components/InvestmentSynthesis";
 import { portfolio } from "@/lib/holdings";
+import { db } from "@/lib/db";
+import styles from "@/components/InvestmentSynthesis.module.css";
 
 export const metadata = { title: "מחקר שוק והחלטות בתיק" };
 
 export const dynamic = "force-dynamic";
 
 export default async function InvestmentResearch() {
-  const folio = await portfolio();
+  const [folio, claude] = await Promise.all([
+    portfolio(),
+    db.research.findMany({ select: { symbol: true, verdict: true, score: true, asOf: true } }),
+  ]);
   return (
-    <>
-      <a href="/invest#investment-synthesis">חזרה לדף ההשקעות</a>
-      <h1>למכור, לחכות או לשנות?</h1>
+    <div className={styles.researchPage}>
+      <header className={styles.researchHero}>
+        <a className={styles.back} href="/invest">חזרה להשקעות ←</a>
+        <p className={styles.kicker}>סקירת 11.11.2026</p>
+        <h1>החלטות בתיק ההשקעות</h1>
+        <div className={styles.overview}>
+          <div><h2>לקנות בכסף חדש</h2><p><bdi>VWRA.L</bdi> כל עוד קרנות הסל מתחת ליעד של 55%.</p></div>
+          <div><h2>להחזיק ולהמתין</h2><p><bdi>RTX</bdi> בגלל משקלה בתיק. <bdi>NVDA</bdi> עד לדוח ב־17.11.</p></div>
+          <div><h2>מכירה</h2><p>בסקירה לא נמצאה החזקה שמצריכה מכירה מיידית.</p></div>
+        </div>
+      </header>
+      <InvestmentComparison folio={folio} claudeBySymbol={Object.fromEntries(claude.map((row) => [row.symbol, row]))} />
       <InvestmentAllocation folio={folio} />
-      <p className="label">סקירה ל־7.11.2026 על בסיס ההחזקות בדוח הברוקר מ־6.11.2026. MU מופיעה בטבלה כמועמדת למעקב.</p>
-      <div className="grid">
-        <div className="card"><h2>למכור עכשיו</h2><p>לא זוהתה סיבה למכירה דחופה בסקירה הזו. שינוי יעד החלוקה לבדו לא מחייב מכירה.</p></div>
-        <div className="card"><h2>אפשר לחכות</h2><p>ב־NVDA עד הדוח ב־17.11 וב־TSM עד עדכון המכירות ב־10.11. ב־PLTR כדאי לבדוק תמחור לפני הגדלה.</p></div>
-        <div className="card"><h2>מה לשנות</h2><p>אם רוצים להפחית את ההטיה לארה״ב, אפשר לכוון את ההפקדות החדשות ל־VWRA לפני ששוקלים מכירה של VUAA.</p></div>
-      </div>
-      <p className="label">השוואת Claude מבוססת על הסבב השמור מ־3.11.2026. סבב חדש לא הושלם עקב מגבלת השימוש. הבדיקה העצמאית מול המקורות נערכה ב־7.11.2026.</p>
-      <InvestmentComparison folio={folio} />
-    </>
+    </div>
   );
 }

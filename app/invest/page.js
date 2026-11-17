@@ -15,6 +15,7 @@ import ExpandRow from "@/components/ExpandRow";
 import Details from "@/components/Details";
 import Screener from "@/components/Screener";
 import SectionTabs from "@/components/SectionTabs";
+import PortfolioOverview from "@/components/PortfolioOverview";
 import WeekAhead from "@/components/WeekAhead";
 import StatusTag from "@/components/StatusTag";
 import { LiveQuotes, LiveChange, LiveWeek, LivePrice, MarketStatus, IntradayChart, Ticker } from "@/components/Live";
@@ -24,7 +25,7 @@ import { ibkrEnabled, syncIbkr, ibkrQuoteUrl, ibkrDetailsUrl } from "@/lib/ibkr"
 import { STOP, TARGET } from "@/lib/alerts";
 import Alerts from "@/components/Alerts";
 import { signalsFor, finvizUrl, onFinviz } from "@/lib/signals";
-import { loadResearch, statusOf, STATUS, WEIGHTS } from "@/lib/research";
+import { loadResearch, statusOf, STATUS, WEIGHTS, actionOf } from "@/lib/research";
 import ThemeCompare from "@/components/ThemeCompare";
 import { technicalsFor, TECH } from "@/lib/technicals";
 import { engineFor } from "@/lib/engine-run";
@@ -157,9 +158,12 @@ export default async function Invest({ searchParams }) {
   const valid = Object.values(market.bySymbol).filter((q) => !q.error && q.buyable);
   const [lo, hi] = [Math.min(...valid.map((q) => q.score)), Math.max(...valid.map((q) => q.score))];
   const ranked = valid.map((q) => ({ ...q, rankScore: hi > lo ? ((q.score - lo) / (hi - lo)) * 100 : 50 })).sort((x, y) => y.score - x.score);
-  const signals = await signalsFor(market.bySymbol, [...Object.keys(market.bySymbol), ...folio.rows.map((h) => h.symbol)]);
-  const techs = await technicalsFor([...Object.keys(market.bySymbol), ...folio.rows.map((h) => h.symbol)]);
-  const engine = await engineFor([...Object.keys(market.bySymbol), ...folio.rows.map((h) => h.symbol)]);
+  const symbols = [...Object.keys(market.bySymbol), ...folio.rows.map((h) => h.symbol)];
+  const [signals, techs, engine] = await Promise.all([
+    signalsFor(market.bySymbol, symbols),
+    technicalsFor(symbols),
+    engineFor(symbols),
+  ]);
   // How much of what is held sits under each technical label, for the snapshot in the first block.
   const techHeld = Object.keys(TECH).map((k) => ({ key: k, value: folio.rows.filter((h) => techs[h.symbol]?.key === k).reduce((t, h) => t + h.value, 0) }));
   const techHeldTotal = techHeld.reduce((t, x) => t + x.value, 0);
@@ -306,7 +310,11 @@ export default async function Invest({ searchParams }) {
       {searchParams?.error && <p className="warn">הפעולה נכשלה: {searchParams.error}</p>}
       {market.rateError && <p className="warn">לא הצלחתי למשוך שערי מטבע ({market.rateError}).</p>}
 
+      <PortfolioOverview folio={folio} money={money} heavy={heavy} />
+
       {folio.broker && folio.rows.length > 0 && (
+        <details className="card">
+          <summary style={{ cursor: "pointer", fontWeight: 600 }}>פירוט חלוקה והשוואת יעדי המודלים</summary>
         <ThemeCompare groups={groups} statuses={statuses} why={Object.fromEntries(folio.rows.map((h) => [h.symbol, whyShort(h.symbol)]))} money={money} total={total}
           summary={<>
               <div className="hero-row" style={{ marginTop: 4 }}>
@@ -314,7 +322,7 @@ export default async function Invest({ searchParams }) {
                 <div><div className="label">הושקע</div><div className="value">{both(folio.cost)}</div></div>
                 <div><div className="label">שווי היום</div><div className="value">{both(folio.held)}</div></div>
                 <div><div className="label">רווח / הפסד</div><div className={`value ${folio.profit >= 0 ? "pos" : "neg"}`}>{both(folio.profit)}</div></div>
-                <div><div className="label">תשואה</div><div className={`value ${folio.pct >= 0 ? "pos" : "neg"}`}>{pct(folio.pct)}</div></div>
+                <div><div className="label">רווח פתוח ביחס לעלות</div><div className={`value ${folio.pct >= 0 ? "pos" : "neg"}`}>{pct(folio.pct)}</div></div>
                 {folio.broker && <div><div className="label">מזומן בחשבון</div><div className="value">{both(folio.cash)}</div></div>}
                 {folio.week != null && <div><div className="label">רווח השבוע</div><div className={`value ${folio.week >= 0 ? "pos" : "neg"}`}>{both(folio.week)}</div></div>}
               </div>
@@ -323,8 +331,10 @@ export default async function Invest({ searchParams }) {
               {" · "}לפי דוח אינטראקטיב מ-{folio.asOf.toLocaleDateString("he-IL", { timeZone: "UTC" })}
             </p>
           </>} />
+        </details>
       )}
       <WeekAhead days={weekDays} />
+      <a className="button secondary-link" href="/invest/research">מחקר עדכני · לקנות, להחזיק או למכור</a>
       {folio.broker && folio.rows.length > 0 && <SectionTabs tabs={TABS} />}
 
       <LiveQuotes symbols={folio.rows.map((h) => h.symbol)}>
@@ -360,23 +370,19 @@ export default async function Invest({ searchParams }) {
               )}
               <div className="table-scroll" style={{ marginTop: 8 }}>
                 <table className="compact holdings">
-                  <thead><tr><th>סימול</th><th>שם</th><th>יחידות</th><th>הושקע</th><th>שווי</th><th>רווח</th><th>%</th><th>היום</th><th>טכני</th><th>סטטוס <Info text="מהמחקר המעמיק: לקנות / עדיף לחכות / למכור, עם התזמון של היום. ⛔ כפילות = קרן שרובה מניות שכבר יש לך בליבה (VUAA ו-VWRA). לחיצה על שורה פותחת את כל הפרטים, גרף שבועי והמקורות." /></th></tr></thead>
+                  <thead><tr><th>סימול</th><th>שם</th><th>שווי</th><th>רווח מאז הקנייה</th><th>היום</th><th>מה לעשות <Info text="מהמחקר המעמיק: לקנות / עדיף לחכות / למכור, עם התזמון של היום. ⛔ כפילות = קרן שרובה מניות שכבר יש לך בליבה (VUAA ו-VWRA). לחיצה על שורה פותחת את כל הפרטים, גרף שבועי והמקורות." /></th></tr></thead>
                   <tbody>
                     {folio.rows.map((h) => (
                       <ExpandRow
                         key={h.symbol}
-                        colSpan={10}
+                        colSpan={6}
                         cells={<>
                           <td className="sym-col"><span className="sym"><span className="exp-ico" aria-hidden="true">▾</span><Logo id={h.symbol} label={h.name} size={18} /><IbLink conid={h.conid ?? market.bySymbol[h.symbol]?.ibkr?.conid}><b>{h.symbol}</b></IbLink></span></td>
                           <td className="line-name" title={h.name}>{h.name} <span className="xtag hpie-type">{typeOf(h)}</span></td>
-                          <td>{h.units ? Math.round(h.units * 1000) / 1000 : "—"}</td>
-                          <td>{both(h.cost)}</td>
                           <td>{both(h.value)}</td>
-                          <td className={h.profit >= 0 ? "pos" : "neg"}>{both(h.profit)}</td>
-                          <td><Ret x={h.pct} /></td>
+                          <td className={h.profit >= 0 ? "pos" : "neg"}>{both(h.profit)} <span className="label">(<Ret x={h.pct} />)</span></td>
                           <td><LiveChange symbol={h.symbol} fallback={market.bySymbol[h.symbol]?.d1} /></td>
-                          <td><TechTag t={techs[h.symbol]} short /></td>
-                          <td><StatusTag st={statuses[h.symbol]} /></td>
+                          <td className="act-col">{(() => { const a = actionOf(statuses[h.symbol], true); return <><span className={`st st-${a.tone}`}>{STATUS[a.tone][0]} {a.text}</span><div className="act-why">{whyShort(h.symbol)}</div></>; })()}</td>
                         </>}
                       >
                         {detailsFor(h.symbol, h)}

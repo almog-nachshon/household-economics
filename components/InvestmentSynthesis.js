@@ -62,14 +62,14 @@ const comparisons = [
   {
     name: "RTX", target: 5, claude: "לקנייה, ציון 0.86.",
     research: "מכירות הרבעון עלו 11% והחברה העלתה תחזית. חלק מהשיפור ברווח המתואם הגיע מהחזר עלויות.",
-    decision: "המועמדת המובילה לביטחון. לבדוק מחיר מול התחזית המעודכנת ואת משקל ההחזקה לפני הוספה.",
+    decision: "להחזיק בלי להוסיף. בדוח 9.11 המשקל הישיר היה גבוה משמעותית מיעד 5%. אם רוצים להתקרב ליעד מהר, לשקול צמצום חלקי אחרי בדיקת מס ועלויות.",
     url: "https://www.rtx.com/news/news-center/2026/10/20/rtx-reports-q3-2026-results",
   },
   {
     name: "TSM", target: 5, claude: "לקנייה, ציון 0.90.",
-    research: "הכנסות הרבעון עלו 50.9% במטבע המקומי. ריכוז פעילות בטייוואן מוסיף סיכון, ועדכון מכירות אוקטובר צפוי ב־10.11.",
-    decision: "המועמדת המובילה בשבבים. לבדוק מחדש אחרי עדכון המכירות ולכלול בחישוב גם את החשיפה דרך הקרן העולמית.",
-    url: "https://investor.tsmc.com/english/financial-calendar",
+    research: "לפי הודעת החברה מ־10.11, הכנסות אוקטובר עלו 59.7% משנה לשנה ו־14.7% מספטמבר.",
+    decision: "להחזיק. הנתון מחזק את המועמדות להגדלה בהמשך, אחרי השלמת הפער בקרנות הסל ובדיקת תמחור וחשיפה מצטברת לשבבים.",
+    url: "https://pr.tsmc.com/english/news/3349",
     extraUrl: "https://investor.tsmc.com/english/quarterly-results/2026/q3",
   },
   {
@@ -87,7 +87,7 @@ const comparisons = [
   {
     name: "NVDA", target: 5, claude: "לקנייה במחקר, להמתנה בסיכום בגלל משקל ההחזקה.",
     research: "דוח הרבעון הבא נקבע ל־17.11. תוספת למניה מגדילה חשיפה שכבר קיימת בתיק ודרך המדד.",
-    decision: "להמתין לדוח ולבדוק את הריכוזיות מחדש לפני הוספה.",
+    decision: "להחזיק בלי להוסיף לפני הדוח ב־17.11. בדוח 9.11 המשקל הישיר כבר היה גבוה מהיעד, עוד לפני החלק דרך קרנות הסל.",
     url: "https://nvidianews.nvidia.com/news/nvidia-sets-conference-call-for-third-quarter-financial-results-6928873",
   },
   {
@@ -96,12 +96,44 @@ const comparisons = [
     decision: "אפשר להמתין עם ההחזקה הקיימת. יעד הכסף החדש מתמקד בקרנות סל, ב־AI ובביטחון.",
     url: "https://ir.tesla.com/press-release/tesla-third-quarter-2026-production-deliveries-and-deployments",
   },
+  {
+    name: "AMD", action: "להמתין",
+    research: "הכנסות הרבעון עלו 45% והכנסות מרכזי הנתונים עלו 97%. תחזית ההנהלה לרבעון הבא היא כ־17 מיליארד דולר.",
+    decision: "מועמדת ל־AI. להמתין לבדיקת תמחור: קנייה תגדיל את החשיפה לאותם תקציבי מרכזי נתונים שמניעים גם את NVDA ו־TSM.",
+    url: "https://ir.amd.com/news-events/press-releases/detail/1303/amd-reports-third-quarter-2026-financial-results",
+  },
+  {
+    name: "ANET", action: "להמתין",
+    research: "הכנסות הרבעון עלו 58.5% לכ־3.66 מיליארד דולר ועברו את תחזית החברה.",
+    decision: "מועמדת לתשתיות רשת ל־AI. המוצר שונה משבבים, אבל עדיין תלוי בהשקעות מרכזי נתונים. לבדוק תמחור וריכוז לקוחות לפני קנייה.",
+    url: "https://investors.arista.com/Communications/Press-Releases-and-Events/Press-Release-Detail/2026/Arista-Networks-Inc--Reports-Third-Quarter-2026-Financial-Results/default.aspx",
+  },
+  {
+    name: "GD", action: "להמתין",
+    research: "ההכנסות עלו 12.9%, הרווח המדולל למניה עלה 15.7%, וצבר ההזמנות הגיע ל־220 מיליארד דולר.",
+    decision: "ראשונה לבדיקה לפיזור בתוך הביטחון, בזכות פעילות בספינות וברכב קרבי. כל עוד הביטחון והתעופה מעל היעד, תוספת תגדיל את החריגה.",
+    url: "https://www.gd.com/news/press-release/general-dynamics-reports-third-quarter-2026-financial-results/",
+  },
+  {
+    name: "HWM", action: "להמתין",
+    research: "ההכנסות עלו 29%, מתוכן צמיחה אורגנית של 25%. החברה העלתה את תחזית 2026.",
+    decision: "מועמדת לחשיפה לרכיבי תעופה. לבחון מול GD ואחרי בדיקת מחיר, כי התיק כבר חשוף לתעופה דרך RTX.",
+    url: "https://www.howmet.com/financial-release/2026-10-29/howmet-aerospace-reports-third-quarter-2026-results/",
+  },
+  {
+    name: "AVAV", action: "להמתין",
+    research: "הכנסות הרבעון עלו 6% וצבר ההזמנות הממומן עלה 37%, לצד הפסד נקי חשבונאי של 5.1 מיליון דולר.",
+    decision: "מועמדת חדשה למעקב בתחום המערכות האוטונומיות הביטחוניות. לבדוק מעבר לרווח ותזרים ביחס למחיר לפני קנייה.",
+    url: "https://www.avinc.com/2026/09/09/aerovironment-announces-fiscal-2027-first-quarter-results/",
+  },
 ];
+
+const verdictLabels = { buy: "לקנות", wait: "להמתין", sell: "למכור" };
 
 export default function InvestmentSynthesis({ folio }) {
   return (
     <section id="investment-synthesis" className={`card ${styles.panel}`}>
-      <span className={styles.kicker}>מחקר משולב · 7.11.2026</span>
+      <span className={styles.kicker}>מחקר משולב · 11.11.2026</span>
       <h2>חלוקה משולבת לכסף לטווח ארוך</h2>
       <a className="button secondary-link" href="/invest/research">למכור, לחכות או לשנות? לדף ההחלטות</a>
       <p>יעד לתיק לטווח ארוך: 55% קרנות סל, 20% AI ושבבים, 15% ביטחון ותעופה, 5% AI ביטחוני ו־5% מזומן.</p>
@@ -120,20 +152,23 @@ export default function InvestmentSynthesis({ folio }) {
   );
 }
 
-export function InvestmentComparison({ folio }) {
+export function InvestmentComparison({ folio, claudeBySymbol = {} }) {
   const available = folio.broker && folio.value > 0 && !folio.missingFx?.length;
   const weights = new Map();
   for (const row of folio.rows) {
     weights.set(row.symbol, (weights.get(row.symbol) ?? 0) + row.value);
   }
   const etfWeight = folio.rows.filter((row) => etfs.has(row.symbol)).reduce((sum, row) => sum + row.value, 0);
+  const groups = available ? [
+    ["החזקות בתיק", comparisons.filter((item) => weights.has(item.name))],
+    ["מועמדות למעקב", comparisons.filter((item) => !weights.has(item.name))],
+  ] : [["ניירות שנבדקו", comparisons]];
   return (
       <section aria-labelledby="investment-comparison">
         <h3 id="investment-comparison">השוואת המניות והקרנות</h3>
-        <p className="label">משקל קיים מתוך שווי החשבון כולל מזומן{available ? `, לפי דוח הברוקר מ־${folio.asOf.toLocaleDateString("he-IL", { timeZone: "UTC" })}` : " (הנתון כרגע לא זמין)"}. יעד 0% פירושו שאין הקצאה חדשה לנייר. 20% מהיעד מוצגים בטבלת האפיקים: 5% מזומן, 10% ביטחון ותעופה ו־5% AI שטרם שויכו לנייר מסוים.</p>
-        <p className="label">מחקר Claude מ־3.11.2026 · בדיקת ChatGPT מ־7.11.2026.</p>
+        <p className="label">משקל בחשבון כולל מזומן{available ? ` · אינטראקטיב ${folio.asOf.toLocaleDateString("he-IL", { timeZone: "UTC" })}` : " · נתוני משקל אינם זמינים"} · סקירה 11.11.2026</p>
         <div className={styles.tableScroll} tabIndex={0} role="region" aria-labelledby="investment-comparison">
-          <table className={styles.comparison} dir="rtl">
+          <table className={`${styles.comparison} ${styles.decisions}`} dir="rtl">
             <thead>
               <tr>
                 <th scope="col">משקל קיים</th>
@@ -143,28 +178,42 @@ export function InvestmentComparison({ folio }) {
                 <th scope="col">יעד המחקר</th>
               </tr>
             </thead>
-            <tbody>
-              {comparisons.map((item) => (
+            {groups.filter(([, items]) => items.length).map(([label, items]) => (
+            <tbody key={label}>
+              <tr className={styles.group}><th scope="rowgroup" colSpan={5}>{label}</th></tr>
+              {items.map((item) => {
+                const claude = claudeBySymbol[item.name];
+                const held = weights.has(item.name);
+                const action = item.action === "לקנות" && (!available || etfWeight / folio.value >= .55)
+                  ? (held ? "להשאיר" : "להמתין")
+                  : item.action ?? (held ? "להשאיר" : "להמתין");
+                return (
                 <tr key={item.name}>
-                  <td><b>{available ? percent((weights.get(item.name) ?? 0) / folio.value) : "—"}</b></td>
+                  <td className={styles.current}><b>{available ? percent((weights.get(item.name) ?? 0) / folio.value) : "—"}</b></td>
                   <th scope="row"><bdi>{item.name}</bdi></th>
-                  <td><b>{item.action === "לקנות" && (!available || etfWeight / folio.value >= .55)
-                    ? (weights.has(item.name) ? "להשאיר" : "להמתין")
-                    : item.action ?? (weights.has(item.name) ? "להשאיר" : "להמתין")}</b></td>
-                  <td>
+                  <td><span className={styles.action} data-action={action}>{action}</span></td>
+                  <td className={styles.reason}>
                     {item.decision}
                     <details>
                       <summary>Claude ו־ChatGPT · מחקר ומקורות</summary>
-                      <p><span className={styles.brand} dir="ltr"><ClaudeMark size={18} /> Claude</span> · {item.claude}</p>
+                      <p><span className={styles.brand} dir="ltr"><ClaudeMark size={18} /> Claude</span> · {claude
+                        ? `${verdictLabels[claude.verdict]} · ${claude.score.toFixed(2)} · ${claude.asOf.toLocaleDateString("he-IL", { timeZone: "Asia/Jerusalem" })}`
+                        : "אין רשומה עדכנית להצגה"}</p>
                       <p><span className={styles.brand} dir="ltr"><Logo id="chatgpt" label="ChatGPT" size={18} /> ChatGPT</span> · {item.research} <a href={item.url}>מקור</a>{item.extraUrl && <> · <a href={item.extraUrl}>דוח הרבעון</a></>}</p>
                     </details>
                   </td>
-                  <td><b>{percent(item.target / 100)}</b></td>
+                  <td className={styles.target}><b>{item.target == null ? "—" : percent(item.target / 100)}</b></td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
+            ))}
           </table>
         </div>
+        <details className={styles.legend}>
+          <summary>איך לקרוא את יעדי המחקר</summary>
+          <p>0% מציין שאין הקצאה לקניות חדשות בנייר. מקף מציין מועמדת שטרם קיבלה יעד. בטבלת האפיקים מופיעים גם 5% מזומן, 10% ביטחון ותעופה ו־5% AI שטרם שויכו לניירות מסוימים.</p>
+        </details>
       </section>
   );
 }
