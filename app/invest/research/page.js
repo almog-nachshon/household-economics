@@ -2,6 +2,7 @@ import { InvestmentAllocation, InvestmentComparison } from "@/components/Investm
 import { portfolio } from "@/lib/holdings";
 import { db } from "@/lib/db";
 import styles from "@/components/InvestmentSynthesis.module.css";
+import KoyfinResearch from "@/components/KoyfinResearch";
 
 export const metadata = { title: "מחקר שוק והחלטות בתיק" };
 
@@ -24,6 +25,7 @@ export default async function InvestmentResearch() {
           <div><h2>מכירה</h2><p>בסקירה לא נמצאה החזקה שמצריכה מכירה מיידית.</p></div>
         </div>
       </header>
+      <KoyfinResearch />
       <InvestmentComparison folio={folio} claudeBySymbol={Object.fromEntries(claude.map((row) => [row.symbol, row]))} />
       <InvestmentAllocation folio={folio} />
     </div>

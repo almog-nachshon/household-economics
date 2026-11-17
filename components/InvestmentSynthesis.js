@@ -200,6 +200,7 @@ export function InvestmentComparison({ folio, claudeBySymbol = {} }) {
                         ? `${verdictLabels[claude.verdict]} · ${claude.score.toFixed(2)} · ${claude.asOf.toLocaleDateString("he-IL", { timeZone: "Asia/Jerusalem" })}`
                         : "אין רשומה עדכנית להצגה"}</p>
                       <p><span className={styles.brand} dir="ltr"><Logo id="chatgpt" label="ChatGPT" size={18} /> ChatGPT</span> · {item.research} <a href={item.url}>מקור</a>{item.extraUrl && <> · <a href={item.extraUrl}>דוח הרבעון</a></>}</p>
+                      <p><a href="https://app.koyfin.com/" target="_blank" rel="noreferrer">Koyfin · בדיקה ידנית משלימה ↗</a> · חפש <bdi>{item.name}</bdi> ובדוק התאמת נייר, תמחור ותחזיות. קישור עזר; אינו מקור שנבדק בסקירה זו.</p>
                     </details>
                   </td>
                   <td className={styles.target}><b>{item.target == null ? "—" : percent(item.target / 100)}</b></td>

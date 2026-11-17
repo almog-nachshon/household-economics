@@ -8,6 +8,11 @@ Research these stocks/ETFs as of today using web search: <SYMBOLS>
 For each, use 6+ current, dated sources (analyst aggregators like StockAnalysis/MarketBeat/TipRanks, recent rating and
 target changes, the latest earnings report, technicals: price vs 50/200-day moving average and RSI, forward P/E,
 sentiment incl. named analysts). Never invent numbers; if not found, say so and score that part 0.
+Include Koyfin as an additional research resource when accessible, for consensus estimates/revisions, historical and
+peer valuation, and ETF holdings/overlap. Use only data actually viewed or a permitted user-provided export. Record
+the observation date, data period, exact listing and underlying source. If access requires login/subscription you
+do not have, state Koyfin was not checked in the relevant note and omit it from sources. Never invent Koyfin findings,
+count a homepage link as evidence, or double-count the same underlying dataset as independent confirmation.
 Score five parts from -2 to +2: analysts, revisions (rating changes + earnings), technicals, valuation, sentiment.
 Return ONLY JSON:
 {"asOf":"YYYY-MM-DD","results":[{"symbol":"","confidence":1-5,"summary_he":"one Hebrew sentence",

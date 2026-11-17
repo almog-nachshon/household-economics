@@ -887,3 +887,6 @@ html[data-theme="dark"] .dt-answer-sell { color: #f7525f; }
 .market-connection { margin-bottom: 24px; }
 .market-connection p { line-height: 1.8; }
 .market-connection a, .market-connection a:visited { color: var(--accent-dark, var(--accent)); }
+.koyfin-research { color: var(--text); line-height: 1.8; }
+.koyfin-research a, .koyfin-research a:visited { color: var(--accent-dark, var(--accent)); }
+.koyfin-research ul { padding-inline-start: 24px; }

@@ -2,6 +2,7 @@ import Logo from "@/components/Logo";
 import Info from "@/components/Info";
 import PriceChart from "@/components/PriceChart";
 import ResearchPanel from "@/components/ResearchPanel";
+import KoyfinResearch from "@/components/KoyfinResearch";
 import TechPanel from "@/components/TechPanel";
 import { LiveChange, LiveWeek } from "@/components/Live";
 import { STATUS, WEIGHTS, actionOf } from "@/lib/research";
@@ -109,6 +110,7 @@ export default function Details({ symbol, name, type, bucket, q, h, st, tech, en
         </details>
       ) : null}
 
+      <KoyfinResearch symbol={symbol} type={type} />
       {about && <p className="dt-about">{about}</p>}
       <div className="dt-links">
         {links.ibkr && <a href={links.ibkr} target="_blank" rel="noreferrer">באינטראקטיב ↗</a>}
