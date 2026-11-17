@@ -37,10 +37,16 @@ export default function BrokerAutoSync() {
     return () => window.removeEventListener("pageshow", restored);
   }, [pathname]);
 
+  useEffect(() => {
+    if (pathname !== "/" && !pathname.startsWith("/invest")) return;
+    const timer = setInterval(() => { if (document.visibilityState === "visible" && !running.current) router.refresh(); }, 60000);
+    return () => clearInterval(timer);
+  }, [pathname, router]);
+
   if (pathname === "/login" || state === "idle") return null;
   return (
     <div className="broker-auto-sync" role="status" aria-live="polite">
-      {state === "pending" ? "מעדכן החזקות, מזומן ועסקאות מאינטראקטיב… אפשר להמשיך לגלוש." : state === "done" ? "✓ הנתונים מאינטראקטיב עודכנו בפתיחת האתר. מחירי ההחזקות לפי דוח הברוקר." : <>העדכון מאינטראקטיב לא הושלם. מוצגים הנתונים השמורים. <button type="button" onClick={refresh}>נסה שוב</button></>}
+      {state === "pending" ? "מעדכן החזקות, מזומן ועסקאות מאינטראקטיב… אפשר להמשיך לגלוש." : state === "done" ? "✓ נתוני הברוקר עודכנו. השערוך משלב מחירי שוק זמינים ומתעדכן מדי דקה; ייתכן עיכוב בנתוני השוק." : <>העדכון מאינטראקטיב לא הושלם. מוצגים נתוני החשבון השמורים עם מחירי השוק הזמינים. <button type="button" onClick={refresh}>נסה שוב</button></>}
     </div>
   );
 }

@@ -1,4 +1,5 @@
-// Live price and today's change for a few symbols (the invest page polls it every minute).
+import { marketSnapshot } from "@/lib/market-snapshot";
+// Latest available regular-session quote; this public feed may be delayed.
 export const dynamic = "force-dynamic";
 
 export async function GET(req) {
@@ -6,11 +7,7 @@ export async function GET(req) {
   const rows = await Promise.all(
     symbols.map(async (s) => {
       try {
-        const res = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(s)}?range=5d&interval=5m`, {
-          headers: { "User-Agent": "Mozilla/5.0" },
-          next: { revalidate: 60 },
-        });
-        const r = (await res.json()).chart.result[0];
+        const r = await marketSnapshot(s);
         const m = r.meta;
         // 5 sessions of 5-minute closes: the last session draws the card's chart, the session before it gives
         // yesterday's close (today's change), and the close before the 5 sessions gives the week's change.

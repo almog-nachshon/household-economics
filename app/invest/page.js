@@ -343,7 +343,7 @@ export default async function Invest({ searchParams }) {
           <h2 style={{ margin: 0 }}>
             {folio.broker ? "המצב עכשיו: התיק שלי (אחזקות)" : "התיק שלי"}{" "}
             <Info text={folio.broker
-              ? `מאינטראקטיב, במחירי הסגירה של ${folio.asOf.toLocaleDateString("he-IL", { timeZone: "UTC" })} (קניות מהיום במחיר הקנייה). התראה ב-${Math.round(STOP * 100)}% או ב-+${Math.round(TARGET * 100)}% ממחיר הקנייה. הרווח בדולרים, מומר לשקלים בשער היום.`
+              ? "כמויות ועלות מאינטראקטיב, בשילוב מחירי השוק האחרונים שאומתו. המקור וזמן המחיר מופיעים ליד כל שווי; ללא מחיר מתאים נשמר מחיר הברוקר. המרת מטבע לפי דוח הברוקר כשזמין, לא שער מט״ח חי."
               : "לפי כל ההפקדות שסימנת ״קניתי״, במחירי היום"} />
           </h2>
           {folio.rows.length === 0 ? (
@@ -379,7 +379,7 @@ export default async function Invest({ searchParams }) {
                         cells={<>
                           <td className="sym-col"><span className="sym"><span className="exp-ico" aria-hidden="true">▾</span><Logo id={h.symbol} label={h.name} size={18} /><IbLink conid={h.conid ?? market.bySymbol[h.symbol]?.ibkr?.conid}><b>{h.symbol}</b></IbLink></span></td>
                           <td className="line-name" title={h.name}>{h.name} <span className="xtag hpie-type">{typeOf(h)}</span></td>
-                          <td>{both(h.value)}</td>
+                          <td>{both(h.value)}<div className="label" style={{ fontSize: 11 }}>{h.priceSource === "Yahoo Finance" ? `Yahoo · ${new Date(h.priceTime).toLocaleString("he-IL", { timeZone: "Asia/Jerusalem", day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit" })}${h.priceReason === "close" ? " · סגירה" : " · ייתכן עיכוב"}` : `מחיר IBKR · ${folio.asOf?.toLocaleDateString("he-IL", { timeZone: "UTC" }) ?? ""}`}</div></td>
                           <td className={h.profit >= 0 ? "pos" : "neg"}>{both(h.profit)} <span className="label">(<Ret x={h.pct} />)</span></td>
                           <td><LiveChange symbol={h.symbol} fallback={market.bySymbol[h.symbol]?.d1} /></td>
                           <td className="act-col">{(() => { const a = actionOf(statuses[h.symbol], true); return <><span className={`st st-${a.tone}`}>{STATUS[a.tone][0]} {a.text}</span><div className="act-why">{whyShort(h.symbol)}</div></>; })()}</td>
