@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { getSettings } from "@/lib/data";
+import MarketConnection from "@/components/MarketConnection";
+import { finnhubEnabled } from "@/lib/finnhub";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +39,7 @@ export default async function Settings() {
   return (
     <>
       <h1>הגדרות</h1>
+      <MarketConnection configured={finnhubEnabled()} />
       <form action={save}>
         {NUMBERS.map(([k, label, step]) => (
           <label key={k}>{label} <input type="number" name={k} step={step || "1"} defaultValue={s[k]} required /></label>
