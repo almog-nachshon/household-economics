@@ -49,7 +49,7 @@ export default function OpportunityResearch() {
       setPreview(parsed);
     } catch (e) { setError(e.message); }
   }
-  async async function save() {
+  async function save() {
     if (!preview) return;
     setError("");
     try {
