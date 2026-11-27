@@ -18,6 +18,7 @@ export default function RootLayout({ children }) {
           <a href="/" className="brand">🏠 <span className="btn-long">תכנית פיננסית לבית ב-</span>2030</a>
           <a href="/expenses">הוצאות / הכנסות</a>
           <a href="/invest">השקעות</a>
+          <a href="/invest/opportunities">הזדמנויות</a>
           <a href="/funds">קרנות ופנסיה</a>
           <a href="/settings">הגדרות</a>
           <a href="/login" className="nav-end">יציאה</a>
