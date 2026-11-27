@@ -3,7 +3,6 @@
 import { useMemo, useState, useEffect } from "react";
 import { validateOpportunityReport, rankOpportunities } from "@/lib/opportunity-report.mjs";
 
-const STORAGE = "opportunity-reports-v1";
 const STRATEGY = { momentum: "מומנטום ופריצה", earnings: "האצת רווחים", value: "איכות בתמחור", growth: "צמיחה", recovery: "התאוששות", other: "אחר" };
 const DECISION = { WATCH: "מעקב", REVIEW: "למחקר נוסף", AVOID: "להימנע" };
 const sample = {
@@ -26,10 +25,15 @@ export default function OpportunityResearch() {
   const [selection, setSelection] = useState("");
   const [filter, setFilter] = useState("ALL");
   useEffect(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem(STORAGE) || "[]");
-      if (Array.isArray(saved)) setReports(saved.filter(r => validateOpportunityReport(r).ok).slice(0, 24));
-    } catch { /* Ignore invalid local cache. */ }
+    const controller = new AbortController();
+    fetch("/api/opportunities", { cache: "no-store", signal: controller.signal })
+      .then(async response => {
+        if (!response.ok) throw Error("טעינת המחקרים מהשרת נכשלה");
+        return response.json();
+      })
+      .then(data => setReports(Array.isArray(data.reports) ? data.reports : []))
+      .catch(e => { if (e.name !== "AbortError") setError(e.message); });
+    return () => controller.abort();
   }, []);
   const active = reports.find(r => r.reportId === selection) || reports[0];
   const rows = useMemo(() => active ? rankOpportunities(active).filter(c => filter === "ALL" || c.strategy === filter) : [], [active, filter]);
@@ -45,15 +49,22 @@ export default function OpportunityResearch() {
       setPreview(parsed);
     } catch (e) { setError(e.message); }
   }
-  function save() {
+  async async function save() {
     if (!preview) return;
-    const match = reports.find(r => r.reportId === preview.reportId);
-    if (match && JSON.stringify(match) !== JSON.stringify(preview)) { setError("דוח בעל אותו מזהה כבר קיים עם נתונים שונים. שנה reportId כדי לשמור גרסה חדשה."); return; }
-    const updated = [preview, ...reports.filter(r => r.reportId !== preview.reportId)].slice(0, 24);
+    setError("");
     try {
-      localStorage.setItem(STORAGE, JSON.stringify(updated));
-      setReports(updated); setSelection(preview.reportId); setDraft(""); setPreview(null); setError("");
-    } catch { setError("שמירת המחקר בדפדפן נכשלה. ייתכן שאין מספיק מקום."); }
+      const response = await fetch("/api/opportunities", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(preview)
+      });
+      const result = await response.json();
+      if (!response.ok) throw Error([result.error, ...(result.details || [])].filter(Boolean).join("; "));
+      const list = await fetch("/api/opportunities", { cache: "no-store" });
+      if (!list.ok) throw Error("הדוח נשמר אך טעינת הרשימה נכשלה");
+      const data = await list.json();
+      setReports(data.reports || []);
+      setSelection(preview.reportId); setDraft(""); setPreview(null);
+    } catch (e) { setError(e.message); }
   }
   function downloadTemplate() {
     const blob = new Blob([JSON.stringify(sample, null, 2)], { type: "application/json" });
@@ -66,7 +77,7 @@ export default function OpportunityResearch() {
     <p>מחקר ChatGPT חיצוני, ללא API. רשימות המועמדים אינן המלצות מסחר ואינן משנות את תיק ההחזקות.</p>
     <div style={{ border: "1px solid #91a5af", borderRadius: 12, padding: 16, marginBottom: 24 }}>
       <h2>ייבוא מחקר JSON</h2>
-      <p>העתק JSON או בחר קובץ מחקר. הדוחות נשמרים <strong>בדפדפן זה בלבד</strong>, לא בשרת ולא בדוח הברוקר.</p>
+      <p>העתק JSON או בחר קובץ מחקר. הדוחות נשמרים <strong>במסד הנתונים הפרטי של האתר</strong>, בנפרד מהעסקאות והברוקר.</p>
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 12 }}>
         <button type="button" onClick={downloadTemplate}>הורד מבנה JSON לדוגמה</button>
         <label>בחר קובץ <input type="file" accept=".json,application/json" onChange={async (e) => {
