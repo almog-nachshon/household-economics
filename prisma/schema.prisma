@@ -284,3 +284,17 @@ model EnginePrediction {
 
   @@unique([symbol, asOf, version])
 }
+
+
+// Versioned, immutable ChatGPT research imports. These are research observations,
+// NOT trades or broker holdings. Never store account identifiers or API secrets here.
+model OpportunityReport {
+  id           Int      @id @default(autoincrement())
+  reportId     String   @unique
+  researchDate String
+  payload      String   // validated JSON, capped at 1MB by API
+  sha256       String
+  createdAt    DateTime @default(now())
+
+  @@index([researchDate])
+}
