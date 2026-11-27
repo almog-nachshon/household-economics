@@ -76,7 +76,8 @@ export default function OpportunityResearch() {
     <h1>🔎 גילוי הזדמנויות השקעה</h1>
     <p>מחקר ChatGPT חיצוני, ללא API. רשימות המועמדים אינן המלצות מסחר ואינן משנות את תיק ההחזקות.</p>
     <div style={{ border: "1px solid #91a5af", borderRadius: 12, padding: 16, marginBottom: 24 }}>
-      <h2>ייבוא מחקר JSON</h2>
+      <h2>ייצוא תיק וייבוא מחקר JSON</h2>
+      <p><a href="/api/opportunities/context">⬇ ייצוא תיק מושחר למחקר ב־ChatGPT</a></p>
       <p>העתק JSON או בחר קובץ מחקר. הדוחות נשמרים <strong>במסד הנתונים הפרטי של האתר</strong>, בנפרד מהעסקאות והברוקר.</p>
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 12 }}>
         <button type="button" onClick={downloadTemplate}>הורד מבנה JSON לדוגמה</button>
