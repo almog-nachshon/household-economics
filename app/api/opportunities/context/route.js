@@ -1,6 +1,8 @@
+import { cookies } from "next/headers";
 import { db } from "@/lib/db";
 import { getSettings } from "@/lib/data";
 import { brokerState } from "@/lib/ibkr";
+import { COOKIE, verifySession } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -8,6 +10,9 @@ export const runtime = "nodejs";
 // Only research-relevant fields leave the server. No account number,
 // broker token, credentials, trade IDs or personally identifying data.
 export async function GET() {
+  if (!await verifySession(cookies().get(COOKIE)?.value)) {
+    return Response.json({ error: "Unauthorized" }, { status: 401, headers: { "Cache-Control": "no-store" } });
+  }
   const [settings, broker] = await Promise.all([getSettings(), brokerState()]);
   const holdings = broker?.asOf
     ? broker.positions.map(p => ({

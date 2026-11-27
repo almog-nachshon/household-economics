@@ -5,14 +5,14 @@
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && next build",
-    "start": "prisma migrate deploy && next start",
+    "start": "prisma db push --skip-generate && next start",
     "seed": "node prisma/seed.mjs",
-    "test": "node --test lib/engine.test.mjs lib/maps.test.mjs lib/research.test.mjs lib/valuation.test.mjs lib/finnhub.test.mjs lib/opportunity-report.test.mjs",
+    "test": "node --test lib/engine.test.mjs lib/maps.test.mjs lib/research.test.mjs lib/valuation.test.mjs lib/finnhub.test.mjs lib/opportunity-report.test.mjs lib/opportunities.test.mjs",
     "auth:setup": "node scripts/auth-setup.mjs"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^1.3.0",
     "@prisma/client": "5.22.0",
+    "ajv": "^8.20.0",
     "lightweight-charts": "4.2.3",
     "next": "14.2.15",
     "react": "18.3.1",

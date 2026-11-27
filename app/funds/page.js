@@ -1,15 +1,11 @@
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { getSettings } from "@/lib/data";
 import { monthlyDeposit, project, yearlyFee, timeline, PENSION_FACTOR } from "@/lib/funds";
 import { monthLabel } from "@/lib/plan";
 import { ils } from "@/lib/goal";
 import Stat from "@/components/Stat";
-import { advisorEnabled } from "@/lib/advisor";
-import AiButton from "@/components/AiButton";
 import Logo, { ClaudeMark } from "@/components/Logo";
-import { generateFundReview } from "@/lib/fund-advisor";
 import styles from "./funds.module.css";
 
 export const dynamic = "force-dynamic";
@@ -63,16 +59,6 @@ async function removeFund(formData) {
   revalidatePath("/funds");
 }
 
-async function reviewNow() {
-  "use server";
-  try {
-    await generateFundReview(new Date(), "lite");
-  } catch (e) {
-    redirect(`/funds?error=${encodeURIComponent(e.message)}#review`);
-  }
-  redirect("/funds#review");
-}
-
 
 const inline = { display: "grid", gap: 4, maxWidth: "none" };
 const Row = ({ children }) => <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "end" }}>{children}</div>;
@@ -110,7 +96,7 @@ function FundFields({ f = {} }) {
   );
 }
 
-export default async function Funds({ searchParams }) {
+export default async function Funds() {
   const [funds, settings, review] = await Promise.all([
     db.fund.findMany({ orderBy: [{ kind: "asc" }, { balance: "desc" }] }),
     getSettings(),
@@ -147,14 +133,6 @@ export default async function Funds({ searchParams }) {
           <Stat label={`צפי זמין לבית ב-${date(target)}`} value={ils(homeValue)} hint={forHome.map((f) => f.name).join(", ") || "סמן ״לבית״ בקרן שנזילה עד היעד"} />
         </div>
       </header>
-      <div className="page-head">
-        {advisorEnabled() && (
-          <form action={reviewNow} style={{ maxWidth: "none" }}>
-            <AiButton label="בדיקת מסלולים עם Claude" updated={review?.createdAt.toLocaleString("he-IL", { timeZone: "Asia/Jerusalem" })} />
-          </form>
-        )}
-      </div>
-
       {[["keren", kerens], ["pension", pensions]].map(([kind, list]) => list.length > 0 && (
         <section key={kind} id={kind} className={styles.section} data-kind={kind}>
           <div className={styles.sectionHeading}>
@@ -248,7 +226,6 @@ export default async function Funds({ searchParams }) {
           לכל קופה (פנסיה מקיפה, משלימה, קרנות השתלמות): 3 הקופות הכי טובות שיכולות להחליף אותה, לפי תשואה נטו ל-3 ול-5 שנים
           ודמי ניהול מצבירה ומהפקדה. רץ אוטומטית פעם ב-3 חודשים (ב-10 לחודש), ובכל רגע מהכפתור למעלה.
         </p>
-        {searchParams?.error && <p className="warn">הבדיקה נכשלה: {searchParams.error}</p>}
         {review ? (
           <>
             <p>{review.summary}</p>
@@ -281,7 +258,7 @@ export default async function Funds({ searchParams }) {
             </details>
           </>
         ) : (
-          <p className="label">{advisorEnabled() ? "עוד לא נעשתה בדיקה." : "חסר ANTHROPIC_API_KEY."}</p>
+          <p className="label">סקירת המסלולים תופיע לאחר ייבוא ידני.</p>
         )}
       </div>
 

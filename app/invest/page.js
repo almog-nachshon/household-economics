@@ -4,8 +4,6 @@ import { db } from "@/lib/db";
 import { getSettings } from "@/lib/data";
 import { ils } from "@/lib/goal";
 import { BUCKETS, loadMarket, planCash, nextSteps, isMetal, bucketPct, DEFAULT_METALS_PCT, ABOUT } from "@/lib/portfolio";
-import { advisorEnabled } from "@/lib/advisor";
-import AiButton from "@/components/AiButton";
 import SyncButton from "@/components/SyncButton";
 import Info from "@/components/Info";
 import HoldingsMap from "@/components/HoldingsMap";
@@ -20,7 +18,7 @@ import WeekAhead from "@/components/WeekAhead";
 import StatusTag from "@/components/StatusTag";
 import { LiveQuotes, LiveChange, LiveWeek, LivePrice, MarketStatus, IntradayChart, Ticker } from "@/components/Live";
 import { portfolio } from "@/lib/holdings";
-import { generatePlan, depositMonth, depositDate } from "@/lib/invest-run";
+import { depositMonth, depositDate } from "@/lib/invest-run";
 import { ibkrEnabled, syncIbkr, ibkrQuoteUrl, ibkrDetailsUrl } from "@/lib/ibkr";
 import { STOP, TARGET } from "@/lib/alerts";
 import Alerts from "@/components/Alerts";
@@ -74,16 +72,6 @@ async function syncNow() {
     await syncIbkr();
   } catch (e) {
     redirect(`/invest?error=${encodeURIComponent(e.message)}`);
-  }
-  redirect("/invest");
-}
-
-async function runNow() {
-  "use server";
-  try {
-    await generatePlan(new Date(), "lite");
-  } catch (e) {
-    redirect(`/invest?error=${encodeURIComponent(/credit balance/i.test(e.message) ? "לבדיקה המהירה של Claude נגמר הקרדיט ב-API. המחקר המלא ב-Claude Code לא תלוי בו." : e.message)}`);
   }
   redirect("/invest");
 }
@@ -289,17 +277,7 @@ export default async function Invest({ searchParams }) {
             />
           </form>
         )}
-        {advisorEnabled() && (
-          <form action={runNow} style={{ maxWidth: "none" }}>
-            <AiButton
-              label={<><span className="btn-long">בדיקה מהירה של </span>Claude</>}
-              updated={plan?.createdAt.toLocaleString("he-IL", { timeZone: "Asia/Jerusalem", dateStyle: "short", timeStyle: "short" })}
-              info={plan
-                ? `${plan.final ? "בדיקה סופית" : "בדיקה יומית"} של Claude (${plan.model}). הכפתור מריץ בדיקה מהירה; המחקר המעמיק (הסטטוסים) נעשה ב-Claude Code.`
-                : "Claude עוד לא בדק את ההפקדה הזו. עד אז החלוקה לפי הביצועים בלבד."}
-            />
-          </form>
-        )}
+        <a className="button secondary-link" href="/invest/opportunities">גילוי הזדמנויות מרחבי השוק</a>
       </div>
       {folio.broker && folio.rows.length > 0 && (
         <LiveQuotes symbols={[...new Set(["VOO", "QQQM", ...folio.rows.map((h) => h.symbol)])]}>

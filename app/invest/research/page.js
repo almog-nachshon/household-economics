@@ -17,6 +17,7 @@ export default async function InvestmentResearch() {
     <div className={styles.researchPage}>
       <header className={styles.researchHero}>
         <a className={styles.back} href="/invest">חזרה להשקעות ←</a>
+        <a className={styles.back} href="/invest/opportunities">גילוי הזדמנויות מרחבי השוק</a>
         <p className={styles.kicker}>סקירת 11.11.2026</p>
         <h1>החלטות בתיק ההשקעות</h1>
         <div className={styles.overview}>

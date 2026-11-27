@@ -2,6 +2,20 @@ generator client {
   provider = "prisma-client-js"
 }
 
+// Immutable, manually imported market research. The content hash makes repeat uploads idempotent.
+model OpportunityResearch {
+  id            String   @id
+  schemaVersion String
+  asOf          DateTime
+  importedAt    DateTime @default(now())
+  title         String
+  screenedCount Int
+  reportCount   Int
+  payload       String
+
+  @@index([asOf, importedAt])
+}
+
 datasource db {
   provider = "sqlite"
   url      = env("DATABASE_URL")
